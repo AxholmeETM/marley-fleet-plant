@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title><%= title %> · Marley Fleet &amp; Plant</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#1d2733">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="/"><span class="brand-mark">M</span><span>Marley Construction<small>Fleet &amp; Plant Register</small></span></a>
+    <nav class="nav">
+      <% const nav = isAdmin
+        ? [['/', 'Dashboard'], ['/plant', 'Plant'], ['/vehicles', 'Fleet'], ['/checks', 'Checks'], ['/defects', 'Defects'], ['/fuel', 'Fuel'], ['/users', 'Users']]
+        : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/checks/plant/new', 'Plant check'], ['/defects/new', 'Report defect']];
+      for (const [href, label] of nav) {
+        const active = href === '/' ? path === '/' : path === href || (isAdmin && path.startsWith(href + '/')); %>
+        <a href="<%= href %>" class="<%= active ? 'active' : '' %>"><%= label %></a>
+      <% } %>
+    </nav>
+    <div class="userbox">
+      <a href="/account" class="who"><%= user.name %></a>
+      <form method="post" action="/logout"><button class="linkbtn" type="submit">Sign out</button></form>
+    </div>
+  </div>
+</header>
+<main>
+<% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.msg %></div><% } %>

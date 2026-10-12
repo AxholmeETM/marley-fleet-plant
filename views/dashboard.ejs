@@ -1,0 +1,82 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Dashboard</h1><p class="muted" style="margin:0"><%= ukDate(today) %> · <%= stats.plantTotal %> plant · <%= stats.vehicleTotal %> vehicles</p></div>
+  <div class="actions">
+    <a class="btn" href="/checks/plant/new">Plant check sheet</a>
+    <a class="btn" href="/checks/vehicle/new">Walk-around</a>
+    <a class="btn primary" href="/fuel/new">Log fuel</a>
+  </div>
+</div>
+
+<div class="section-title"><h2>Plant</h2><a class="small" href="/plant">Plant register →</a></div>
+<div class="kpis">
+  <a class="kpi <%= stats.plantServiceOverdue ? 'bad' : stats.plantService ? 'warn' : 'good' %>" href="/plant?filter=attention">
+    <div class="label">Services due</div><div class="value"><%= stats.plantService %></div>
+    <div class="sub"><%= stats.plantServiceOverdue %> overdue on running hours</div></a>
+  <a class="kpi <%= stats.plantLoler ? 'bad' : 'good' %>" href="/plant?filter=attention">
+    <div class="label">LOLER due</div><div class="value"><%= stats.plantLoler %></div>
+    <div class="sub">overdue or due in 30 days</div></a>
+  <a class="kpi <%= stats.plantChecks ? 'bad' : 'good' %>" href="/checks?type=plant">
+    <div class="label">Weekly checks overdue</div><div class="value"><%= stats.plantChecks %></div>
+    <div class="sub">no check sheet in 7 days</div></a>
+  <a class="kpi <%= stats.defectsUnsafe ? 'bad' : stats.defectsOpen ? 'warn' : 'good' %>" href="/defects">
+    <div class="label">Open defects</div><div class="value"><%= stats.defectsOpen %></div>
+    <div class="sub"><%= stats.defectsUnsafe %> marked unsafe</div></a>
+</div>
+
+<div class="section-title"><h2>Fleet</h2><a class="small" href="/vehicles">Fleet register →</a></div>
+<div class="kpis">
+  <a class="kpi <%= stats.walkaroundsDone < stats.walkaroundsExpected ? 'warn' : 'good' %>" href="/checks?type=vehicle">
+    <div class="label">Walk-arounds today</div><div class="value"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></div>
+    <div class="sub">vehicles with a driver assigned</div></a>
+  <a class="kpi <%= stats.mot ? 'bad' : 'good' %>" href="/vehicles?filter=attention">
+    <div class="label">MOT due</div><div class="value"><%= stats.mot %></div><div class="sub">overdue or due in 30 days</div></a>
+  <a class="kpi <%= stats.tax ? 'bad' : 'good' %>" href="/vehicles?filter=attention">
+    <div class="label">Tax due</div><div class="value"><%= stats.tax %></div><div class="sub">overdue or due in 30 days</div></a>
+  <a class="kpi <%= stats.vehicleService ? 'warn' : 'good' %>" href="/vehicles?filter=attention">
+    <div class="label">Services due</div><div class="value"><%= stats.vehicleService %></div><div class="sub">overdue or due in 30 days</div></a>
+</div>
+
+<div class="section-title"><h2>Fuel this month</h2><a class="small" href="/fuel">Fuel dashboard →</a></div>
+<div class="kpis">
+  <a class="kpi" href="/fuel"><div class="label">Fuel used</div><div class="value"><%= num(fuelTotals.litres) %> L</div><div class="sub">diesel and unleaded</div></a>
+  <a class="kpi" href="/fuel?type=adblue"><div class="label">AdBlue</div><div class="value"><%= num(fuelTotals.adblue) %> L</div><div class="sub">&nbsp;</div></a>
+  <a class="kpi" href="/fuel"><div class="label">Spend</div><div class="value"><%= money(fuelTotals.cost) %></div><div class="sub">from priced receipts</div></a>
+  <a class="kpi <%= allUnverified ? 'warn' : 'good' %>" href="/fuel?show=unverified&period=year"><div class="label">Receipts to check</div><div class="value"><%= allUnverified %></div><div class="sub">waiting for the office</div></a>
+</div>
+
+<div class="grid grid-2">
+  <div class="card flush">
+    <h2>Needs attention</h2>
+    <% if (!attention.length) { %><p class="empty">Nothing overdue or due soon. 👍</p><% } else { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Asset</th><th>Item</th><th>Status</th></tr></thead>
+      <tbody>
+      <% for (const a of attention.slice(0, 25)) { %>
+        <tr><td><a href="<%= a.href %>"><%= a.asset %></a></td><td><%= a.what %></td><td><%- pill(a.status) %></td></tr>
+      <% } %>
+      </tbody>
+    </table></div>
+    <% if (attention.length > 25) { %><p class="empty"><%= attention.length - 25 %> more. See the plant and fleet registers.</p><% } %>
+    <% } %>
+  </div>
+  <div class="card flush">
+    <h2>Open defects</h2>
+    <% if (!defects.length) { %><p class="empty">No open defects.</p><% } else { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Asset</th><th>Defect</th><th>Severity</th></tr></thead>
+      <tbody>
+      <% for (const d of defects) { %>
+        <tr>
+          <td><a href="/<%= d.asset_type === 'plant' ? 'plant' : 'vehicles' %>/<%= d.asset_id %>"><%= d.asset_name %></a><div class="small muted"><%= ukDate(d.reported_at) %> · <%= d.reported_by_name %></div></td>
+          <td><%= d.description %></td>
+          <td><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span></td>
+        </tr>
+      <% } %>
+      </tbody>
+    </table></div>
+    <p class="empty" style="padding-top:10px"><a href="/defects">All defects →</a></p>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/footer') %>

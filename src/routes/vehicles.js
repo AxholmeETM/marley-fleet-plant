@@ -1,0 +1,119 @@
+const express = require('express');
+const { all, run, get, transaction } = require('../db');
+const { listVehicles, getVehicle, listDefects, listDrivers } = require('../queries');
+const { requireAdmin, UserError, numberField, text } = require('../auth');
+const { isValidDate, isoDate, addMonths, addDays } = require('../status');
+
+const router = express.Router();
+router.use('/vehicles', requireAdmin);
+
+function dateField(v, label) {
+  if (!v) return null;
+  if (!isValidDate(v)) throw new UserError(`${label} is not a valid date.`);
+  return v;
+}
+
+function readVehicle(body) {
+  const reg = text(body.reg);
+  if (!reg) throw new UserError('Registration is required.');
+  const driverId = Number(body.driver_id) || null;
+  if (driverId && !get('SELECT id FROM users WHERE id = ?', driverId)) throw new UserError('Unknown driver.');
+  return {
+    reg: reg.toUpperCase().replace(/\s+/g, ' '),
+    make: text(body.make),
+    model: text(body.model),
+    vehicle_type: text(body.vehicle_type),
+    fuel_type: ['diesel', 'unleaded'].includes(body.fuel_type) ? body.fuel_type : 'diesel',
+    driver_id: driverId,
+    mileage: numberField(body.mileage, 'Mileage', { integer: true }),
+    last_service_date: dateField(body.last_service_date, 'Last service date'),
+    service_interval_months: numberField(body.service_interval_months, 'Service interval', { integer: true, min: 1 }) ?? 12,
+    mot_due: dateField(body.mot_due, 'MOT due date'),
+    tax_due: dateField(body.tax_due, 'Tax due date'),
+    notes: text(body.notes),
+    active: body.active === undefined ? 1 : body.active === '1' ? 1 : 0,
+  };
+}
+
+function saveError(err) {
+  if (String(err.message).includes('UNIQUE')) throw new UserError('Another vehicle already has that registration.');
+  throw err;
+}
+
+router.get('/vehicles', (req, res) => {
+  const filter = req.query.filter || '';
+  let vehicles = listVehicles({ includeInactive: filter === 'inactive' });
+  if (filter === 'inactive') vehicles = vehicles.filter((v) => !v.active);
+  if (filter === 'attention') vehicles = vehicles.filter((v) => [v.mot, v.tax, v.service, v.walkaround].some((s) => s.level === 'overdue' || s.level === 'soon') || v.open_defects);
+  const q = String(req.query.q || '').trim().toLowerCase();
+  if (q) vehicles = vehicles.filter((v) => [v.reg, v.make, v.model, v.driver_name, v.vehicle_type].some((f) => f && f.toLowerCase().includes(q)));
+  res.render('vehicle-list', { title: 'Fleet register', vehicles, filter, q: req.query.q || '' });
+});
+
+router.get('/vehicles/new', (req, res) => {
+  res.render('vehicle-form', { title: 'Add vehicle', item: { fuel_type: 'diesel', service_interval_months: 12, active: 1 }, drivers: listDrivers() });
+});
+
+router.post('/vehicles', (req, res) => {
+  const v = readVehicle(req.body);
+  const cols = Object.keys(v);
+  let id;
+  try {
+    id = run(`INSERT INTO vehicles (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, ...Object.values(v)).lastInsertRowid;
+  } catch (err) { saveError(err); }
+  req.flash('success', `${v.reg} added to the fleet register.`);
+  res.redirect(`/vehicles/${id}`);
+});
+
+router.get('/vehicles/:id', (req, res) => {
+  const item = getVehicle(Number(req.params.id));
+  if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
+  const checks = all(`SELECT c.*, u.name AS user_name FROM vehicle_checks c JOIN users u ON u.id = c.user_id
+    WHERE c.vehicle_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 30`, item.id);
+  const records = all(`SELECT * FROM service_records WHERE asset_type = 'vehicle' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
+  const fuel = all(`SELECT f.*, u.name AS driver_name FROM fuel_entries f JOIN users u ON u.id = f.user_id
+    WHERE f.vehicle_id = ? ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
+  const defects = listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
+  res.render('vehicle-view', { title: item.reg, item, checks, records, fuel, defects, addMonths, addDays });
+});
+
+router.get('/vehicles/:id/edit', (req, res) => {
+  const item = get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
+  if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
+  res.render('vehicle-form', { title: `Edit ${item.reg}`, item, drivers: listDrivers() });
+});
+
+router.post('/vehicles/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const v = readVehicle(req.body);
+  try {
+    run(`UPDATE vehicles SET ${Object.keys(v).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(v), id);
+  } catch (err) { saveError(err); }
+  req.flash('success', `${v.reg} updated.`);
+  res.redirect(`/vehicles/${id}`);
+});
+
+// Record a service, MOT pass or tax renewal; updates the vehicle's due dates.
+router.post('/vehicles/:id/records', (req, res) => {
+  const item = get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
+  if (!item) throw new UserError('Vehicle not found.', 404);
+  const kind = ['service', 'mot', 'tax'].includes(req.body.kind) ? req.body.kind : 'service';
+  const date = req.body.record_date || isoDate();
+  if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
+  let nextDue = dateField(req.body.next_due, 'Next due date');
+  if (kind === 'mot' && !nextDue) nextDue = addDays(addMonths(date, 12), -1);
+  if (kind === 'tax' && !nextDue) throw new UserError('Please enter the date the new tax runs until.');
+  const mileage = numberField(req.body.reading, 'Mileage', { integer: true });
+  transaction(() => {
+    run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('vehicle', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      item.id, kind, date, mileage, nextDue, text(req.body.done_by), text(req.body.notes), req.user.id);
+    if (kind === 'service') run('UPDATE vehicles SET last_service_date = ? WHERE id = ?', date, item.id);
+    if (kind === 'mot') run('UPDATE vehicles SET mot_due = ? WHERE id = ?', nextDue, item.id);
+    if (kind === 'tax') run('UPDATE vehicles SET tax_due = ? WHERE id = ?', nextDue, item.id);
+    if (mileage != null) run('UPDATE vehicles SET mileage = MAX(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, item.id);
+  });
+  req.flash('success', { service: 'Service recorded.', mot: 'MOT recorded.', tax: 'Tax renewal recorded.' }[kind]);
+  res.redirect(`/vehicles/${item.id}`);
+});
+
+module.exports = router;

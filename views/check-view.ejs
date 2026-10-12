@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1><%= title %></h1><p class="muted" style="margin:0"><%= check.asset %> · <%= ukDate(check.check_date) %> · by <%= check.user_name %></p></div>
+  <div class="actions">
+    <% if (isAdmin) { %><a class="btn" href="/<%= type === 'plant' ? 'plant' : 'vehicles' %>/<%= check.asset_id %>">View <%= type === 'plant' ? 'plant' : 'vehicle' %></a><% } %>
+    <button class="btn" onclick="print()">Print</button>
+  </div>
+</div>
+<div class="grid grid-2">
+  <div class="card flush">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Item</th><th>Result</th></tr></thead>
+      <tbody><% for (const r of results) { %>
+        <tr><td><%= r.item %></td><td class="result-<%= r.result %>"><%= { ok: 'OK', defect: 'Defect', na: 'N/A' }[r.result] %></td></tr>
+      <% } %></tbody>
+    </table></div>
+  </div>
+  <div>
+    <div class="card">
+      <dl class="facts">
+        <dt><%= type === 'plant' ? 'Running hours' : 'Mileage' %></dt><dd><%= type === 'plant' ? fmtHours(check.reading) : num(check.reading) %></dd>
+        <% if (type === 'plant') { %><dt>Job ref</dt><dd><%= check.job_ref || '—' %></dd><% } %>
+        <dt>Submitted</dt><dd><%= ukDateTime(check.created_at) %> (UTC)</dd>
+        <dt>Notes</dt><dd><%= check.notes || '—' %></dd>
+      </dl>
+    </div>
+    <% if (defect) { %>
+    <div class="card">
+      <h2>Defect reported <span class="pill <%= defect.severity %>"><%= SEVERITY_LABELS[defect.severity] %></span></h2>
+      <p><%= defect.description %></p>
+      <% if (defect.status === 'resolved') { %><p class="pill ok">Resolved <%= ukDate(defect.resolved_at) %></p><p><%= defect.resolution %></p>
+      <% } else if (isAdmin) { %>
+        <form method="post" action="/defects/<%= defect.id %>/resolve">
+          <input type="hidden" name="back" value="/checks/<%= type %>/<%= check.id %>">
+          <div class="field"><label for="resolution">Mark as fixed</label><input id="resolution" name="resolution" type="text" placeholder="What was done?" required></div>
+          <button class="btn dark small" type="submit">Resolve defect</button>
+        </form>
+      <% } else { %><span class="pill overdue">Open</span><% } %>
+    </div>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/footer') %>

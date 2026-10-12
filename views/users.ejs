@@ -1,0 +1,20 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Users</h1><p class="muted" style="margin:0">Admins see everything. Drivers and operatives can do checks, log fuel and report defects.</p></div>
+  <div class="actions"><a class="btn primary" href="/users/new">Add user</a></div>
+</div>
+<div class="card flush">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Vehicles</th><th>Status</th><th></th></tr></thead>
+    <tbody><% for (const u of users) { %>
+      <tr>
+        <td><strong><%= u.name %></strong></td><td><%= u.email %></td><td><%= u.phone || '—' %></td>
+        <td><%= u.role === 'admin' ? 'Admin' : 'Driver / operative' %></td>
+        <td><%= u.vehicles || '—' %></td>
+        <td><%- u.active ? '<span class="pill ok">Active</span>' : '<span class="pill none">Disabled</span>' %></td>
+        <td><a href="/users/<%= u.id %>/edit">Edit</a></td>
+      </tr>
+    <% } %></tbody>
+  </table></div>
+</div>
+<%- include('partials/footer') %>

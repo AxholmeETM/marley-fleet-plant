@@ -1,0 +1,10 @@
+<%- include('partials/header') %>
+<div class="page-head"><div><h1>My account</h1><p class="muted" style="margin:0"><%= user.name %> · <%= user.email %> · <%= user.role === 'admin' ? 'Admin' : 'Driver / operative' %></p></div></div>
+<form class="card" method="post" action="/account/password" style="max-width:480px">
+  <h2>Change password</h2>
+  <div class="field"><label for="current">Current password</label><input id="current" name="current" type="password" autocomplete="current-password" required></div>
+  <div class="field"><label for="password">New password <span class="hint">(at least 8 characters)</span></label><input id="password" name="password" type="password" minlength="8" autocomplete="new-password" required></div>
+  <div class="field"><label for="confirm">Confirm new password</label><input id="confirm" name="confirm" type="password" minlength="8" autocomplete="new-password" required></div>
+  <button class="btn primary" type="submit">Change password</button>
+</form>
+<%- include('partials/footer') %>

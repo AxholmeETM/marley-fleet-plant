@@ -1,0 +1,111 @@
+<%- include('partials/header') %>
+<%
+  const qs = (over) => new URLSearchParams(Object.fromEntries(Object.entries({ period: period.key, from: period.key === 'custom' ? period.from : '', to: period.key === 'custom' ? period.to : '', type, show, board, ...over }).filter(([, v]) => v))).toString();
+  const currentQs = qs({});
+  const board_rows = board === 'vehicles' ? vehicles : drivers;
+  const top = Math.max(1, ...board_rows.map((r) => r.fuel || r.adblue));
+%>
+<div class="page-head">
+  <div><h1>Fuel dashboard</h1><p class="muted" style="margin:0"><%= ukDate(period.from) %> to <%= ukDate(period.to) %></p></div>
+  <div class="actions">
+    <a class="btn" href="/export/fuel.csv?from=<%= period.from %>&to=<%= period.to %>">Export CSV</a>
+    <a class="btn dark" href="/fuel/next">Check receipts one by one</a>
+    <a class="btn primary" href="/fuel/new">Log fuel</a>
+  </div>
+</div>
+
+<form class="filters" method="get">
+  <div class="field"><label for="period">Period</label>
+    <select id="period" name="period" onchange="document.getElementById('custom-dates').style.display = this.value === 'custom' ? 'contents' : 'none'">
+      <% for (const [k, l] of [['month', 'This month'], ['last', 'Last month'], ['quarter', 'Last 3 months'], ['year', 'This year'], ['custom', 'Custom dates']]) { %>
+        <option value="<%= k %>" <%= period.key === k ? 'selected' : '' %>><%= l %></option>
+      <% } %>
+    </select></div>
+  <span id="custom-dates" style="display:<%= period.key === 'custom' ? 'contents' : 'none' %>">
+    <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= period.from %>"></div>
+    <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= period.to %>"></div>
+  </span>
+  <div class="field"><label for="type">Fuel</label>
+    <select id="type" name="type"><option value="">All fuel</option>
+      <% for (const t of ['diesel', 'unleaded', 'adblue']) { %><option value="<%= t %>" <%= type === t ? 'selected' : '' %>><%= FUEL_LABELS[t] %></option><% } %>
+    </select></div>
+  <div class="field"><label for="show">Receipts</label>
+    <select id="show" name="show">
+      <option value="">All</option>
+      <option value="unpriced" <%= show === 'unpriced' ? 'selected' : '' %>>No price yet</option>
+      <option value="unverified" <%= show === 'unverified' ? 'selected' : '' %>>Not checked</option>
+      <option value="verified" <%= show === 'verified' ? 'selected' : '' %>>Checked</option>
+    </select></div>
+  <input type="hidden" name="board" value="<%= board %>">
+  <button class="btn" type="submit">Apply</button>
+</form>
+
+<div class="kpis">
+  <% for (const t of ['diesel', 'unleaded', 'adblue']) { const b = byType[t]; %>
+  <div class="kpi"><div class="label"><%= FUEL_LABELS[t] %></div><div class="value"><%= num(b.litres, 1) %> L</div>
+    <div class="sub"><%= money(b.cost) %><% if (b.pricedLitres) { %> · avg £<%= (b.cost / b.pricedLitres).toFixed(3) %>/L<% } %> · <%= b.fills %> fill<%= b.fills === 1 ? '' : 's' %></div></div>
+  <% } %>
+  <div class="kpi"><div class="label">Total spend</div><div class="value"><%= money(counts.cost || 0) %></div><div class="sub"><%= counts.fills %> receipts this period</div></div>
+  <a class="kpi <%= counts.unverified ? 'warn' : 'good' %>" href="?<%= qs({ show: 'unverified' }) %>"><div class="label">To check</div><div class="value"><%= counts.unverified || 0 %></div><div class="sub"><%= counts.unpriced || 0 %> still need a price</div></a>
+</div>
+
+<div class="card flush">
+  <div class="section-title" style="padding:14px 16px 0;margin:0 0 10px">
+    <h2>🏆 Fuel used leaderboard</h2>
+    <div class="tabs" style="margin:0">
+      <a href="?<%= qs({ board: 'drivers' }) %>" class="<%= board === 'drivers' ? 'active' : '' %>">By driver</a>
+      <a href="?<%= qs({ board: 'vehicles' }) %>" class="<%= board === 'vehicles' ? 'active' : '' %>">By vehicle</a>
+    </div>
+  </div>
+  <% if (!board_rows.length) { %><p class="empty">No fuel logged in this period.</p><% } else { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>#</th><th><%= board === 'vehicles' ? 'Vehicle' : 'Driver' %></th><th class="bar-cell hide-sm">Fuel used</th><th class="num">Diesel L</th><th class="num">Unleaded L</th><th class="num">Fuel total L</th><th class="num">AdBlue L</th><th class="num">Cost</th><th class="num">Fills</th>
+      <% if (board === 'vehicles') { %><th class="num" title="Worked out from odometer readings logged with fuel. Needs at least two fills with mileage.">Approx MPG</th><% } %></tr></thead>
+    <tbody><% board_rows.forEach((r, i) => { %>
+      <tr>
+        <td><span class="rank r<%= i + 1 %>"><%= i + 1 %></span></td>
+        <td><%= r.name %></td>
+        <td class="bar-cell hide-sm"><div class="bar"><span style="width:<%= Math.round(100 * (r.fuel || 0) / top) %>%"></span></div></td>
+        <td class="num"><%= num(r.diesel, 1) %></td>
+        <td class="num"><%= num(r.unleaded, 1) %></td>
+        <td class="num"><strong><%= num(r.fuel, 1) %></strong></td>
+        <td class="num"><%= num(r.adblue, 1) %></td>
+        <td class="num"><%= money(r.cost) %><% if (r.unpriced) { %><div class="ppl"><%= r.unpriced %> unpriced</div><% } %></td>
+        <td class="num"><%= r.fills %></td>
+        <% if (board === 'vehicles') { %><td class="num"><%= r.mpg ? num(r.mpg, 1) : '—' %><% if (r.miles) { %><div class="ppl"><%= num(r.miles) %> miles</div><% } %></td><% } %>
+      </tr>
+    <% }) %></tbody>
+  </table></div><% } %>
+</div>
+
+<div class="card flush">
+  <h2>Fuel log and receipts</h2>
+  <% if (!entries.length) { %><p class="empty">No entries match.</p><% } else { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Receipt</th><th>Date</th><th>Vehicle</th><th>Driver</th><th>Fuel</th><th class="num">Litres</th><th class="num">Mileage</th><th>Price (£, total)</th><th></th></tr></thead>
+    <tbody><% for (const e of entries) { %>
+      <tr>
+        <td><% if (e.receipt_file) { %><a href="/fuel/<%= e.id %>" title="Open receipt">
+          <% if (/\.pdf$/i.test(e.receipt_file)) { %><span class="pill none">PDF</span><% } else { %><img class="receipt-thumb" src="/receipts/<%= e.receipt_file %>" alt="Receipt" loading="lazy"><% } %>
+        </a><% } else { %><span class="pill overdue">None</span><% } %></td>
+        <td class="nowrap"><%= ukDate(e.fill_date) %></td>
+        <td><span class="reg"><%= e.reg %></span></td>
+        <td><%= e.driver_name %></td>
+        <td><%= FUEL_LABELS[e.fuel_type] %></td>
+        <td class="num"><%= num(e.litres, 2) %></td>
+        <td class="num"><%= num(e.mileage) %></td>
+        <td>
+          <form class="price-form" method="post" action="/fuel/<%= e.id %>">
+            <input type="hidden" name="return_to" value="dashboard"><input type="hidden" name="qs" value="<%= currentQs %>">
+            <input type="number" name="cost" step="0.01" min="0" inputmode="decimal" value="<%= e.cost != null ? e.cost.toFixed(2) : '' %>" aria-label="Total price" placeholder="0.00">
+            <label class="check-row small" style="margin:0"><input type="checkbox" name="verified" value="1" <%= e.verified ? 'checked' : '' %>> Checked</label>
+            <button class="btn small" type="submit">Save</button>
+          </form>
+          <% if (e.cost != null) { %><div class="ppl">£<%= (e.cost / e.litres).toFixed(3) %> per litre</div><% } %>
+        </td>
+        <td><a href="/fuel/<%= e.id %>">Open</a></td>
+      </tr>
+    <% } %></tbody>
+  </table></div><% } %>
+</div>
+<%- include('partials/footer') %>

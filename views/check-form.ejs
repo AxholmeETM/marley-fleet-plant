@@ -1,0 +1,87 @@
+<%- include('partials/header') %>
+<% const isVehicle = kind === 'vehicle'; %>
+<div class="page-head"><div>
+  <h1><%= title %></h1>
+  <p class="muted" style="margin:0"><%= isVehicle ? 'Complete before driving, every day. Mark anything that is not right as a defect.' : 'Complete at least once a week for each machine. Mark anything that is not right as a defect.' %></p>
+</div></div>
+
+<form method="post" action="/checks/<%= kind %>" id="check-form">
+  <div class="card">
+    <div class="form-grid">
+      <div class="field">
+        <label for="asset_id"><%= isVehicle ? 'Vehicle' : 'Plant' %></label>
+        <select id="asset_id" name="asset_id" required onchange="location.search='?<%= isVehicle ? 'vehicle' : 'plant' %>=' + this.value">
+          <option value="">Choose…</option>
+          <% if (isVehicle && mineIds.length) { %><optgroup label="My vehicles"><% for (const a of assets.filter((x) => mineIds.includes(x.id))) { %>
+            <option value="<%= a.id %>" <%= asset && asset.id === a.id ? 'selected' : '' %>><%= a.reg %> – <%= [a.make, a.model].filter(Boolean).join(' ') %></option>
+          <% } %></optgroup><optgroup label="Other vehicles"><% } %>
+          <% for (const a of assets.filter((x) => !mineIds.includes(x.id))) { %>
+            <option value="<%= a.id %>" <%= asset && asset.id === a.id ? 'selected' : '' %>><%= isVehicle ? `${a.reg} – ${[a.make, a.model].filter(Boolean).join(' ')}` : `${a.plant_no} – ${a.description}` %></option>
+          <% } %>
+          <% if (isVehicle && mineIds.length) { %></optgroup><% } %>
+        </select>
+      </div>
+      <div class="field"><label for="check_date">Date</label><input id="check_date" name="check_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+      <% if (isVehicle) { %>
+        <div class="field"><label for="reading">Mileage <span class="hint">(odometer)</span></label>
+          <input id="reading" name="reading" type="number" inputmode="numeric" min="0" step="1" placeholder="<%= asset && asset.mileage ? 'Last: ' + asset.mileage : '' %>"></div>
+      <% } else { %>
+        <div class="field"><label for="reading">Running hours <span class="hint">(hour meter)</span></label>
+          <input id="reading" name="reading" type="number" inputmode="decimal" min="0" step="0.1" required placeholder="<%= asset ? 'Last: ' + fmtHours(asset.running_hours) : '' %>"></div>
+        <div class="field"><label for="job_ref">Job reference</label><input id="job_ref" name="job_ref" type="text" value="<%= asset && asset.job_ref || '' %>"></div>
+      <% } %>
+    </div>
+    <% if (asset && asset.open_defects) { %><div class="flash warning" style="margin:0">This <%= isVehicle ? 'vehicle' : 'machine' %> already has <%= asset.open_defects %> open defect<%= asset.open_defects > 1 ? 's' : '' %> reported.</div><% } %>
+  </div>
+
+  <div class="card">
+    <div class="section-title" style="margin-top:0"><h2>Checklist</h2><button type="button" class="btn small" id="all-ok">Mark all OK</button></div>
+    <ul class="checklist">
+      <% items.forEach((item, i) => { %>
+      <li>
+        <span class="item"><%= item %></span>
+        <span class="seg" role="radiogroup" aria-label="<%= item %>">
+          <input type="radio" id="i<%= i %>ok" name="item_<%= i %>" value="ok" required><label class="ok" for="i<%= i %>ok">OK</label>
+          <input type="radio" id="i<%= i %>d" name="item_<%= i %>" value="defect"><label class="defect" for="i<%= i %>d">Defect</label>
+          <input type="radio" id="i<%= i %>na" name="item_<%= i %>" value="na"><label class="na" for="i<%= i %>na">N/A</label>
+        </span>
+      </li>
+      <% }) %>
+    </ul>
+  </div>
+
+  <div class="card" id="defect-box" hidden>
+    <h2>Defects found</h2>
+    <div class="field"><label for="defect_details">What is wrong?</label><textarea id="defect_details" name="defect_details" placeholder="Describe each defect"></textarea></div>
+    <div class="field"><label for="severity">How serious?</label>
+      <select id="severity" name="severity">
+        <option value="minor">Minor – safe to use, fix soon</option>
+        <option value="major">Major – needs fixing quickly</option>
+        <option value="unsafe">Unsafe – do not use</option>
+      </select></div>
+  </div>
+
+  <div class="card">
+    <div class="field" style="margin:0"><label for="notes">Other notes <span class="hint">(optional)</span></label><textarea id="notes" name="notes"></textarea></div>
+  </div>
+  <button class="btn primary big" type="submit">Submit check</button>
+</form>
+<script>
+  (function () {
+    const form = document.getElementById('check-form');
+    const box = document.getElementById('defect-box');
+    const details = document.getElementById('defect_details');
+    function update() {
+      const any = !!form.querySelector('input[value="defect"]:checked');
+      box.hidden = !any;
+      details.required = any;
+    }
+    form.addEventListener('change', update);
+    document.getElementById('all-ok').addEventListener('click', function () {
+      form.querySelectorAll('input[value="ok"]').forEach(function (r) { if (!form.querySelector('input[name="' + r.name + '"]:checked')) r.checked = true; });
+      update();
+    });
+    update();
+  })();
+</script>
+<%- include('partials/footer') %>

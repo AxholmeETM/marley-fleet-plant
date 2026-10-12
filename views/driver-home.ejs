@@ -1,0 +1,59 @@
+<%- include('partials/header') %>
+<div class="page-head"><div><h1>Hi <%= user.name.split(' ')[0] %></h1><p class="muted" style="margin:0"><%= ukDate(today) %></p></div></div>
+
+<% for (const v of vehicles) { %>
+<div class="card vehicle-card">
+  <div>
+    <span class="reg"><%= v.reg %></span> <strong><%= [v.make, v.model].filter(Boolean).join(' ') %></strong>
+    <div class="small muted" style="margin-top:6px">MOT <%- pill(v.mot) %> · Tax <%- pill(v.tax) %> · Service <%- pill(v.service) %></div>
+  </div>
+  <div>
+    <% if (v.walkaround.level === 'ok') { %>
+      <span class="pill ok">✓ Walk-around done today</span>
+    <% } else { %>
+      <a class="btn primary" href="/checks/vehicle/new?vehicle=<%= v.id %>">Do today's walk-around check</a>
+    <% } %>
+  </div>
+</div>
+<% } %>
+<% if (!vehicles.length) { %><div class="card muted">You don't have a vehicle assigned. Ask the office if you should have one.</div><% } %>
+
+<div class="quick">
+  <a href="/checks/vehicle/new"><span class="ico">🚐</span><span>Walk-around check<small>Daily vehicle check</small></span></a>
+  <a href="/fuel/new"><span class="ico">⛽</span><span>Log fuel<small>Diesel, unleaded or AdBlue + receipt</small></span></a>
+  <a href="/checks/plant/new"><span class="ico">🚜</span><span>Plant check sheet<small>Weekly plant check</small></span></a>
+  <a href="/defects/new"><span class="ico">⚠️</span><span>Report a defect<small>Plant or vehicle</small></span></a>
+</div>
+
+<div class="grid grid-2">
+  <div class="card flush">
+    <h2>My recent fuel</h2>
+    <% if (!fuel.length) { %><p class="empty">No fuel logged yet.</p><% } else { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Vehicle</th><th>Fuel</th><th class="num">Litres</th><th>Receipt</th></tr></thead>
+      <tbody><% for (const f of fuel) { %>
+        <tr><td><%= ukDate(f.fill_date) %></td><td><%= f.reg %></td><td><%= FUEL_LABELS[f.fuel_type] %></td><td class="num"><%= num(f.litres, 2) %></td>
+          <td><% if (f.receipt_file) { %><a href="/receipts/<%= f.receipt_file %>" target="_blank">View</a><% } %> <% if (f.verified) { %><span class="pill ok">Checked</span><% } %></td></tr>
+      <% } %></tbody>
+    </table></div><% } %>
+  </div>
+  <div class="card flush">
+    <h2>My recent checks</h2>
+    <% if (!checks.length) { %><p class="empty">No checks yet.</p><% } else { %>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Date</th><th>Type</th><th>Asset</th><th>Result</th></tr></thead>
+      <tbody><% for (const c of checks) { %>
+        <tr><td><a href="/checks/<%= c.type %>/<%= c.id %>"><%= ukDate(c.check_date) %></a></td><td><%= c.type === 'vehicle' ? 'Walk-around' : 'Plant check' %></td><td><%= c.asset %></td>
+          <td><%- c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' %></td></tr>
+      <% } %></tbody>
+    </table></div><% } %>
+  </div>
+</div>
+<% if (defects.length) { %>
+<div class="card flush"><h2>Defects I've reported that are still open</h2>
+  <div class="table-wrap"><table><tbody><% for (const d of defects) { %>
+    <tr><td><%= ukDate(d.reported_at) %></td><td><%= d.description %></td><td><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span></td></tr>
+  <% } %></tbody></table></div>
+</div>
+<% } %>
+<%- include('partials/footer') %>

@@ -1,0 +1,40 @@
+<%- include('partials/header') %>
+<div class="page-head"><div><h1><%= title %></h1></div></div>
+<form method="post" action="/plant<%= item.id ? '/' + item.id : '' %>" style="max-width:900px">
+  <fieldset class="card"><legend>Details</legend>
+    <div class="form-grid">
+      <div class="field"><label for="plant_no">Plant ID</label><input id="plant_no" name="plant_no" type="text" value="<%= item.plant_no || '' %>" required></div>
+      <div class="field"><label for="description">Description</label><input id="description" name="description" type="text" value="<%= item.description || '' %>" placeholder="e.g. 13t tracked excavator" required></div>
+      <div class="field"><label for="make">Make</label><input id="make" name="make" type="text" value="<%= item.make || '' %>"></div>
+      <div class="field"><label for="model">Model</label><input id="model" name="model" type="text" value="<%= item.model || '' %>"></div>
+      <div class="field"><label for="serial_no">Serial number</label><input id="serial_no" name="serial_no" type="text" value="<%= item.serial_no || '' %>"></div>
+      <div class="field"><label for="job_ref">Job reference</label><input id="job_ref" name="job_ref" type="text" value="<%= item.job_ref || '' %>"></div>
+      <div class="field"><label for="location">Site / location</label><input id="location" name="location" type="text" value="<%= item.location || '' %>"></div>
+      <div class="field"><label for="active">Status</label>
+        <select id="active" name="active"><option value="1">Active</option><option value="0" <%= item.active === 0 ? 'selected' : '' %>>Off hire / disposed</option></select></div>
+    </div>
+  </fieldset>
+  <fieldset class="card"><legend>Running hours and servicing</legend>
+    <div class="form-grid">
+      <div class="field"><label for="running_hours">Current running hours</label><input id="running_hours" name="running_hours" type="number" step="0.1" min="0" value="<%= item.running_hours ?? '' %>"></div>
+      <div class="field"><label for="service_interval_hours">Service every <span class="hint">(hours)</span></label><input id="service_interval_hours" name="service_interval_hours" type="number" step="1" min="1" value="<%= item.service_interval_hours ?? '' %>" required></div>
+      <div class="field"><label for="last_service_hours">Hours at last service</label><input id="last_service_hours" name="last_service_hours" type="number" step="0.1" min="0" value="<%= item.last_service_hours ?? '' %>"></div>
+      <div class="field"><label for="last_service_date">Last service date</label><input id="last_service_date" name="last_service_date" type="date" value="<%= item.last_service_date || '' %>"></div>
+    </div>
+    <p class="hint" style="margin:0">Next service is due at hours at last service + interval. Running hours update automatically from weekly check sheets.</p>
+  </fieldset>
+  <fieldset class="card"><legend>LOLER</legend>
+    <label class="check-row field"><input type="checkbox" name="loler_required" value="1" <%= item.loler_required ? 'checked' : '' %>> LOLER thorough examination required (lifting equipment)</label>
+    <div class="form-grid">
+      <div class="field"><label for="loler_interval_months">Examination interval</label>
+        <select id="loler_interval_months" name="loler_interval_months">
+          <option value="12">Every 12 months (lifting equipment)</option>
+          <option value="6" <%= Number(item.loler_interval_months) === 6 ? 'selected' : '' %>>Every 6 months (lifting people / accessories)</option>
+        </select></div>
+      <div class="field"><label for="last_loler_date">Last LOLER inspection</label><input id="last_loler_date" name="last_loler_date" type="date" value="<%= item.last_loler_date || '' %>"></div>
+    </div>
+  </fieldset>
+  <div class="card"><div class="field" style="margin:0"><label for="notes">Notes</label><textarea id="notes" name="notes"><%= item.notes || '' %></textarea></div></div>
+  <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="<%= item.id ? '/plant/' + item.id : '/plant' %>">Cancel</a></div>
+</form>
+<%- include('partials/footer') %>

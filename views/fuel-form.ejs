@@ -1,0 +1,46 @@
+<%- include('partials/header') %>
+<div class="page-head"><div><h1>Log fuel</h1><p class="muted" style="margin:0">Enter what you put in and take a photo of the receipt. The office adds the price.</p></div></div>
+<form class="card" method="post" action="/fuel" enctype="multipart/form-data" style="max-width:640px">
+  <div class="field">
+    <label for="vehicle_id">Vehicle</label>
+    <select id="vehicle_id" name="vehicle_id" required>
+      <option value="">Choose…</option>
+      <% if (mineIds.length) { %><optgroup label="My vehicles"><% for (const v of vehicles.filter((x) => mineIds.includes(x.id))) { %>
+        <option value="<%= v.id %>" data-fuel="<%= v.fuel_type %>" <%= selected && selected.id === v.id ? 'selected' : '' %>><%= v.reg %> – <%= [v.make, v.model].filter(Boolean).join(' ') %></option>
+      <% } %></optgroup><optgroup label="Other vehicles"><% } %>
+      <% for (const v of vehicles.filter((x) => !mineIds.includes(x.id))) { %>
+        <option value="<%= v.id %>" data-fuel="<%= v.fuel_type %>" <%= selected && selected.id === v.id ? 'selected' : '' %>><%= v.reg %> – <%= [v.make, v.model].filter(Boolean).join(' ') %></option>
+      <% } %>
+      <% if (mineIds.length) { %></optgroup><% } %>
+    </select>
+  </div>
+  <fieldset>
+    <legend>Fuel type</legend>
+    <span class="seg" id="fuel-seg">
+      <% for (const t of ['diesel', 'unleaded', 'adblue']) { %>
+        <input type="radio" id="ft-<%= t %>" name="fuel_type" value="<%= t %>" required <%= (selected ? selected.fuel_type : 'diesel') === t ? 'checked' : '' %>><label class="<%= t === 'adblue' ? 'na' : 'ok' %>" for="ft-<%= t %>"><%= FUEL_LABELS[t] %></label>
+      <% } %>
+    </span>
+  </fieldset>
+  <div class="form-grid">
+    <div class="field"><label for="litres">Litres</label><input id="litres" name="litres" type="number" inputmode="decimal" step="0.01" min="0.01" required></div>
+    <div class="field"><label for="fill_date">Date</label><input id="fill_date" name="fill_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+    <div class="field"><label for="mileage">Mileage <span class="hint">(odometer)</span></label><input id="mileage" name="mileage" type="number" inputmode="numeric" min="0" step="1"></div>
+    <div class="field"><label for="station">Fuel station <span class="hint">(optional)</span></label><input id="station" name="station" type="text"></div>
+  </div>
+  <div class="field">
+    <label for="receipt">Receipt <span class="hint">(photo or PDF, up to 15 MB)</span></label>
+    <input id="receipt" name="receipt" type="file" accept="image/*,application/pdf" required>
+  </div>
+  <div class="field"><label for="notes">Notes <span class="hint">(optional)</span></label><textarea id="notes" name="notes" style="min-height:60px"></textarea></div>
+  <button class="btn primary big" type="submit">Save fuel entry</button>
+</form>
+<script>
+  document.getElementById('vehicle_id').addEventListener('change', function () {
+    const opt = this.selectedOptions[0];
+    const fuel = opt && opt.dataset.fuel;
+    const adblue = document.getElementById('ft-adblue');
+    if (fuel && !adblue.checked) document.getElementById('ft-' + fuel).checked = true;
+  });
+</script>
+<%- include('partials/footer') %>

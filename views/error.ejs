@@ -1,0 +1,10 @@
+<% if (locals.user) { %><%- include('partials/header') %><% } else { %><!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title><%= title %></title><link rel="stylesheet" href="/static/style.css"></head><body><main><% } %>
+<div class="card" style="max-width:560px">
+  <h1><%= title %></h1>
+  <p><%= message %></p>
+  <div class="form-actions">
+    <button class="btn primary" type="button" onclick="history.back()">Go back</button>
+    <a class="btn" href="/">Home</a>
+  </div>
+</div>
+<%- include('partials/footer') %>

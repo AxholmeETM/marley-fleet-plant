@@ -1,0 +1,19 @@
+<%- include('partials/header') %>
+<div class="page-head"><div><h1>Report a defect</h1><p class="muted" style="margin:0">For anything wrong with a vehicle or piece of plant outside of a check.</p></div></div>
+<form class="card" method="post" action="/defects" style="max-width:640px">
+  <div class="field"><label for="asset">Plant or vehicle</label>
+    <select id="asset" name="asset" required>
+      <option value="">Choose…</option>
+      <optgroup label="Vehicles"><% for (const v of vehicles) { %><option value="vehicle:<%= v.id %>" <%= selected === 'vehicle:' + v.id ? 'selected' : '' %>><%= v.reg %> – <%= [v.make, v.model].filter(Boolean).join(' ') %></option><% } %></optgroup>
+      <optgroup label="Plant"><% for (const p of plant) { %><option value="plant:<%= p.id %>" <%= selected === 'plant:' + p.id ? 'selected' : '' %>><%= p.plant_no %> – <%= p.description %></option><% } %></optgroup>
+    </select></div>
+  <div class="field"><label for="description">What is wrong?</label><textarea id="description" name="description" required></textarea></div>
+  <div class="field"><label for="severity">How serious?</label>
+    <select id="severity" name="severity">
+      <option value="minor">Minor – safe to use, fix soon</option>
+      <option value="major">Major – needs fixing quickly</option>
+      <option value="unsafe">Unsafe – do not use</option>
+    </select></div>
+  <button class="btn primary big" type="submit">Report defect</button>
+</form>
+<%- include('partials/footer') %>

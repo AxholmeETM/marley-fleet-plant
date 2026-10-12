@@ -1,0 +1,47 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Fuel receipt</h1><p class="muted" style="margin:0"><span class="reg"><%= entry.reg %></span> · <%= entry.driver_name %> · logged <%= ukDateTime(entry.created_at) %></p></div>
+  <div class="actions"><a class="btn" href="/fuel">Back to fuel dashboard</a></div>
+</div>
+<div class="grid grid-2">
+  <div class="receipt-view">
+    <% if (!entry.receipt_file) { %><p style="color:#fff">No receipt attached</p>
+    <% } else if (/\.pdf$/i.test(entry.receipt_file)) { %><iframe src="/receipts/<%= entry.receipt_file %>" title="Receipt"></iframe>
+    <% } else if (/\.hei[cf]$/i.test(entry.receipt_file)) { %><p style="color:#fff">HEIC photo – <a style="color:#f2b705" href="/receipts/<%= entry.receipt_file %>">download to view</a></p>
+    <% } else { %><a href="/receipts/<%= entry.receipt_file %>" target="_blank" title="Open full size"><img src="/receipts/<%= entry.receipt_file %>" alt="Fuel receipt"></a><% } %>
+  </div>
+  <form class="card" method="post" action="/fuel/<%= entry.id %>" style="margin:0">
+    <h2>Cross-check against the receipt</h2>
+    <p class="small muted" style="margin-top:0">Correct anything the driver entered wrongly, enter the total price paid, then tick checked.</p>
+    <div class="form-grid">
+      <div class="field"><label for="fill_date">Date</label><input id="fill_date" name="fill_date" type="date" value="<%= entry.fill_date %>" required></div>
+      <div class="field"><label for="fuel_type">Fuel</label>
+        <select id="fuel_type" name="fuel_type"><% for (const t of FUEL_TYPES) { %><option value="<%= t %>" <%= entry.fuel_type === t ? 'selected' : '' %>><%= FUEL_LABELS[t] %></option><% } %></select></div>
+      <div class="field"><label for="litres">Litres</label><input id="litres" name="litres" type="number" step="0.01" min="0.01" value="<%= entry.litres %>" required></div>
+      <div class="field"><label for="cost">Total price (£)</label><input id="cost" name="cost" type="number" step="0.01" min="0" inputmode="decimal" value="<%= entry.cost != null ? entry.cost.toFixed(2) : '' %>" autofocus placeholder="0.00"></div>
+    </div>
+    <p class="small" id="ppl-line"><% if (entry.cost != null) { %>£<%= (entry.cost / entry.litres).toFixed(3) %> per litre<% } %></p>
+    <dl class="facts small" style="margin-bottom:14px">
+      <dt>Mileage</dt><dd><%= num(entry.mileage) %></dd>
+      <dt>Station</dt><dd><%= entry.station || '—' %></dd>
+      <dt>Driver notes</dt><dd><%= entry.notes || '—' %></dd>
+      <% if (entry.priced_at) { %><dt>Last saved</dt><dd><%= entry.priced_by_name %>, <%= ukDateTime(entry.priced_at) %></dd><% } %>
+    </dl>
+    <div class="field"><label for="admin_notes">Office notes</label><textarea id="admin_notes" name="admin_notes" style="min-height:60px"><%= entry.admin_notes || '' %></textarea></div>
+    <label class="check-row" style="margin-bottom:14px"><input type="checkbox" name="verified" value="1" <%= entry.verified ? 'checked' : '' %>> Receipt checked and price entered</label>
+    <div class="form-actions">
+      <button class="btn primary" type="submit" name="next" value="1">Save &amp; next receipt<% if (remaining) { %> (<%= remaining %> left)<% } %></button>
+      <button class="btn" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+<script>
+  (function () {
+    const cost = document.getElementById('cost'), litres = document.getElementById('litres'), out = document.getElementById('ppl-line');
+    function upd() { const c = parseFloat(cost.value), l = parseFloat(litres.value); out.textContent = c > 0 && l > 0 ? '£' + (c / l).toFixed(3) + ' per litre' : ''; }
+    cost.addEventListener('input', upd); litres.addEventListener('input', upd);
+    cost.addEventListener('input', function () { const v = document.querySelector('input[name=verified]'); if (cost.value && !v.dataset.touched) v.checked = true; });
+    document.querySelector('input[name=verified]').addEventListener('change', function () { this.dataset.touched = '1'; });
+  })();
+</script>
+<%- include('partials/footer') %>

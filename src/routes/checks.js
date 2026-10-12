@@ -1,0 +1,143 @@
+const express = require('express');
+const { all, get, run, transaction } = require('../db');
+const { listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
+const { VEHICLE_ITEMS, PLANT_ITEMS, RESULTS } = require('../checklists');
+const { requireAdmin, UserError, numberField, text } = require('../auth');
+const { isoDate, isValidDate, addDays } = require('../status');
+
+const router = express.Router();
+
+function readResults(body, items) {
+  return items.map((item, i) => {
+    const result = body[`item_${i}`];
+    if (!RESULTS.includes(result)) throw new UserError(`Please answer every item on the check (missing: ${item}).`);
+    return { item, result };
+  });
+}
+
+function checkDate(value) {
+  const d = value || isoDate();
+  if (!isValidDate(d) || d > isoDate()) throw new UserError('Check date must be today or earlier.');
+  return d;
+}
+
+const SEVERITIES = ['minor', 'major', 'unsafe'];
+
+// ---- Vehicle daily walk-around ----
+
+router.get('/checks/vehicle/new', (req, res) => {
+  const vehicles = listVehicles();
+  const mine = vehicles.filter((v) => v.driver_id === req.user.id);
+  const selectedId = Number(req.query.vehicle) || (mine[0] && mine[0].id) || null;
+  const vehicle = selectedId ? vehicles.find((v) => v.id === selectedId) : null;
+  res.render('check-form', {
+    title: 'Daily walk-around check', kind: 'vehicle', items: VEHICLE_ITEMS,
+    assets: vehicles, mineIds: mine.map((v) => v.id), asset: vehicle,
+  });
+});
+
+router.post('/checks/vehicle', (req, res) => {
+  const vehicle = getVehicle(Number(req.body.asset_id));
+  if (!vehicle || !vehicle.active) throw new UserError('Please choose a vehicle.');
+  const results = readResults(req.body, VEHICLE_ITEMS);
+  const date = checkDate(req.body.check_date);
+  const mileage = numberField(req.body.reading, 'Mileage', { integer: true });
+  const defectItems = results.filter((r) => r.result === 'defect');
+  const details = text(req.body.defect_details);
+  if (defectItems.length && !details) throw new UserError('Please describe the defects you found.');
+  const severity = SEVERITIES.includes(req.body.severity) ? req.body.severity : 'minor';
+
+  const id = transaction(() => {
+    const { lastInsertRowid } = run(
+      'INSERT INTO vehicle_checks (vehicle_id, user_id, check_date, mileage, results, defects_found, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      vehicle.id, req.user.id, date, mileage, JSON.stringify(results), defectItems.length, text(req.body.notes));
+    if (mileage != null) run('UPDATE vehicles SET mileage = MAX(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, vehicle.id);
+    if (defectItems.length) {
+      run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
+        'vehicle', vehicle.id, lastInsertRowid, `${defectItems.map((r) => r.item).join('; ')}: ${details}`, severity, req.user.id);
+    }
+    return lastInsertRowid;
+  });
+  req.flash(defectItems.length ? 'warning' : 'success',
+    defectItems.length ? `Walk-around saved for ${vehicle.reg}. Defects have been reported to the office.` : `Walk-around saved for ${vehicle.reg}. No defects.`);
+  res.redirect(req.user.role === 'admin' ? `/checks/vehicle/${id}` : '/');
+});
+
+// ---- Plant weekly check sheet ----
+
+router.get('/checks/plant/new', (req, res) => {
+  const plant = listPlant();
+  const selectedId = Number(req.query.plant) || null;
+  res.render('check-form', {
+    title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS,
+    assets: plant, mineIds: [], asset: selectedId ? plant.find((p) => p.id === selectedId) : null,
+  });
+});
+
+router.post('/checks/plant', (req, res) => {
+  const plant = getPlant(Number(req.body.asset_id));
+  if (!plant || !plant.active) throw new UserError('Please choose a piece of plant.');
+  const results = readResults(req.body, PLANT_ITEMS);
+  const date = checkDate(req.body.check_date);
+  const hours = numberField(req.body.reading, 'Running hours');
+  if (hours == null) throw new UserError('Please enter the running hours from the hour meter.');
+  const jobRef = text(req.body.job_ref) || plant.job_ref;
+  const defectItems = results.filter((r) => r.result === 'defect');
+  const details = text(req.body.defect_details);
+  if (defectItems.length && !details) throw new UserError('Please describe the defects you found.');
+  const severity = SEVERITIES.includes(req.body.severity) ? req.body.severity : 'minor';
+
+  const id = transaction(() => {
+    const { lastInsertRowid } = run(
+      'INSERT INTO plant_checks (plant_id, user_id, check_date, hours, job_ref, results, defects_found, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      plant.id, req.user.id, date, hours, jobRef, JSON.stringify(results), defectItems.length, text(req.body.notes));
+    run('UPDATE plant SET running_hours = MAX(running_hours, ?), job_ref = COALESCE(?, job_ref) WHERE id = ?', hours, jobRef, plant.id);
+    if (defectItems.length) {
+      run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
+        'plant', plant.id, lastInsertRowid, `${defectItems.map((r) => r.item).join('; ')}: ${details}`, severity, req.user.id);
+    }
+    return lastInsertRowid;
+  });
+  const warn = hours < plant.running_hours ? ` Note: the hours you entered are lower than the last reading (${plant.running_hours}).` : '';
+  req.flash(defectItems.length || warn ? 'warning' : 'success',
+    `Check sheet saved for ${plant.plant_no}.${defectItems.length ? ' Defects have been reported to the office.' : ''}${warn}`);
+  res.redirect(req.user.role === 'admin' ? `/checks/plant/${id}` : '/');
+});
+
+// ---- Viewing checks ----
+
+router.get('/checks', requireAdmin, (req, res) => {
+  const type = req.query.type === 'plant' ? 'plant' : 'vehicle';
+  const from = isValidDate(req.query.from) ? req.query.from : addDays(isoDate(), -13);
+  const to = isValidDate(req.query.to) ? req.query.to : isoDate();
+  const rows = type === 'vehicle'
+    ? all(`SELECT c.id, c.check_date, c.mileage AS reading, c.defects_found, c.created_at, v.reg AS asset, v.id AS asset_id, u.name AS user_name
+           FROM vehicle_checks c JOIN vehicles v ON v.id = c.vehicle_id JOIN users u ON u.id = c.user_id
+           WHERE c.check_date BETWEEN ? AND ? ORDER BY c.check_date DESC, c.id DESC`, from, to)
+    : all(`SELECT c.id, c.check_date, c.hours AS reading, c.job_ref, c.defects_found, c.created_at, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name
+           FROM plant_checks c JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id
+           WHERE c.check_date BETWEEN ? AND ? ORDER BY c.check_date DESC, c.id DESC`, from, to);
+  const missing = type === 'vehicle'
+    ? listVehicles().filter((v) => v.walkaround.level === 'overdue')
+    : listPlant().filter((p) => p.check.level !== 'ok');
+  res.render('checks', { title: 'Checks', type, from, to, rows, missing });
+});
+
+router.get('/checks/:type/:id', (req, res) => {
+  const { type } = req.params;
+  let check;
+  if (type === 'vehicle') {
+    check = get(`SELECT c.*, c.mileage AS reading, v.reg AS asset, v.id AS asset_id, u.name AS user_name FROM vehicle_checks c
+      JOIN vehicles v ON v.id = c.vehicle_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
+  } else if (type === 'plant') {
+    check = get(`SELECT c.*, c.hours AS reading, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name FROM plant_checks c
+      JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
+  }
+  if (!check || (req.user.role !== 'admin' && check.user_id !== req.user.id)) {
+    return res.status(404).render('error', { title: 'Not found', message: 'Check not found.' });
+  }
+  const defect = get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);
+  res.render('check-view', { title: type === 'vehicle' ? 'Walk-around check' : 'Plant check sheet', type, check, results: JSON.parse(check.results), defect });
+});
+
+module.exports = router;

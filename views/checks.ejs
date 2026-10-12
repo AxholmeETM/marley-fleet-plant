@@ -1,0 +1,50 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Checks</h1><p class="muted" style="margin:0">Daily vehicle walk-arounds and weekly plant check sheets</p></div>
+  <div class="actions"><a class="btn" href="/checks/plant/new">New plant check</a><a class="btn primary" href="/checks/vehicle/new">New walk-around</a></div>
+</div>
+<div class="tabs">
+  <a href="/checks?type=vehicle" class="<%= type === 'vehicle' ? 'active' : '' %>">Vehicle walk-arounds</a>
+  <a href="/checks?type=plant" class="<%= type === 'plant' ? 'active' : '' %>">Plant check sheets</a>
+</div>
+
+<% if (missing.length) { %>
+<div class="card flush">
+  <h2><%= type === 'vehicle' ? 'No walk-around today' : 'Weekly check sheet due or overdue' %> (<%= missing.length %>)</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th><%= type === 'vehicle' ? 'Vehicle' : 'Plant' %></th><th><%= type === 'vehicle' ? 'Driver' : 'Job ref' %></th><th>Status</th></tr></thead>
+    <tbody><% for (const m of missing) { %>
+      <tr><% if (type === 'vehicle') { %>
+        <td><a href="/vehicles/<%= m.id %>"><span class="reg"><%= m.reg %></span></a></td><td><%= m.driver_name || '—' %></td><td><%- pill(m.walkaround) %></td>
+      <% } else { %>
+        <td><a href="/plant/<%= m.id %>"><strong><%= m.plant_no %></strong> <%= m.description %></a></td><td><%= m.job_ref || '—' %></td><td><%- pill(m.check) %></td>
+      <% } %></tr>
+    <% } %></tbody>
+  </table></div>
+</div>
+<% } %>
+
+<form class="filters" method="get">
+  <input type="hidden" name="type" value="<%= type %>">
+  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= from %>"></div>
+  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= to %>"></div>
+  <button class="btn" type="submit">Show</button>
+</form>
+<div class="card flush">
+  <% if (!rows.length) { %><p class="empty">No checks in this period.</p><% } else { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Date</th><th><%= type === 'vehicle' ? 'Vehicle' : 'Plant' %></th><th>By</th><th class="num"><%= type === 'vehicle' ? 'Mileage' : 'Hours' %></th><% if (type === 'plant') { %><th>Job ref</th><% } %><th>Result</th><th></th></tr></thead>
+    <tbody><% for (const r of rows) { %>
+      <tr>
+        <td class="nowrap"><%= ukDate(r.check_date) %></td>
+        <td><%= r.asset %></td>
+        <td><%= r.user_name %></td>
+        <td class="num"><%= type === 'vehicle' ? num(r.reading) : fmtHours(r.reading) %></td>
+        <% if (type === 'plant') { %><td><%= r.job_ref || '—' %></td><% } %>
+        <td><%- r.defects_found ? `<span class="pill overdue">${r.defects_found} defect${r.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' %></td>
+        <td><a href="/checks/<%= type %>/<%= r.id %>">View</a></td>
+      </tr>
+    <% } %></tbody>
+  </table></div><% } %>
+</div>
+<%- include('partials/footer') %>

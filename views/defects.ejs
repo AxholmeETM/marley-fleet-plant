@@ -1,0 +1,43 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Defects</h1><p class="muted" style="margin:0">Reported from checks or directly by drivers and operatives</p></div>
+  <div class="actions"><a class="btn primary" href="/defects/new">Report a defect</a></div>
+</div>
+<div class="tabs">
+  <% for (const [k, l] of [['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']]) { %>
+    <a class="<%= statusFilter === k ? 'active' : '' %>" href="?status=<%= k %><%= assetType ? '&asset=' + assetType : '' %>"><%= l %></a>
+  <% } %>
+  <span style="width:12px"></span>
+  <a class="<%= !assetType ? 'active' : '' %>" href="?status=<%= statusFilter %>">Plant &amp; vehicles</a>
+  <a class="<%= assetType === 'plant' ? 'active' : '' %>" href="?status=<%= statusFilter %>&asset=plant">Plant</a>
+  <a class="<%= assetType === 'vehicle' ? 'active' : '' %>" href="?status=<%= statusFilter %>&asset=vehicle">Vehicles</a>
+</div>
+<div class="card flush">
+  <% if (!defects.length) { %><p class="empty">No defects here.</p><% } else { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Reported</th><th>Asset</th><th>Defect</th><th>Severity</th><th>Status</th></tr></thead>
+    <tbody><% for (const d of defects) { %>
+      <tr>
+        <td class="nowrap"><%= ukDate(d.reported_at) %><div class="small muted"><%= d.reported_by_name %></div></td>
+        <td><a href="/<%= d.asset_type === 'plant' ? 'plant' : 'vehicles' %>/<%= d.asset_id %>"><%= d.asset_name %></a>
+          <% if (d.check_id) { %><div class="small"><a href="/checks/<%= d.asset_type %>/<%= d.check_id %>">From check</a></div><% } %></td>
+        <td><%= d.description %></td>
+        <td><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span></td>
+        <td style="min-width:240px">
+          <% if (d.status === 'open') { %>
+            <form class="price-form" method="post" action="/defects/<%= d.id %>/resolve">
+              <input type="hidden" name="back" value="/defects?status=<%= statusFilter %><%= assetType ? '&asset=' + assetType : '' %>">
+              <input type="text" name="resolution" placeholder="What was done?" required aria-label="Resolution">
+              <button class="btn small" type="submit">Resolve</button>
+            </form>
+          <% } else { %>
+            <span class="pill ok">Resolved <%= ukDate(d.resolved_at) %></span>
+            <div class="small"><%= d.resolution %><% if (d.resolved_by_name) { %> – <%= d.resolved_by_name %><% } %></div>
+            <form class="inline" method="post" action="/defects/<%= d.id %>/reopen"><button class="linkbtn small" style="color:var(--blue)" type="submit">Reopen</button></form>
+          <% } %>
+        </td>
+      </tr>
+    <% } %></tbody>
+  </table></div><% } %>
+</div>
+<%- include('partials/footer') %>
