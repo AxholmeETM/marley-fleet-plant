@@ -10,7 +10,7 @@ Menu for admin users: **Dashboard · Plant · Fleet · Fuel cards · Equipment �
 
 | Account | Who | Can see and do |
 | --- | --- | --- |
-| Admin user | Office | Everything: registers, fuel dashboard and receipts, fuel cards, users, exports |
+| Admin user | Office | Everything: registers, fuel dashboard and receipts, fuel cards, users |
 | Employee – site manager | Site managers | All plant and equipment (view, check sheets, defects, service / inspection / repair records; no purchase prices or hire rates, can't edit the asset record) plus their own vehicles |
 | Employee – fleet driver | Drivers | Only the vehicles assigned to them: walk-around checks, fuel with their fuel cards, defects |
 
@@ -40,7 +40,6 @@ Each account also records the person's **role within the company** (Groundworker
 **Fuel**
 - Drivers log **diesel, unleaded or AdBlue**: vehicle, date, litres, mileage, station, fuel card used and a **photo or PDF of the receipt** (required)
 - **Fuel dashboard** for the admin assistant: receipt thumbnails, a side-by-side receipt view to cross-check and correct entries, **enter the price** of each purchase and tick it as checked ("Save & next receipt" walks through the unchecked ones), totals and average £/litre per fuel type, and a **fuel used leaderboard** by driver or by vehicle (diesel + unleaded ranked, AdBlue shown separately, approx MPG from logged mileage)
-- Export the fuel log to CSV for any period
 
 ## Running it
 
@@ -101,7 +100,7 @@ src/storage.js      Receipt photos (Supabase Storage, or local files)
 src/status.js       Due / overdue rules (service hours, LOLER, MOT, tax, checks)
 src/checklists.js   Walk-around and plant check sheet items
 src/categories.js   Asset categories, owners, statuses, inspection types
-src/routes/         Pages: dashboard, plant, vehicles, checks, defects, fuel, users, exports
+src/routes/         Pages: dashboard, plant, vehicles, checks, defects, fuel, users
 views/              Page templates (EJS), pre-built by scripts/build-views.js
 public/static/      Styling and icon
 scripts/seed.js     Demo data

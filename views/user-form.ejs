@@ -35,7 +35,7 @@
 </form>
 <script>
   (function () {
-    const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards, users and exports.' };
+    const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards and users.' };
     function upd() {
       const role = document.querySelector('input[name="role"]:checked').value;
       document.getElementById('emp-type').hidden = role === 'admin';

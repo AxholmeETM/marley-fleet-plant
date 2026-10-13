@@ -63,7 +63,7 @@ Push to `main` on GitHub and Cloudflare rebuilds and deploys in a minute or two.
 
 ## Backups
 
-Supabase's paid plans back up the database daily (see **Database > Backups**). On the free plan, download the CSV exports under **Admin** now and then.
+Supabase's paid plans back up the database daily (see **Database > Backups**). The free plan has no daily backups, so move to a paid plan once the system is in real use.
 
 ## Running it somewhere else
 

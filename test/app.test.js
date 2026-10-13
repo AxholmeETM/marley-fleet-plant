@@ -215,7 +215,6 @@ test('admin and driver flows', async () => {
   await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'Tyre replaced' });
   assert.equal((await get('SELECT status FROM defects WHERE id = ?', defect.id)).status, 'resolved');
 
-  const csv = await admin('GET', '/export/fuel.csv');
-  assert.match(csv.text, /YX21 KPL,Dave Driver,Esso #12 ••0127,diesel,55\.2/);
+  assert.equal((await admin('GET', '/export/fuel.csv')).status, 404);
   await run('DELETE FROM fuel_entries');
 });
