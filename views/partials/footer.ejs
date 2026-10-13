@@ -1,5 +1,27 @@
 </main>
 </div>
 </div>
+<script>
+// Filter bars update the list as soon as a choice changes; the search box waits for a pause in typing.
+document.querySelectorAll('form.filters').forEach((form) => {
+  const go = () => form.requestSubmit ? form.requestSubmit() : form.submit();
+  let timer;
+  // Leave empty choices out of the address so it stays short.
+  form.addEventListener('submit', () => form.querySelectorAll('input, select').forEach((el) => { if (!el.value) el.disabled = true; }));
+  form.addEventListener('change', (e) => {
+    if (e.target.type === 'search') return;
+    if (e.target.name === 'period' && e.target.value === 'custom') return; // wait for the dates
+    go();
+  });
+  form.addEventListener('input', (e) => {
+    if (e.target.type !== 'search') return;
+    clearTimeout(timer);
+    timer = setTimeout(go, 600);
+  });
+  // After a search reloads the page, carry on typing where you left off.
+  const q = form.querySelector('input[type=search]');
+  if (q && q.value && new URLSearchParams(location.search).has(q.name)) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+});
+</script>
 </body>
 </html>

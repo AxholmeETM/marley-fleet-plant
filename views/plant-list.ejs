@@ -27,7 +27,7 @@
       <option value="repair" <%= filter === 'repair' ? 'selected' : '' %>>At repair</option>
       <option value="inactive" <%= filter === 'inactive' ? 'selected' : '' %>>Sold, stolen or disposed</option>
     </select></div>
-  <button class="btn" type="submit">Apply</button>
+  <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
 <div class="card flush">

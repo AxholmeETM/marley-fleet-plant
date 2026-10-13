@@ -8,7 +8,7 @@
     <select id="status" name="status"><% for (const [k, l] of [['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']]) { %><option value="<%= k %>" <%= statusFilter === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
   <div class="field"><label for="asset">Type</label>
     <select id="asset" name="asset"><% for (const [k, l] of [['', 'Plant & vehicles'], ['plant', 'Plant & equipment'], ['vehicle', 'Vehicles']]) { %><option value="<%= k %>" <%= (assetType || '') === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
-  <button class="btn" type="submit">Apply</button>
+  <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
 <div class="card flush">

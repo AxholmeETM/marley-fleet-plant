@@ -9,7 +9,7 @@
     <select id="type" name="type"><option value="vehicle" <%= type === 'vehicle' ? 'selected' : '' %>>Vehicle walk-arounds</option><option value="plant" <%= type === 'plant' ? 'selected' : '' %>>Plant check sheets</option></select></div>
   <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= from %>"></div>
   <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= to %>"></div>
-  <button class="btn" type="submit">Show</button>
+  <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
 <% if (missing.length) { %>

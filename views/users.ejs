@@ -10,7 +10,7 @@
         <option value="<%= key %>" <%= show === key ? 'selected' : '' %>><%= label %> (<%= n || 0 %>)</option>
       <% } %>
     </select></div>
-  <button class="btn" type="submit">Apply</button>
+  <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
 <div class="card flush">

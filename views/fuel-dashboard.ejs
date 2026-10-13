@@ -36,7 +36,7 @@
       <option value="verified" <%= show === 'verified' ? 'selected' : '' %>>Checked</option>
     </select></div>
   <input type="hidden" name="board" value="<%= board %>">
-  <button class="btn" type="submit">Apply</button>
+  <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
 <div class="kpis">
