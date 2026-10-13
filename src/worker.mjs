@@ -2,8 +2,14 @@
 // Cloudflare's Node.js HTTP server support. Files in public/ are served by Cloudflare directly.
 import { createServer } from 'node:http';
 import { httpServerHandler } from 'cloudflare:node';
+import { env } from 'cloudflare:workers';
 import { createApp } from './app.js';
 import { perRequest, endRequest } from './db.js';
+
+// Copy the Worker's variables and secrets into process.env, where the app reads its settings.
+for (const [key, value] of Object.entries(env)) {
+  if (typeof value === 'string' && process.env[key] === undefined) process.env[key] = value;
+}
 
 let app = null;
 
@@ -23,7 +29,9 @@ const server = createServer((req, res) => {
       if (!res.headersSent) res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' });
       // Show the reason (never a connection string) so whoever set it up can fix the secret.
       const reason = String(err && err.message || err).replace(/postgres(ql)?:\/\/\S+/gi, '[connection string]');
-      res.end(`The site could not reach its database. Check the DATABASE_URL secret in Cloudflare.\n\nReason: ${reason}`);
+      // Names only, never values, to show which settings reached the site.
+      const seen = Object.keys(env).filter((k) => typeof env[k] === 'string').sort().join(', ') || 'none';
+      res.end(`The site could not reach its database. Check the DATABASE_URL secret in Cloudflare.\n\nReason: ${reason}\n\nSettings the site can see: ${seen}`);
     }
   });
 });
