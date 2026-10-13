@@ -110,8 +110,7 @@ router.get(['/plant', '/equipment'], async (req, res) => {
   if (category) plant = plant.filter((p) => p.category === category);
   const q = String(req.query.q || '').trim().toLowerCase();
   if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
-  const hireTotal = plant.filter((p) => p.active && p.weekly_hire_rate).reduce((t, p) => t + p.weekly_hire_rate, 0);
-  res.render('plant-list', { title: SECTIONS[section].label, section: SECTIONS[section], plant, filter, category, owner, counts, hireTotal, q: req.query.q || '', CATEGORIES: categories, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
+  res.render('plant-list', { title: SECTIONS[section].label, section: SECTIONS[section], plant, filter, category, owner, counts, q: req.query.q || '', CATEGORIES: categories, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
 router.get('/plant/new', requireAdmin, async (req, res) => {

@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1>Fleet register</h1><p class="muted" style="margin:0"><%= vehicles.length %> vehicle<%= vehicles.length === 1 ? '' : 's' %></p></div>
+  <div><h1>Fleet register <span class="count"><%= vehicles.length %> vehicle<%= vehicles.length === 1 ? '' : 's' %></span></h1></div>
   <div class="actions"><a class="btn primary" href="/vehicles/new">Add vehicle</a></div>
 </div>
 <% const qs = (over) => new URLSearchParams(Object.fromEntries(Object.entries({ q, filter, category, ...over }).filter(([, x]) => x))).toString(); %>

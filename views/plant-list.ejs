@@ -7,7 +7,7 @@
   const showChecks = cat ? cat.checks : plant.some((p) => p.weekly_checks);
 %>
 <div class="page-head">
-  <div><h1><%= section.label %></h1><p class="muted" style="margin:0"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %><% if (hireTotal && isAdmin) { %> · £<%= num(hireTotal, 2) %> a week on hire rates<% } %></p></div>
+  <div><h1><%= section.label %> <span class="count"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %></span></h1></div>
   <% if (isAdmin) { %><div class="actions"><a class="btn primary" href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add <%= cat ? cat.label.replace(/s$/, '').toLowerCase() : section.noun %></a></div><% } else { %><div class="actions"><a class="btn primary" href="/checks/plant/new">New check sheet</a></div><% } %>
 </div>
 <form class="filters" method="get">
