@@ -10,6 +10,8 @@
   "preview_urls": false,
   "build": { "command": "node scripts/build-views.js" },
   "assets": { "directory": "./public" },
+  // Hyperdrive "marley-db": the connection to Supabase (Workers can't make the encrypted connection themselves).
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "c9e8236eba4e4f2db848e9948fee13d8" }],
   "alias": { "@electric-sql/pglite": "./src/no-pglite.js" },
   "vars": { "COOKIE_SECURE": "true" },
   "keep_vars": true,
