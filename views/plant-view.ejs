@@ -62,10 +62,10 @@
       <div class="card-head"><h2>History</h2>
         <div class="subnav tl-filter"><a href="#history" class="active" data-filter="all">All</a><a href="#history" data-filter="service">Services</a><a href="#history" data-filter="check">Checks</a><a href="#history" data-filter="defect">Defects</a></div></div>
       <% if (!events.length) { %><p class="empty">Nothing recorded yet.</p><% } else { %>
-      <div class="table-wrap"><table>
+      <div class="table-wrap tl-scroll"><table>
         <thead><tr><th>Date</th><th>Type</th><th class="num">Hours</th><th>Details</th></tr></thead>
         <tbody><% for (const e of events) { %>
-          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %></td></tr>
+          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %></td></tr>
         <% } %></tbody>
       </table></div>
       <p class="empty tl-none" hidden>Nothing of this type yet.</p><% } %>
