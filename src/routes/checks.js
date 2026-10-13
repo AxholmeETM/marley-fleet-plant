@@ -109,7 +109,7 @@ router.post('/checks/plant', requirePlantAccess, async (req, res) => {
 // ---- Viewing checks ----
 
 router.get('/checks', requireAdmin, async (req, res) => {
-  const type = req.query.type === 'plant' ? 'plant' : 'vehicle';
+  const type = req.query.type === 'vehicle' ? 'vehicle' : 'plant';
   const from = isValidDate(req.query.from) ? req.query.from : addDays(isoDate(), -13);
   const to = isValidDate(req.query.to) ? req.query.to : isoDate();
   const rows = type === 'vehicle'
@@ -142,7 +142,7 @@ router.get('/checks/:type/:id', async (req, res) => {
   }
   const defect = await get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);
   const title = type === 'vehicle' ? 'Walk-around check' : 'Plant check sheet';
-  const crumbs = isAdmin(req.user) ? [['Admin', '/admin'], ['Checks', `/checks?type=${type}`], [`${title} · ${ukDate(check.check_date)}`]] : [['Home', '/'], [title]];
+  const crumbs = isAdmin(req.user) ? [['Plant', '/plant'], ['Checks', `/checks?type=${type}`], [`${title} · ${ukDate(check.check_date)}`]] : [['Home', '/'], [title]];
   res.render('check-view', { title, crumbs, type, check, results: JSON.parse(check.results), defect });
 });
 

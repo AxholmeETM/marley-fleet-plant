@@ -1,21 +1,11 @@
 <%- include('partials/header') %>
-<div class="page-head"><div><h1>Admin</h1><p class="muted" style="margin:0">People, checks, defects and projects.</p></div></div>
+<div class="page-head"><div><h1>Admin</h1><p class="muted" style="margin:0">People and projects.</p></div></div>
 <%- include('partials/pane-end') %>
 <div class="tiles">
   <a class="tile" href="/users">
     <span class="tile-title">Users</span>
     <span class="tile-value"><%= (users.admins || 0) + (users.drivers || 0) + (users.site_managers || 0) %></span>
     <span class="tile-sub"><%= users.drivers || 0 %> fleet drivers · <%= users.site_managers || 0 %> site managers · <%= users.admins || 0 %> admin</span>
-  </a>
-  <a class="tile" href="/checks">
-    <span class="tile-title">Checks</span>
-    <span class="tile-value"><%= checks.walkarounds %></span>
-    <span class="tile-sub">walk-arounds today · <%= checks.plant %> plant checks this week</span>
-  </a>
-  <a class="tile <%= defects.unsafe ? 'bad' : '' %>" href="/defects">
-    <span class="tile-title">Defects</span>
-    <span class="tile-value"><%= defects.open %></span>
-    <span class="tile-sub">open<%= defects.unsafe ? ` · ${defects.unsafe} unsafe` : '' %></span>
   </a>
   <a class="tile" href="/projects">
     <span class="tile-title">Projects</span>
