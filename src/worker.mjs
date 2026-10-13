@@ -7,19 +7,26 @@ import { createApp } from './app.js';
 import { perRequest, endRequest } from './db.js';
 
 // Copy the Worker's variables and secrets into process.env, where the app reads its settings.
-for (const [key, value] of Object.entries(env)) {
-  if (typeof value === 'string' && process.env[key] === undefined) process.env[key] = value;
-}
-// Workers can't open an encrypted Postgres connection themselves. Hyperdrive (the HYPERDRIVE binding in
-// wrangler.jsonc) holds the encrypted connection to Supabase and hands the app a local one.
-if (env.HYPERDRIVE) {
-  process.env.DATABASE_URL = env.HYPERDRIVE.connectionString;
-  process.env.DATABASE_SSL = 'off';
+// Done on the first request: Cloudflare doesn't allow Hyperdrive to be read before then.
+let settingsLoaded = false;
+function loadSettings() {
+  if (settingsLoaded) return;
+  settingsLoaded = true;
+  for (const [key, value] of Object.entries(env)) {
+    if (typeof value === 'string' && process.env[key] === undefined) process.env[key] = value;
+  }
+  // Workers can't open an encrypted Postgres connection themselves. Hyperdrive (the HYPERDRIVE binding in
+  // wrangler.jsonc) holds the encrypted connection to Supabase and hands the app a local one.
+  if (env.HYPERDRIVE) {
+    process.env.DATABASE_URL = env.HYPERDRIVE.connectionString;
+    process.env.DATABASE_SSL = 'off';
+  }
 }
 
 let app = null;
 
 const server = createServer((req, res) => {
+  loadSettings();
   // Tell the app whether the visitor is on HTTPS, so it can set secure sign-in cookies.
   if (!req.headers['x-forwarded-proto']) {
     req.headers['x-forwarded-proto'] = /"scheme":"http"/.test(req.headers['cf-visitor'] || '') ? 'http' : 'https';

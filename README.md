@@ -65,7 +65,7 @@ npm start
 
 Demo logins (password `password123`): `admin@marley.local` and `office@marley.local` (admin users), `kieran@marley.local` (site manager), `dave@marley.local` (fleet driver).
 
-To try the Cloudflare version locally, put the settings in a `.dev.vars` file (it is ignored by git) and run `npm run cf:dev`.
+To try the Cloudflare version locally, put the Supabase settings in a `.dev.vars` file (it is ignored by git), set `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` to a Postgres connection string (it must include a password), and run `npm run cf:dev`.
 
 ### Settings (environment variables, or secrets in Cloudflare)
 
