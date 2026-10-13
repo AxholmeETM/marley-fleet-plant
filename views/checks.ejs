@@ -38,7 +38,7 @@
         <td><%= r.asset %></td>
         <td><%= r.user_name %></td>
         <td class="num"><%= type === 'vehicle' ? num(r.reading) : fmtHours(r.reading) %></td>
-        <% if (type === 'plant') { %><td><%= r.job_ref || '—' %></td><% } %>
+        <% if (type === 'plant') { %><td class="nowrap"><%= r.job_ref || '—' %></td><% } %>
         <td><%- r.defects_found ? `<span class="pill overdue">${r.defects_found} defect${r.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' %></td>
         <td><a href="/checks/<%= type %>/<%= r.id %>">View</a></td>
       </tr>
