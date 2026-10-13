@@ -47,21 +47,6 @@
       </dl>
       <% if (item.notes) { %><p style="white-space:pre-wrap;margin:12px 0 0"><%= item.notes %></p><% } %>
     </div>
-    <% if (plan.length) { %>
-    <div class="card flush">
-      <h2>Service plan</h2>
-      <p class="small muted" style="margin:-6px 16px 10px">First services at <%= item.service_schedule || '—' %> hrs, then every <%= fmtHours(item.service_interval_hours) %> hrs<%= item.service_months ? ` or ${item.service_months} months, whichever comes first` : '' %>. Past services are under History. Typical work shown as a guide; follow the machine's manual.</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Next service</th><th>Status</th></tr></thead>
-        <tbody><% for (const r of plan.filter((p) => p.state === 'next')) { %>
-          <tr>
-            <td><strong class="nowrap"><%= fmtHours(r.hours) %> hr</strong><div class="small muted"><%= serviceWork(r.hours, r.hours === firstMark, item.service_interval_hours) %></div></td>
-            <td><% if (r.state === 'done') { %><span class="pill ok">Done</span><% } else if (r.state === 'next') { %><%- pill(item.service) %><% } else if (r.state === 'missed') { %><span class="pill none">No record</span><% } else { %><span class="muted small">In <%= fmtHours(r.hours - item.running_hours) %> hrs</span><% } %></td>
-          </tr>
-        <% } %></tbody>
-      </table></div>
-    </div>
-    <% } %>
   </div>
   <div>
 <%
