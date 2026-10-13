@@ -23,13 +23,12 @@
 <div class="card flush">
   <% if (!vehicles.length) { %><p class="empty">No vehicles found. <a href="/vehicles/new">Add your first vehicle.</a></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Reg</th><th class="desc">Vehicle</th><th>User</th><th>Walk-around</th><th>Next Service Due</th><th>MOT Expiry</th><th>Tax Due</th></tr></thead>
+    <thead><tr><th>Reg</th><th class="desc">Vehicle</th><th>Assigned Driver</th><th>Next Service Due</th><th>MOT Expiry</th><th>Tax Due</th></tr></thead>
     <tbody><% for (const v of vehicles) { %>
       <tr>
         <td class="nowrap"><a href="/vehicles/<%= v.id %>"><span class="reg"><%= v.reg %></span></a></td>
         <td><%= [v.make, v.model].filter(Boolean).join(' ') %><% if (v.status !== 'active') { %> <span class="pill none"><%= VEHICLE_STATUSES[v.status] %></span><% } %></td>
         <td><%= v.driver_display || '—' %><% if (v.driver_display && !v.driver_id) { %><div class="small muted">no app account</div><% } %></td>
-        <td><%- pill(v.walkaround) %></td>
         <td><%- pill(v.service) %><% if (v.last_service_date) { %><div class="small muted">last <%= ukDate(v.last_service_date) %></div><% } %></td>
         <td><%- pill(v.mot) %></td>
         <td><%- pill(v.tax) %></td>
