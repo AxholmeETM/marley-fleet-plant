@@ -7,7 +7,7 @@
   <div class="field"><label for="status">Status</label>
     <select id="status" name="status"><% for (const [k, l] of [['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']]) { %><option value="<%= k %>" <%= statusFilter === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
   <div class="field"><label for="asset">Type</label>
-    <select id="asset" name="asset"><% for (const [k, l] of [['', 'Plant & vehicles'], ['plant', 'Plant & equipment'], ['vehicle', 'Vehicles']]) { %><option value="<%= k %>" <%= (assetType || '') === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
+    <select id="asset" name="asset"><% for (const [k, l] of [['', 'All'], ...CATEGORIES.map((c) => [c.key, c.label]), ['vehicle', 'Vehicles']]) { %><option value="<%= k %>" <%= assetFilter === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
   <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
@@ -25,7 +25,7 @@
         <td style="min-width:240px">
           <% if (d.status === 'open') { %>
             <form class="price-form" method="post" action="/defects/<%= d.id %>/resolve">
-              <input type="hidden" name="back" value="/defects?status=<%= statusFilter %><%= assetType ? '&asset=' + assetType : '' %>">
+              <input type="hidden" name="back" value="/defects?status=<%= statusFilter %><%= assetFilter ? '&asset=' + assetFilter : '' %>">
               <input type="text" name="resolution" placeholder="What was done?" required aria-label="Resolution">
               <button class="btn small" type="submit">Resolve</button>
             </form>

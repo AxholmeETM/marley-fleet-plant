@@ -38,12 +38,13 @@ async function getVehicle(id) {
 }
 
 // Defects with a readable asset name attached.
-async function listDefects({ status = 'open', assetType = null, assetId = null, limit = 500 } = {}) {
+async function listDefects({ status = 'open', assetType = null, assetId = null, category = null, limit = 500 } = {}) {
   const where = [];
   const params = [];
   if (status && status !== 'all') { where.push('d.status = ?'); params.push(status); }
   if (assetType) { where.push('d.asset_type = ?'); params.push(assetType); }
   if (assetId) { where.push('d.asset_id = ?'); params.push(assetId); }
+  if (category) { where.push("d.asset_type = 'plant' AND d.asset_id IN (SELECT id FROM plant WHERE category = ?)"); params.push(category); }
   params.push(limit);
   return await all(`
     SELECT d.*, r.name AS reported_by_name, s.name AS resolved_by_name,

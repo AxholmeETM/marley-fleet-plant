@@ -1,14 +1,18 @@
 const express = require('express');
 const { run, get } = require('../db');
 const { listDefects, listPlant, listVehicles } = require('../queries');
+const { CATEGORIES } = require('../categories');
 const { requireAdmin, isAdmin, canUsePlant, canUseVehicle, UserError, text } = require('../auth');
 
 const router = express.Router();
 
 router.get('/defects', requireAdmin, async (req, res) => {
   const statusFilter = ['open', 'resolved', 'all'].includes(req.query.status) ? req.query.status : 'open';
-  const assetType = ['plant', 'vehicle'].includes(req.query.asset) ? req.query.asset : null;
-  res.render('defects', { title: 'Defects', defects: await listDefects({ status: statusFilter, assetType }), statusFilter, assetType });
+  // Type filter: all, vehicles, all plant & equipment, or one plant category.
+  const asset = String(req.query.asset || '');
+  const category = CATEGORIES.some((c) => c.key === asset) ? asset : null;
+  const assetType = ['plant', 'vehicle'].includes(asset) ? asset : null;
+  res.render('defects', { title: 'Defects', defects: await listDefects({ status: statusFilter, assetType, category }), statusFilter, assetFilter: category || assetType || '', CATEGORIES });
 });
 
 router.get('/defects/new', async (req, res) => {
