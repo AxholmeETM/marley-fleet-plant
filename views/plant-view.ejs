@@ -6,10 +6,16 @@
   <div class="actions">
     <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a>
+    <button class="btn" type="button" data-open="record-dlg">Record service</button>
     <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a><% } %>
   </div>
 </div>
 <%- include('partials/pane-end') %>
+<% const openDefects = defects.filter((d) => d.status === 'open'); if (openDefects.length) { %>
+<div class="alert-strip"><strong><%= openDefects.length %> open defect<%= openDefects.length > 1 ? 's' : '' %></strong>
+  <span><%= openDefects.map((d) => d.description).join(' · ') %></span>
+  <a href="#history" data-filter="defect">View</a></div>
+<% } %>
 <div class="kpis">
   <div class="kpi"><div class="label">Project No.</div><div class="value" style="font-size:1.2rem"><%= item.job_ref || '—' %></div><div class="sub"><%= item.project_name || '\u00a0' %></div></div>
   <% if (item.tracks_hours) { %>
@@ -57,63 +63,66 @@
       </table></div>
     </div>
     <% } %>
-    <form class="card" method="post" action="/plant/<%= item.id %>/records">
-      <h2>Record a service, <%= item.loler.level === 'none' ? 'test' : insp === 'LOLER' ? insp : insp.toLowerCase() %> or repair</h2>
-      <div class="form-grid">
-        <div class="field"><label for="kind">Type</label><select id="kind" name="kind">
-          <option value="service"><%= item.tracks_hours && item.service.name ? item.service.name : 'Service' %></option>
-          <option value="loler"><%= item.loler.level === 'none' ? 'LOLER / test / calibration' : insp %></option>
-          <option value="repair">Repair</option></select></div>
-        <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
-        <% if (item.tracks_hours) { %><div class="field"><label for="reading">Running hours <span class="hint">(at the time)</span></label><input id="reading" name="reading" type="number" step="0.1" min="0" value="<%= item.running_hours %>"></div><% } %>
-        <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Fitter / dealer / test company"></div>
-        <div class="field insp-field"><label for="next_due">Next due <span class="hint">(blank = <%= item.loler_interval_months %> months)</span></label><input id="next_due" name="next_due" type="date"></div>
-        <div class="field insp-field"><label for="cert_no">Certificate no</label><input id="cert_no" name="cert_no" type="text"></div>
-      </div>
-      <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text" placeholder="Work done, parts, invoice no."></div>
-      <button class="btn dark" type="submit">Save record</button>
-    </form>
   </div>
   <div>
-    <% if (item.weekly_checks || checks.length) { %>
-    <div class="card flush">
-      <h2>Check sheets</h2>
-      <% if (!checks.length) { %><p class="empty">No check sheets yet.</p><% } else { %>
+<%
+  const kindName = (r) => r.kind === 'loler' ? insp : r.kind === 'repair' ? 'Repair' : 'Service';
+  const events = [
+    ...records.map((r) => ({ type: 'service', date: r.record_date, label: kindName(r), hours: r.reading, text: [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · ') })),
+    ...checks.map((c) => ({ type: 'check', date: c.check_date, label: 'Check sheet', hours: c.hours, href: '/checks/plant/' + c.id, text: [c.user_name, c.job_ref].filter(Boolean).join(' · '), result: c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' })),
+    ...defects.map((d) => ({ type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>' })),
+  ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+%>
+    <div class="card flush" id="history">
+      <div class="card-head"><h2>History</h2>
+        <div class="subnav tl-filter"><a href="#history" class="active" data-filter="all">All</a><a href="#history" data-filter="service">Services</a><a href="#history" data-filter="check">Checks</a><a href="#history" data-filter="defect">Defects</a></div></div>
+      <% if (!events.length) { %><p class="empty">Nothing recorded yet.</p><% } else { %>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>By</th><th class="num">Hours</th><th>Project No.</th><th>Result</th></tr></thead>
-        <tbody><% for (const c of checks) { %>
-          <tr><td><a href="/checks/plant/<%= c.id %>"><%= ukDate(c.check_date) %></a></td><td><%= c.user_name %></td><td class="num"><%= fmtHours(c.hours) %></td><td><%= c.job_ref || '—' %></td>
-            <td><%- c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' %></td></tr>
+        <thead><tr><th>Date</th><th>Type</th><th class="num">Hours</th><th>Details</th></tr></thead>
+        <tbody><% for (const e of events) { %>
+          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %></td></tr>
         <% } %></tbody>
-      </table></div><% } %>
-    </div>
-    <% } %>
-    <div class="card flush">
-      <h2>Defects</h2>
-      <% if (!defects.length) { %><p class="empty">No defects reported.</p><% } else { %>
-      <div class="table-wrap"><table><tbody><% for (const d of defects) { %>
-        <tr><td class="nowrap"><%= ukDate(d.reported_at) %></td><td><%= d.description %><div class="small muted"><%= d.reported_by_name %><%= d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : '' %></div></td>
-          <td><% if (d.status === 'open') { %><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span><% } else { %><span class="pill ok">Resolved</span><% } %></td></tr>
-      <% } %></tbody></table></div>
-      <% if (isAdmin) { %><p class="empty" style="padding-top:8px"><a href="/defects?asset=plant">Manage defects →</a></p><% } %><% } %>
-    </div>
-    <div class="card flush">
-      <h2>History</h2>
-      <% if (!records.length) { %><p class="empty">No records yet.</p><% } else { %>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Type</th><th class="num">Hours</th><th>Done by / notes</th></tr></thead>
-        <tbody><% for (const r of records) { %>
-          <tr><td class="nowrap"><%= ukDate(r.record_date) %></td><td><%= r.kind === 'loler' ? insp : r.kind === 'repair' ? 'Repair' : 'Service' %></td><td class="num"><%= r.reading != null ? fmtHours(r.reading) : '—' %></td><td><%= [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · ') || '—' %></td></tr>
-        <% } %></tbody>
-      </table></div><% } %>
+      </table></div>
+      <p class="empty tl-none" hidden>Nothing of this type yet.</p><% } %>
+      <% if (isAdmin && defects.length) { %><p class="empty" style="padding-top:8px"><a href="/defects?asset=plant">Manage defects →</a></p><% } %>
     </div>
   </div>
 </div>
+<dialog id="record-dlg" class="dlg">
+  <form class="card" method="post" action="/plant/<%= item.id %>/records">
+    <div class="dlg-head"><h2>Record a service, <%= item.loler.level === 'none' ? 'test' : insp === 'LOLER' ? insp : insp.toLowerCase() %> or repair</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <div class="form-grid">
+      <div class="field"><label for="kind">Type</label><select id="kind" name="kind">
+        <option value="service"><%= item.tracks_hours && item.service.name ? item.service.name : 'Service' %></option>
+        <option value="loler"><%= item.loler.level === 'none' ? 'LOLER / test / calibration' : insp %></option>
+        <option value="repair">Repair</option></select></div>
+      <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+      <% if (item.tracks_hours) { %><div class="field"><label for="reading">Running hours <span class="hint">(at the time)</span></label><input id="reading" name="reading" type="number" step="0.1" min="0" value="<%= item.running_hours %>"></div><% } %>
+      <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Fitter / dealer / test company"></div>
+      <div class="field insp-field"><label for="next_due">Next due <span class="hint">(blank = <%= item.loler_interval_months %> months)</span></label><input id="next_due" name="next_due" type="date"></div>
+      <div class="field insp-field"><label for="cert_no">Certificate no</label><input id="cert_no" name="cert_no" type="text"></div>
+    </div>
+    <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text" placeholder="Work done, parts, invoice no."></div>
+    <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Save record</button></div>
+  </form>
+</dialog>
 <script>
   (function () {
     const kind = document.getElementById('kind');
     function upd() { document.querySelectorAll('.insp-field').forEach((el) => { el.style.display = kind.value === 'loler' ? '' : 'none'; }); }
     kind.addEventListener('change', upd); upd();
+    const dlg = document.getElementById('record-dlg');
+    document.querySelectorAll('[data-open="record-dlg"]').forEach((b) => b.addEventListener('click', () => dlg.showModal()));
+    dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    const rows = document.querySelectorAll('#history tr[data-type]'), none = document.querySelector('.tl-none');
+    function filter(t) {
+      let shown = 0;
+      rows.forEach((r) => { const on = t === 'all' || r.dataset.type === t; r.hidden = !on; if (on) shown++; });
+      document.querySelectorAll('.tl-filter a').forEach((a) => a.classList.toggle('active', a.dataset.filter === t));
+      if (none) none.hidden = shown > 0;
+    }
+    document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', () => filter(a.dataset.filter)));
   })();
 </script>
 <%- include('partials/footer') %>
