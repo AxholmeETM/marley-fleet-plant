@@ -6,6 +6,8 @@
   "main": "src/worker.mjs",
   "compatibility_date": "2026-09-01",
   "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
   "build": { "command": "node scripts/build-views.js" },
   "assets": { "directory": "./public" },
   "alias": { "@electric-sql/pglite": "./src/no-pglite.js" },
