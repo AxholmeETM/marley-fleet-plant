@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1>Hi <%= user.name.split(' ')[0] %></h1><p class="muted" style="margin:0"><%= ukDate(today) %></p></div></div>
-
+<%- include('partials/pane-end') %>
 <% for (const v of vehicles) { %>
 <div class="card vehicle-card">
   <div>

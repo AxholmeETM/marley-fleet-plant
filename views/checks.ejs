@@ -11,7 +11,7 @@
   <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= to %>"></div>
   <button class="btn" type="submit">Show</button>
 </form>
-
+<%- include('partials/pane-end') %>
 <% if (missing.length) { %>
 <div class="card flush">
   <h2><%= type === 'vehicle' ? 'No walk-around today' : 'Weekly check sheet due or overdue' %> (<%= missing.length %>)</h2>

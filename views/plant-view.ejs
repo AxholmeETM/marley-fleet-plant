@@ -10,6 +10,7 @@
     <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a><% } %>
   </div>
 </div>
+<%- include('partials/pane-end') %>
 <div class="kpis">
   <div class="kpi"><div class="label">Location / job</div><div class="value" style="font-size:1.2rem"><%= item.location || '—' %></div><div class="sub"><%= item.job_ref ? 'Job ' + item.job_ref : '\u00a0' %></div></div>
   <% if (item.tracks_hours) { %>

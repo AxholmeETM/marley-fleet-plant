@@ -1,6 +1,7 @@
 <%- include('partials/header') %>
 <% const v = (k) => item[k] ?? ''; %>
 <div class="page-head"><div><h1><%= title %></h1></div></div>
+<%- include('partials/pane-end') %>
 <form method="post" action="/plant<%= item.id ? '/' + item.id : '' %>" style="max-width:960px" id="plant-form">
   <fieldset class="card"><legend>Asset</legend>
     <div class="form-grid">

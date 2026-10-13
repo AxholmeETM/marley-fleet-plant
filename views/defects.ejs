@@ -10,6 +10,7 @@
     <select id="asset" name="asset"><% for (const [k, l] of [['', 'Plant & vehicles'], ['plant', 'Plant & equipment'], ['vehicle', 'Vehicles']]) { %><option value="<%= k %>" <%= (assetType || '') === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
   <button class="btn" type="submit">Apply</button>
 </form>
+<%- include('partials/pane-end') %>
 <div class="card flush">
   <% if (!defects.length) { %><p class="empty">No defects here.</p><% } else { %>
   <div class="table-wrap"><table>

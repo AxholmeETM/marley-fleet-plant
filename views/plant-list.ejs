@@ -29,6 +29,7 @@
     </select></div>
   <button class="btn" type="submit">Apply</button>
 </form>
+<%- include('partials/pane-end') %>
 <div class="card flush">
   <% if (!plant.length) { %><p class="empty">Nothing here yet.<% if (isAdmin) { %> <a href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add an item.</a><% } %></p><% } else { %>
   <div class="table-wrap"><table>

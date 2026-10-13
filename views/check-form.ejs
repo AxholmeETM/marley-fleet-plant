@@ -4,7 +4,7 @@
   <h1><%= title %></h1>
   <p class="muted" style="margin:0"><%= isVehicle ? 'Complete before driving, every day. Mark anything that is not right as a defect.' : 'Complete at least once a week for each machine. Mark anything that is not right as a defect.' %></p>
 </div></div>
-
+<%- include('partials/pane-end') %>
 <form method="post" action="/checks/<%= kind %>" id="check-form">
   <div class="card">
     <div class="form-grid">

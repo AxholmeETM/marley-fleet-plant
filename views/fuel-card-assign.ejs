@@ -4,6 +4,7 @@
   <div class="actions"><a class="btn primary" href="/fuel-cards/new">Add fuel card</a></div>
 </div>
 <div class="field" style="max-width:320px"><label for="who">Find a person</label><input id="who" type="search" placeholder="Type a name…" autocomplete="off"></div>
+<%- include('partials/pane-end') %>
 <p id="board-msg" class="small muted" role="status" aria-live="polite">&nbsp;</p>
 <div class="board">
   <% for (const lane of lanes) { %>

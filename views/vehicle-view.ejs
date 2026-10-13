@@ -9,6 +9,7 @@
     <% if (isAdmin) { %><a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit</a><% } else { %><a class="btn" href="/defects/new?asset=vehicle:<%= item.id %>">Report defect</a><% } %>
   </div>
 </div>
+<%- include('partials/pane-end') %>
 <% const cls = (s) => ({ overdue: 'bad', soon: 'warn', ok: 'good' }[s.level] || ''); %>
 <div class="kpis">
   <div class="kpi <%= cls(item.walkaround) %>"><div class="label">Today's walk-around</div><div class="value" style="font-size:1.3rem"><%= item.walkaround.level === 'ok' ? 'Done' : 'Not done' %></div><div class="sub"><%- pill(item.walkaround) %></div></div>

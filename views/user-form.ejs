@@ -1,5 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1><%= title %></h1></div></div>
+<%- include('partials/pane-end') %>
 <form class="card" method="post" action="/users<%= item.id ? '/' + item.id : '' %>" style="max-width:680px">
   <fieldset>
     <legend>Account type</legend>

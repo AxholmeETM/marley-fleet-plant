@@ -38,7 +38,7 @@
   <input type="hidden" name="board" value="<%= board %>">
   <button class="btn" type="submit">Apply</button>
 </form>
-
+<%- include('partials/pane-end') %>
 <div class="kpis">
   <% for (const t of ['diesel', 'unleaded', 'adblue']) { const b = byType[t]; %>
   <div class="kpi"><div class="label"><%= FUEL_LABELS[t] %></div><div class="value"><%= num(b.litres, 1) %> L</div>

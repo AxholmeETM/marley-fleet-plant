@@ -1,5 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1>Report a defect</h1><p class="muted" style="margin:0">For anything wrong with <%= plant.length ? 'a vehicle or piece of plant' : 'your vehicle' %> outside of a check.</p></div></div>
+<%- include('partials/pane-end') %>
 <form class="card" method="post" action="/defects" style="max-width:640px">
   <div class="field"><label for="asset">Plant or vehicle</label>
     <select id="asset" name="asset" required>

@@ -48,22 +48,34 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .right { text-align: right; }
 .nowrap { white-space: nowrap; }
 
-/* Top bar: translucent, like apple.com */
-.topbar { position: sticky; top: 0; z-index: 50; background: var(--bar); color: #fff; }
-.topbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 22px; display: flex; align-items: center; gap: 18px; min-height: 52px; }
-.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; white-space: nowrap; font-size: .95rem; }
+/* Layout: navy menu down the left, page content on the right */
+.layout { display: flex; min-height: 100vh; }
+.sidebar { position: sticky; top: 0; height: 100vh; width: 236px; flex: none; background: var(--navy); color: #fff;
+  display: flex; flex-direction: column; gap: 22px; padding: 20px 14px; overflow-y: auto; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; white-space: nowrap; font-size: .95rem; padding: 0 6px; }
 .brand:hover { text-decoration: none; }
-.brand-mark { background: var(--brand); color: var(--bg); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: .95rem; }
-.topbar .brand-mark { background: #fff; color: var(--navy); }
+.brand-mark { background: var(--brand); color: var(--bg); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: .95rem; flex: none; }
+.sidebar .brand-mark { background: #fff; color: var(--navy); }
 .brand small { display: block; font-weight: 400; color: rgba(255, 255, 255, .65); font-size: .72rem; letter-spacing: 0; }
-.nav { display: flex; gap: 2px; overflow-x: auto; flex: 1; scrollbar-width: none; justify-content: center; }
-.nav::-webkit-scrollbar { display: none; }
-.nav a { color: rgba(255, 255, 255, .82); padding: 6px 13px; border-radius: 999px; white-space: nowrap; font-size: .88rem; font-weight: 400; transition: background .15s, color .15s; }
-.nav a:hover { background: rgba(255, 255, 255, .12); text-decoration: none; color: #fff; }
-.nav a.active { background: #fff; color: var(--navy); font-weight: 600; }
-.userbox { display: flex; align-items: center; gap: 12px; white-space: nowrap; color: rgba(255, 255, 255, .7); font-size: .85rem; }
-.userbox a, .userbox .linkbtn { color: #fff; }
-.userbox form { margin: 0; }
+.side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.side-nav a { color: rgba(255, 255, 255, .82); padding: 9px 12px; border-radius: 10px; font-size: .93rem; white-space: nowrap; transition: background .15s, color .15s; }
+.side-nav a:hover { background: rgba(255, 255, 255, .1); color: #fff; text-decoration: none; }
+.side-nav a.active { background: #fff; color: var(--navy); font-weight: 600; }
+.side-user { border-top: 1px solid rgba(255, 255, 255, .14); padding: 14px 6px 0; display: flex; flex-direction: column; gap: 6px; font-size: .88rem; }
+.side-user form { margin: 0; }
+.side-user a, .side-user .linkbtn { color: #fff; text-align: left; }
+.side-user .linkbtn { color: rgba(255, 255, 255, .7); }
+.content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+/* Fixed pane at the top of each page: where you are, what the page is, search and buttons */
+.pane { position: sticky; top: 0; z-index: 40; background: #fff;
+  border-bottom: 1px solid var(--line); box-shadow: 0 6px 18px rgba(11, 31, 63, .04); }
+.pane-inner { max-width: 1280px; margin: 0 auto; padding: 20px 32px 4px; }
+.pane .page-head { margin-bottom: 16px; }
+.pane .filters, .pane .tabs, .pane > .pane-inner > .field { margin-bottom: 16px; }
+.pane .subnav { margin-bottom: 16px; }
+.pane .crumbs { margin: 0 0 10px; }
+.linkbtn { color: #fff; }
 .linkbtn { background: none; border: 0; color: var(--blue); cursor: pointer; font: inherit; padding: 0; }
 
 /* Second-level tabs: a segmented control under the bar */
@@ -78,7 +90,7 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .crumbs .sep { color: var(--line-strong); }
 .crumbs [aria-current] { color: var(--ink-2); }
 
-main { max-width: 1280px; margin: 0 auto; padding: 32px 22px 64px; }
+main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 24px 32px 64px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
 .page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .page-head p.muted { font-size: 1rem; }
@@ -267,13 +279,20 @@ legend + * { clear: both; }
 
 @media (max-width: 900px) {
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
-  .userbox .who { display: none; }
-  .nav { justify-content: flex-start; }
+  .layout { flex-direction: column; }
+  .sidebar { position: sticky; z-index: 50; height: auto; width: auto; flex-direction: row; align-items: center; gap: 12px; padding: 10px 16px; overflow: visible; }
+  .side-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
+  .side-nav::-webkit-scrollbar { display: none; }
+  .side-nav a { padding: 6px 12px; border-radius: 999px; font-size: .88rem; }
+  .side-user { border: 0; padding: 0; flex-direction: row; gap: 12px; }
+  .side-user .who { display: none; }
+  .pane { position: static; box-shadow: none; }
 }
 @media (max-width: 640px) {
-  .topbar-inner { flex-wrap: wrap; padding: 8px 16px; gap: 6px; }
-  .nav { order: 3; flex-basis: 100%; margin: 0 -4px; }
-  .userbox { margin-left: auto; }
+  .sidebar { flex-wrap: wrap; gap: 8px; }
+  .side-nav { order: 3; flex-basis: 100%; }
+  .side-user { margin-left: auto; }
+  .pane-inner { padding: 16px 16px 2px; }
   main { padding: 20px 16px 48px; }
   h1 { font-size: 1.6rem; }
   .kpi .value { font-size: 1.5rem; }
@@ -284,7 +303,7 @@ legend + * { clear: both; }
   .card { padding: 18px; }
 }
 @media print {
-  .topbar, .subnav, .crumbs, .page-head .actions, .form-actions, .filters { display: none; }
+  .sidebar, .pane .subnav, .crumbs, .pane .filters, .page-head .actions, .form-actions, .filters { display: none; }
   body { background: #fff; }
   .card { box-shadow: none; }
 }

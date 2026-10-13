@@ -1,5 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1><%= title %></h1></div></div>
+<%- include('partials/pane-end') %>
 <form method="post" action="/vehicles<%= item.id ? '/' + item.id : '' %>" style="max-width:900px">
   <fieldset class="card"><legend>Vehicle</legend>
     <div class="form-grid">

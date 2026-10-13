@@ -7,7 +7,7 @@
     <a class="btn primary" href="/fuel/new">Log fuel</a>
   </div>
 </div>
-
+<%- include('partials/pane-end') %>
 <div class="section-title"><h2>Plant</h2></div>
 <div class="kpis">
   <a class="kpi <%= stats.plantServiceOverdue ? 'bad' : stats.plantService ? 'warn' : 'good' %>" href="/plant?filter=attention">

@@ -9,10 +9,10 @@
   <meta name="theme-color" content="#0b1f3f">
 </head>
 <body>
-<header class="topbar">
-  <div class="topbar-inner">
-    <a class="brand" href="/"><span class="brand-mark">M</span><span>Marley Construction<small>Fleet &amp; Plant Register</small></span></a>
-    <nav class="nav">
+<div class="layout">
+<aside class="sidebar">
+  <a class="brand" href="/"><span class="brand-mark">M</span><span>Marley Construction<small>Fleet &amp; Plant Register</small></span></a>
+    <nav class="side-nav" aria-label="Main menu">
       <%
         // [href, label, other paths that belong to the same section]
         const nav = isAdmin
@@ -32,13 +32,13 @@
         <a href="<%= item[0] %>" class="<%= item === current ? 'active' : '' %>"><%= item[1] %></a>
       <% } %>
     </nav>
-    <div class="userbox">
+    <div class="side-user">
       <a href="/account" class="who"><%= user.name %></a>
       <form method="post" action="/logout"><button class="linkbtn" type="submit">Sign out</button></form>
     </div>
-  </div>
-</header>
-<main>
+</aside>
+<div class="content">
+<div class="pane"><div class="pane-inner">
 <%
   // Second-level tabs for the sections that hold more than one page.
   const SUBNAV = {
@@ -52,4 +52,3 @@
 <% } else if (subnav) { %>
 <nav class="subnav"><% for (const [href, label, on] of subnav) { %><a href="<%= href %>" class="<%= on(path) ? 'active' : '' %>"><%= label %></a><% } %></nav>
 <% } %>
-<% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.msg %></div><% } %>

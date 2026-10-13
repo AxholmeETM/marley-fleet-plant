@@ -19,6 +19,7 @@
     </select></div>
   <button class="btn" type="submit">Apply</button>
 </form>
+<%- include('partials/pane-end') %>
 <div class="card flush">
   <% if (!vehicles.length) { %><p class="empty">No vehicles found. <a href="/vehicles/new">Add your first vehicle.</a></p><% } else { %>
   <div class="table-wrap"><table>

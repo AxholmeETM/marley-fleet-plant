@@ -1,5 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1><%= title %></h1></div></div>
+<%- include('partials/pane-end') %>
 <form class="card" method="post" action="/fuel-cards<%= item.id ? '/' + item.id : '' %>" style="max-width:760px">
   <div class="form-grid">
     <div class="field"><label for="provider">Fuel card company</label>
