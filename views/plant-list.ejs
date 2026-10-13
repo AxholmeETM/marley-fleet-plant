@@ -10,15 +10,12 @@
   <div><h1><%= section.label %></h1><p class="muted" style="margin:0"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %><% if (hireTotal && isAdmin) { %> · £<%= num(hireTotal, 2) %> a week on hire rates<% } %></p></div>
   <% if (isAdmin) { %><div class="actions"><a class="btn" href="/export/plant.csv">Export CSV</a><a class="btn primary" href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add <%= cat ? cat.label.replace(/s$/, '').toLowerCase() : section.noun %></a></div><% } else { %><div class="actions"><a class="btn primary" href="/checks/plant/new">New check sheet</a></div><% } %>
 </div>
-<div class="tabs">
-  <a href="?<%= qs({ category: '' }) %>" class="<%= !category ? 'active' : '' %>">All (<%= total %>)</a>
-  <% for (const c of CATEGORIES) { if (!counts[c.key] && category !== c.key) continue; %>
-    <a href="?<%= qs({ category: c.key }) %>" class="<%= category === c.key ? 'active' : '' %>"><%= c.label %> (<%= counts[c.key] || 0 %>)</a>
-  <% } %>
-</div>
 <form class="filters" method="get">
-  <input type="hidden" name="category" value="<%= category %>">
   <div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Asset no, serial, job ref, site…"></div>
+  <div class="field"><label for="category">Type</label>
+    <select id="category" name="category"><option value="">All types (<%= total %>)</option>
+      <% for (const c of CATEGORIES) { if (!counts[c.key] && category !== c.key) continue; %><option value="<%= c.key %>" <%= category === c.key ? 'selected' : '' %>><%= c.label %> (<%= counts[c.key] || 0 %>)</option><% } %>
+    </select></div>
   <div class="field"><label for="owner">Owner</label>
     <select id="owner" name="owner"><option value="">Both companies</option>
       <% for (const [k, l] of Object.entries(OWNERS)) { %><option value="<%= k %>" <%= owner === k ? 'selected' : '' %>><%= l %></option><% } %>

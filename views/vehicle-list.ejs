@@ -4,13 +4,12 @@
   <div class="actions"><a class="btn" href="/export/vehicles.csv">Export CSV</a><a class="btn primary" href="/vehicles/new">Add vehicle</a></div>
 </div>
 <% const qs = (over) => new URLSearchParams(Object.fromEntries(Object.entries({ q, filter, category, ...over }).filter(([, x]) => x))).toString(); %>
-<div class="tabs">
-  <a href="?<%= qs({ category: '' }) %>" class="<%= !category ? 'active' : '' %>">All (<%= Object.values(counts).reduce((a, b) => a + b, 0) %>)</a>
-  <% for (const [k, l] of Object.entries(VEHICLE_CATEGORIES)) { if (!counts[k]) continue; %><a href="?<%= qs({ category: k }) %>" class="<%= category === k ? 'active' : '' %>"><%= l %>s (<%= counts[k] %>)</a><% } %>
-</div>
 <form class="filters" method="get">
-  <input type="hidden" name="category" value="<%= category %>">
   <div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Reg, asset no, user, make…"></div>
+  <div class="field"><label for="category">Type</label>
+    <select id="category" name="category"><option value="">All types (<%= Object.values(counts).reduce((a, b) => a + b, 0) %>)</option>
+      <% for (const [k, l] of Object.entries(VEHICLE_CATEGORIES)) { if (!counts[k] && category !== k) continue; %><option value="<%= k %>" <%= category === k ? 'selected' : '' %>><%= l %>s (<%= counts[k] || 0 %>)</option><% } %>
+    </select></div>
   <div class="field"><label for="filter">Show</label>
     <select id="filter" name="filter">
       <option value="">All active vehicles</option>

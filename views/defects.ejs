@@ -3,15 +3,13 @@
   <div><h1>Defects</h1><p class="muted" style="margin:0">Reported from checks or directly by drivers and operatives</p></div>
   <div class="actions"><a class="btn primary" href="/defects/new">Report a defect</a></div>
 </div>
-<div class="tabs">
-  <% for (const [k, l] of [['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']]) { %>
-    <a class="<%= statusFilter === k ? 'active' : '' %>" href="?status=<%= k %><%= assetType ? '&asset=' + assetType : '' %>"><%= l %></a>
-  <% } %>
-  <span style="width:12px"></span>
-  <a class="<%= !assetType ? 'active' : '' %>" href="?status=<%= statusFilter %>">Plant &amp; vehicles</a>
-  <a class="<%= assetType === 'plant' ? 'active' : '' %>" href="?status=<%= statusFilter %>&asset=plant">Plant</a>
-  <a class="<%= assetType === 'vehicle' ? 'active' : '' %>" href="?status=<%= statusFilter %>&asset=vehicle">Vehicles</a>
-</div>
+<form class="filters" method="get">
+  <div class="field"><label for="status">Status</label>
+    <select id="status" name="status"><% for (const [k, l] of [['open', 'Open'], ['resolved', 'Resolved'], ['all', 'All']]) { %><option value="<%= k %>" <%= statusFilter === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
+  <div class="field"><label for="asset">Type</label>
+    <select id="asset" name="asset"><% for (const [k, l] of [['', 'Plant & vehicles'], ['plant', 'Plant & equipment'], ['vehicle', 'Vehicles']]) { %><option value="<%= k %>" <%= (assetType || '') === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
+  <button class="btn" type="submit">Apply</button>
+</form>
 <div class="card flush">
   <% if (!defects.length) { %><p class="empty">No defects here.</p><% } else { %>
   <div class="table-wrap"><table>

@@ -3,10 +3,14 @@
   <div><h1>Checks</h1><p class="muted" style="margin:0">Daily vehicle walk-arounds and weekly plant check sheets</p></div>
   <div class="actions"><a class="btn" href="/checks/plant/new">New plant check</a><a class="btn primary" href="/checks/vehicle/new">New walk-around</a></div>
 </div>
-<div class="tabs">
-  <a href="/checks?type=vehicle" class="<%= type === 'vehicle' ? 'active' : '' %>">Vehicle walk-arounds</a>
-  <a href="/checks?type=plant" class="<%= type === 'plant' ? 'active' : '' %>">Plant check sheets</a>
-</div>
+
+<form class="filters" method="get">
+  <div class="field"><label for="type">Type</label>
+    <select id="type" name="type"><option value="vehicle" <%= type === 'vehicle' ? 'selected' : '' %>>Vehicle walk-arounds</option><option value="plant" <%= type === 'plant' ? 'selected' : '' %>>Plant check sheets</option></select></div>
+  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= from %>"></div>
+  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= to %>"></div>
+  <button class="btn" type="submit">Show</button>
+</form>
 
 <% if (missing.length) { %>
 <div class="card flush">
@@ -24,12 +28,6 @@
 </div>
 <% } %>
 
-<form class="filters" method="get">
-  <input type="hidden" name="type" value="<%= type %>">
-  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= from %>"></div>
-  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= to %>"></div>
-  <button class="btn" type="submit">Show</button>
-</form>
 <div class="card flush">
   <% if (!rows.length) { %><p class="empty">No checks in this period.</p><% } else { %>
   <div class="table-wrap"><table>

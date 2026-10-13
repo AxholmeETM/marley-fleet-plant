@@ -3,11 +3,15 @@
   <div><h1>Users</h1><p class="muted" style="margin:0">Admin users run the office side and see everything. Employees (fleet drivers and site managers) do checks, log fuel and report defects.</p></div>
   <div class="actions"><a class="btn" href="/users/new?role=admin">Add admin user</a><a class="btn primary" href="/users/new">Add employee</a></div>
 </div>
-<div class="tabs">
-  <% for (const [key, label, n] of [['', 'All', counts.all_users], ['employees', 'Employees', counts.employees], ['drivers', 'Fleet drivers', counts.drivers], ['site_managers', 'Site managers', counts.site_managers], ['admins', 'Admin users', counts.admins]]) { %>
-    <a href="<%= key ? '?show=' + key : '/users' %>" class="<%= show === key ? 'active' : '' %>"><%= label %> (<%= n || 0 %>)</a>
-  <% } %>
-</div>
+<form class="filters" method="get">
+  <div class="field"><label for="show">Type</label>
+    <select id="show" name="show">
+      <% for (const [key, label, n] of [['', 'Everyone', counts.all_users], ['employees', 'Employees', counts.employees], ['drivers', 'Fleet drivers', counts.drivers], ['site_managers', 'Site managers', counts.site_managers], ['admins', 'Admin users', counts.admins]]) { %>
+        <option value="<%= key %>" <%= show === key ? 'selected' : '' %>><%= label %> (<%= n || 0 %>)</option>
+      <% } %>
+    </select></div>
+  <button class="btn" type="submit">Apply</button>
+</form>
 <div class="card flush">
   <% if (!users.length) { %><p class="empty">Nobody here yet.</p><% } else { %>
   <div class="table-wrap"><table>
