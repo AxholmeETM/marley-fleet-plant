@@ -10,6 +10,12 @@ import { perRequest, endRequest } from './db.js';
 for (const [key, value] of Object.entries(env)) {
   if (typeof value === 'string' && process.env[key] === undefined) process.env[key] = value;
 }
+// Workers can't open an encrypted Postgres connection themselves. Hyperdrive (the HYPERDRIVE binding in
+// wrangler.jsonc) holds the encrypted connection to Supabase and hands the app a local one.
+if (env.HYPERDRIVE) {
+  process.env.DATABASE_URL = env.HYPERDRIVE.connectionString;
+  process.env.DATABASE_SSL = 'off';
+}
 
 let app = null;
 
@@ -30,7 +36,7 @@ const server = createServer((req, res) => {
       // Show the reason (never a connection string) so whoever set it up can fix the secret.
       const reason = String(err && err.message || err).replace(/postgres(ql)?:\/\/\S+/gi, '[connection string]');
       // Names only, never values, to show which settings reached the site.
-      const seen = Object.keys(env).filter((k) => typeof env[k] === 'string').sort().join(', ') || 'none';
+      const seen = Object.keys(env).filter((k) => typeof env[k] === 'string' || k === 'HYPERDRIVE').sort().join(', ') || 'none';
       res.end(`The site could not reach its database. Check the DATABASE_URL secret in Cloudflare.\n\nReason: ${reason}\n\nSettings the site can see: ${seen}`);
     }
   });
