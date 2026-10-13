@@ -50,7 +50,7 @@
     <h2>Needs attention</h2>
     <% if (!attention.length) { %><p class="empty">Nothing overdue or due soon. 👍</p><% } else { %>
     <div class="table-wrap"><table>
-      <thead><tr><th>Asset</th><th>Item</th><th>Status</th></tr></thead>
+      <thead><tr><th>Asset</th><th>Due</th><th>Status</th></tr></thead>
       <tbody>
       <% for (const a of attention.slice(0, 25)) { %>
         <tr><td><a href="<%= a.href %>"><%= a.asset %></a></td><td><%= a.what %></td><td><%- pill(a.status) %></td></tr>

@@ -50,9 +50,9 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 
 /* Layout: navy menu down the left, page content on the right */
 .layout { display: flex; min-height: 100vh; }
-.sidebar { position: sticky; top: 0; height: 100vh; width: 236px; flex: none; background: var(--navy); color: #fff;
+.sidebar { position: sticky; top: 0; height: 100vh; width: 208px; flex: none; background: var(--navy); color: #fff;
   display: flex; flex-direction: column; gap: 22px; padding: 20px 14px; overflow-y: auto; }
-.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; white-space: nowrap; font-size: .95rem; padding: 0 6px; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; white-space: nowrap; font-size: .88rem; padding: 0 4px; }
 .brand:hover { text-decoration: none; }
 .brand-mark { background: var(--brand); color: var(--bg); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: .95rem; flex: none; }
 .sidebar .brand-mark { background: #fff; color: var(--navy); }
@@ -70,7 +70,7 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 /* Fixed pane at the top of each page: where you are, what the page is, search and buttons */
 .pane { position: sticky; top: 0; z-index: 40; background: #fff;
   border-bottom: 1px solid var(--line); box-shadow: 0 6px 18px rgba(11, 31, 63, .04); }
-.pane-inner { max-width: 1280px; margin: 0 auto; padding: 20px 32px 4px; }
+.pane-inner { max-width: 1280px; margin: 0 auto; padding: 20px 24px 4px; }
 .pane .page-head { margin-bottom: 16px; }
 .pane .filters, .pane .tabs, .pane > .pane-inner > .field { margin-bottom: 16px; }
 .pane .subnav { margin-bottom: 16px; }
@@ -90,7 +90,7 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .crumbs .sep { color: var(--line-strong); }
 .crumbs [aria-current] { color: var(--ink-2); }
 
-main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 24px 32px 64px; }
+main { width: 100%; max-width: 1280px; margin: 0 auto; padding: 24px 24px 64px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
 .page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .page-head p.muted { font-size: 1rem; }
@@ -128,10 +128,16 @@ a.kpi:hover { text-decoration: none; box-shadow: var(--shadow-lift); transform: 
 /* Tables */
 .table-wrap { overflow-x: auto; }
 table { width: 100%; border-collapse: collapse; }
-th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+th, td { text-align: left; padding: 10px 9px; border-bottom: 1px solid var(--line); vertical-align: middle; }
 th { font-size: .76rem; font-weight: 500; color: var(--muted); white-space: nowrap; }
-td:first-child, th:first-child { padding-left: 22px; }
-td:last-child, th:last-child { padding-right: 22px; }
+td:first-child, th:first-child { padding-left: 20px; }
+td:last-child, th:last-child { padding-right: 20px; }
+/* Status pills in tables may wrap so the table fits the page; the description column keeps room to read. */
+td .pill { white-space: normal; border-radius: 8px; }
+td .pill.nowrap { white-space: nowrap; }
+th.w-pill { min-width: 116px; }
+th.desc { min-width: 200px; }
+td.serial { word-break: break-all; min-width: 90px; }
 tr:last-child td { border-bottom: 0; }
 tbody tr { transition: background .12s; }
 tbody tr:hover { background: var(--hover); }

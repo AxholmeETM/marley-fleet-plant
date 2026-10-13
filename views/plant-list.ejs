@@ -33,23 +33,23 @@
 <div class="card flush">
   <% if (!plant.length) { %><p class="empty">Nothing here yet.<% if (isAdmin) { %> <a href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add an item.</a><% } %></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Asset no</th><th>Item</th><% if (!category) { %><th>Category</th><% } else { %><th>Serial no</th><% } %><th>Project No.</th>
-      <% if (showHours) { %><th class="num">Hours</th><th>Service</th><% } else { %><th>Last service</th><% } %>
-      <% if (showChecks) { %><th>Weekly check</th><% } %><th>LOLER / test / calibration</th><th>Status</th></tr></thead>
+    <thead><tr><th>Asset no</th><th class="desc">Description</th><% if (!category) { %><th>Category</th><% } else { %><th>Serial no</th><% } %><th>Project No.</th>
+      <% if (showHours) { %><th class="num">Hours</th><th class="w-pill">Service</th><% } else { %><th>Last service</th><% } %>
+      <% if (showChecks) { %><th class="w-pill">Check</th><% } %><th class="w-pill">Inspection</th><th>Status</th></tr></thead>
     <tbody><% for (const p of plant) { %>
       <tr>
         <td class="nowrap"><a href="/plant/<%= p.id %>"><strong><%= p.plant_no %></strong></a></td>
         <td><%= p.description %><div class="small muted"><%= [p.description !== [p.make, p.model].filter(Boolean).join(' ') ? [p.make, p.model].filter(Boolean).join(' ') : '', p.swl ? 'SWL ' + p.swl : ''].filter(Boolean).join(' · ') %></div></td>
         <% if (!category) { %><td class="small"><%= CATEGORY[p.category] ? CATEGORY[p.category].label : p.category %></td><% } %>
-        <% if (category) { %><td class="small"><%= p.serial_no || '—' %></td><% } %>
+        <% if (category) { %><td class="small serial"><%= p.serial_no || '—' %></td><% } %>
         <td><%= p.job_ref || '—' %></td>
         <% if (showHours) { %>
           <td class="num"><%= p.tracks_hours ? fmtHours(p.running_hours) : '—' %></td>
-          <td><%- pill(p.service) %><% if (p.service.nextAt) { %><div class="small muted">at <%= fmtHours(p.service.nextAt) %> hrs</div><% } %></td>
+          <td><%- pill(p.service) %></td>
         <% } else { %><td class="nowrap"><%= ukDate(p.last_service_date) %></td><% } %>
         <% if (showChecks) { %><td><%- pill(p.check) %></td><% } %>
         <td><%- pill(p.loler) %><% if (p.loler.level !== 'none') { %><div class="small muted"><%= INSPECTION_TYPES[p.inspection_type] %></div><% } %></td>
-        <td><span class="pill <%= p.status === 'in_use' ? 'ok' : ['stolen', 'repair'].includes(p.status) ? 'overdue' : 'none' %>"><%= PLANT_STATUSES[p.status] || p.status %></span>
+        <td><span class="pill <%= p.status === 'in_use' ? 'ok' : ['stolen', 'repair'].includes(p.status) ? 'overdue' : 'none' %> nowrap"><%= p.status === 'in_use' ? 'In use' : PLANT_STATUSES[p.status] || p.status %></span>
           <% if (p.open_defects) { %><div><span class="pill overdue"><%= p.open_defects %> defect<%= p.open_defects > 1 ? 's' : '' %></span></div><% } %></td>
       </tr>
     <% } %></tbody>
