@@ -4,6 +4,7 @@ const { listPlant, listVehicles, listDefects } = require('../queries');
 const { isoDate, dueStatus } = require('../status');
 const { INSPECTION_TYPES } = require('../categories');
 const fuelCards = require('./fuel-cards');
+const { isSiteManager } = require('../auth');
 
 const router = express.Router();
 
@@ -29,8 +30,8 @@ function attentionList(plant, vehicles) {
     add(name, `/vehicles/${v.id}`, 'Service', v.service);
     add(name, `/vehicles/${v.id}`, 'Walk-around', v.walkaround);
   }
-  for (const c of all("SELECT * FROM fuel_cards WHERE status = 'active' AND expiry IS NOT NULL").map(fuelCards.decorate)) {
-    add(`${c.provider}${c.card_ref ? ' #' + c.card_ref : ''}${c.holder ? ' (' + c.holder + ')' : ''}`, `/fuel-cards/${c.id}/edit`, 'Fuel card expiry', c.expiryStatus);
+  for (const c of all(`${fuelCards.CARD_SQL} WHERE c.status = 'active' AND c.expiry IS NOT NULL`).map(fuelCards.decorate)) {
+    add(`${c.provider}${c.card_ref ? ' #' + c.card_ref : ''}${c.holder_display ? ' (' + c.holder_display + ')' : ''}`, `/fuel-cards/${c.id}/edit`, 'Fuel card expiry', c.expiryStatus);
   }
   return items.sort((a, b) => (a.status.level === b.status.level ? 0 : a.status.level === 'overdue' ? -1 : 1));
 }
@@ -92,7 +93,11 @@ function driverHome(req, res) {
       FROM plant_checks c JOIN plant p ON p.id = c.plant_id WHERE c.user_id = ?
     ) ORDER BY check_date DESC, id DESC LIMIT 10`, req.user.id, req.user.id);
   const defects = all(`SELECT * FROM defects WHERE reported_by = ? AND status = 'open' ORDER BY reported_at DESC`, req.user.id);
-  res.render('driver-home', { title: 'Home', vehicles, fuel, checks, defects });
+  // Site managers also get a summary of plant that needs attention.
+  const plantAttention = isSiteManager(req.user)
+    ? listPlant().filter((p) => [p.service, p.loler, p.check].some((s) => s.level === 'overdue' || s.level === 'soon') || p.open_defects)
+    : null;
+  res.render('driver-home', { title: 'Home', vehicles, fuel, checks, defects, plantAttention });
 }
 
 module.exports = router;

@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <div class="page-head">
   <div><h1>Fuel cards</h1><p class="muted" style="margin:0">Who holds each card and which vehicle it's for. Card PINs are never stored here.</p></div>
-  <div class="actions"><a class="btn" href="/fuel">Fuel dashboard</a><a class="btn primary" href="/fuel-cards/new">Add fuel card</a></div>
+  <div class="actions"><a class="btn" href="/fuel">Fuel dashboard</a><a class="btn" href="/fuel-cards/assign">Assign cards</a><a class="btn primary" href="/fuel-cards/new">Add fuel card</a></div>
 </div>
 <div class="tabs">
   <a href="?show=active" class="<%= show === 'active' ? 'active' : '' %>">Active</a>
@@ -10,12 +10,12 @@
 <div class="card flush">
   <% if (!cards.length) { %><p class="empty">No fuel cards yet. <a href="/fuel-cards/new">Add one.</a></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Company</th><th>Card</th><th>Holder</th><th>Vehicle</th><th>Fuel</th><th>Expiry</th><th>Last used</th><th></th></tr></thead>
+    <thead><tr><th>Company</th><th>Card</th><th>Assigned to</th><th>Vehicle</th><th>Fuel</th><th>Expiry</th><th>Last used</th><th></th></tr></thead>
     <tbody><% for (const c of cards) { %>
       <tr>
         <td><%= c.provider %></td>
         <td class="nowrap"><%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.last4 ? '••••' + c.last4 : '' %></span></td>
-        <td><%= c.holder || '—' %></td>
+        <td><%= c.holder_display || '—' %><% if (c.user_name && c.holder && c.holder !== c.user_name) { %><div class="small muted">Card name: <%= c.holder %></div><% } %></td>
         <td><% if (c.reg) { %><a href="/vehicles/<%= c.vehicle_id %>"><span class="reg"><%= c.reg %></span></a><% } else { %>—<% } %></td>
         <td class="small"><%= c.card_type || '—' %></td>
         <td class="nowrap"><%= c.expiry ? c.expiry.slice(5, 7) + '/' + c.expiry.slice(0, 4) : '—' %> <% if (c.status !== 'active' || c.expiry) { %><%- pill(c.expiryStatus.level === 'ok' ? { level: 'ok', text: 'Active' } : c.expiryStatus) %><% } %></td>

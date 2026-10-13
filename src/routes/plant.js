@@ -1,12 +1,14 @@
 const express = require('express');
 const { all, run, get, transaction } = require('../db');
 const { listPlant, getPlant, listDefects } = require('../queries');
-const { requireAdmin, UserError, numberField, text } = require('../auth');
+const { requireAdmin, requirePlantAccess, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
-const { serviceWork, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE, INSPECTION_TYPES } = require('../categories');
+const { serviceWork, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE, INSPECTION_TYPES } = require('../categories');
 
 const router = express.Router();
-router.use('/plant', requireAdmin);
+// Site managers can see all plant and add checks, defects and service / inspection records.
+// Adding or editing the asset record itself (prices, hire rates, ownership) stays with admin users.
+router.use(['/plant', '/equipment'], requirePlantAccess);
 
 const { DEFAULT_SERVICE_INTERVAL, parseSchedule, servicePlan } = require('../status');
 
@@ -86,11 +88,13 @@ function saveError(err) {
   throw err;
 }
 
-router.get('/plant', (req, res) => {
+router.get(['/plant', '/equipment'], (req, res) => {
+  const section = req.path === '/equipment' ? 'equipment' : 'plant';
+  const categories = CATEGORIES.filter((c) => c.section === section);
   const filter = req.query.filter || '';
-  const category = CATEGORY[req.query.category] ? req.query.category : '';
+  const category = CATEGORY[req.query.category] && CATEGORY[req.query.category].section === section ? req.query.category : '';
   const owner = OWNERS[req.query.owner] ? req.query.owner : '';
-  let plant = listPlant({ includeInactive: filter === 'inactive' });
+  let plant = listPlant({ includeInactive: filter === 'inactive' }).filter((p) => (CATEGORY[p.category] || CATEGORY.misc).section === section);
   if (filter === 'inactive') plant = plant.filter((p) => !p.active);
   if (filter === 'attention') plant = plant.filter((p) => [p.service, p.loler, p.check].some((s) => s.level === 'overdue' || s.level === 'soon') || p.open_defects);
   if (filter === 'repair') plant = plant.filter((p) => p.status === 'repair');
@@ -101,10 +105,10 @@ router.get('/plant', (req, res) => {
   const q = String(req.query.q || '').trim().toLowerCase();
   if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.location, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
   const hireTotal = plant.filter((p) => p.active && p.weekly_hire_rate).reduce((t, p) => t + p.weekly_hire_rate, 0);
-  res.render('plant-list', { title: 'Plant & equipment register', plant, filter, category, owner, counts, hireTotal, q: req.query.q || '', CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
+  res.render('plant-list', { title: SECTIONS[section].label, section: SECTIONS[section], plant, filter, category, owner, counts, hireTotal, q: req.query.q || '', CATEGORIES: categories, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
-router.get('/plant/new', (req, res) => {
+router.get('/plant/new', requireAdmin, (req, res) => {
   const c = CATEGORY[req.query.category] || CATEGORIES[0];
   res.render('plant-form', {
     title: 'Add plant or equipment',
@@ -113,7 +117,7 @@ router.get('/plant/new', (req, res) => {
   });
 });
 
-router.post('/plant', (req, res) => {
+router.post('/plant', requireAdmin, (req, res) => {
   const p = readPlant(req.body);
   const cols = Object.keys(p);
   let id;
@@ -131,16 +135,17 @@ router.get('/plant/:id', (req, res) => {
     WHERE c.plant_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 20`, item.id);
   const records = all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
   const defects = listDefects({ status: 'all', assetType: 'plant', assetId: item.id, limit: 50 });
+  res.locals.navActive = SECTIONS[(CATEGORY[item.category] || CATEGORY.misc).section].href;
   res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, item, checks, records, defects, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
-router.get('/plant/:id/edit', (req, res) => {
+router.get('/plant/:id/edit', requireAdmin, (req, res) => {
   const item = get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Plant not found.' });
   res.render('plant-form', { title: `Edit ${item.plant_no}`, ...formLocals(item) });
 });
 
-router.post('/plant/:id', (req, res) => {
+router.post('/plant/:id', requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   const p = readPlant(req.body);
   try {

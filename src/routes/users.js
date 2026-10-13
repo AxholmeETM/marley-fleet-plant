@@ -2,17 +2,31 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { all, get, run } = require('../db');
 const { requireAdmin, UserError, text } = require('../auth');
+const { EMPLOYEE_TYPES } = require('../categories');
 
 const router = express.Router();
 router.use('/users', requireAdmin);
 
+const SHOW = { employees: "u.role = 'driver'", drivers: "u.role = 'driver' AND u.employee_type = 'driver'",
+  site_managers: "u.role = 'driver' AND u.employee_type = 'site_manager'", admins: "u.role = 'admin'" };
+
 router.get('/users', (req, res) => {
-  const users = all(`SELECT u.*, (SELECT GROUP_CONCAT(reg, ', ') FROM vehicles v WHERE v.driver_id = u.id AND v.active = 1) AS vehicles
-    FROM users u ORDER BY u.active DESC, u.name`);
-  res.render('users', { title: 'Users', users });
+  const show = SHOW[req.query.show] ? req.query.show : '';
+  const users = all(`SELECT u.*, (SELECT GROUP_CONCAT(reg, ', ') FROM vehicles v WHERE v.driver_id = u.id AND v.active = 1) AS vehicles,
+      (SELECT COUNT(*) FROM fuel_cards c WHERE c.user_id = u.id AND c.status = 'active') AS cards
+    FROM users u ${show ? 'WHERE ' + SHOW[show] : ''} ORDER BY u.active DESC, u.role = 'admin', u.name`);
+  const counts = get(`SELECT COUNT(*) AS all_users, SUM(role = 'driver') AS employees, SUM(role = 'driver' AND employee_type = 'driver') AS drivers,
+    SUM(role = 'driver' AND employee_type = 'site_manager') AS site_managers, SUM(role = 'admin') AS admins FROM users`);
+  res.render('users', { title: 'Users', users, show, counts });
 });
 
-router.get('/users/new', (req, res) => res.render('user-form', { title: 'Add user', item: { role: 'driver', active: 1 } }));
+const userForm = (res, title, item) => res.render('user-form', { title, item, EMPLOYEE_TYPES });
+
+router.get('/users/new', (req, res) => {
+  const role = req.query.role === 'admin' ? 'admin' : 'driver';
+  const type = EMPLOYEE_TYPES[req.query.type] ? req.query.type : 'driver';
+  userForm(res, role === 'admin' ? 'Add admin user' : 'Add employee', { role, employee_type: type, active: 1 });
+});
 
 function readUser(body, isNew) {
   const name = text(body.name);
@@ -20,14 +34,17 @@ function readUser(body, isNew) {
   if (!name || !email) throw new UserError('Name and email are required.');
   if (isNew && (!body.password || body.password.length < 8)) throw new UserError('Password must be at least 8 characters.');
   if (!isNew && body.password && body.password.length < 8) throw new UserError('Password must be at least 8 characters.');
-  return { name, email, phone: text(body.phone), role: body.role === 'admin' ? 'admin' : 'driver', active: body.active === '0' ? 0 : 1 };
+  const role = body.role === 'admin' ? 'admin' : 'driver';
+  const employeeType = role === 'admin' ? null : body.employee_type;
+  if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose fleet driver or site manager.');
+  return { name, email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1 };
 }
 
 router.post('/users', (req, res) => {
   const u = readUser(req.body, true);
   try {
-    run('INSERT INTO users (name, email, phone, role, active, password_hash) VALUES (?, ?, ?, ?, ?, ?)',
-      u.name, u.email, u.phone, u.role, u.active, bcrypt.hashSync(req.body.password, 10));
+    run('INSERT INTO users (name, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, bcrypt.hashSync(req.body.password, 10));
   } catch (err) {
     if (String(err.message).includes('UNIQUE')) throw new UserError('A user with that email already exists.');
     throw err;
@@ -39,7 +56,7 @@ router.post('/users', (req, res) => {
 router.get('/users/:id/edit', (req, res) => {
   const item = get('SELECT * FROM users WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'User not found.' });
-  res.render('user-form', { title: `Edit ${item.name}`, item });
+  userForm(res, `Edit ${item.name}`, item);
 });
 
 router.post('/users/:id', (req, res) => {
@@ -47,7 +64,8 @@ router.post('/users/:id', (req, res) => {
   const u = readUser(req.body, false);
   if (id === req.user.id && (u.role !== 'admin' || !u.active)) throw new UserError('You cannot remove your own admin access.');
   try {
-    run('UPDATE users SET name = ?, email = ?, phone = ?, role = ?, active = ? WHERE id = ?', u.name, u.email, u.phone, u.role, u.active, id);
+    run('UPDATE users SET name = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ? WHERE id = ?',
+      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, id);
   } catch (err) {
     if (String(err.message).includes('UNIQUE')) throw new UserError('A user with that email already exists.');
     throw err;

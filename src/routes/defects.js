@@ -1,7 +1,7 @@
 const express = require('express');
 const { run, get } = require('../db');
 const { listDefects, listPlant, listVehicles } = require('../queries');
-const { requireAdmin, UserError, text } = require('../auth');
+const { requireAdmin, isAdmin, canUsePlant, canUseVehicle, UserError, text } = require('../auth');
 
 const router = express.Router();
 
@@ -13,7 +13,9 @@ router.get('/defects', requireAdmin, (req, res) => {
 
 router.get('/defects/new', (req, res) => {
   res.render('defect-form', {
-    title: 'Report a defect', plant: listPlant(), vehicles: listVehicles(),
+    title: 'Report a defect',
+    plant: canUsePlant(req.user) ? listPlant() : [],
+    vehicles: listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id }),
     selected: req.query.asset || '',
   });
 });
@@ -21,7 +23,9 @@ router.get('/defects/new', (req, res) => {
 router.post('/defects', (req, res) => {
   const [assetType, idStr] = String(req.body.asset || '').split(':');
   const table = assetType === 'plant' ? 'plant' : assetType === 'vehicle' ? 'vehicles' : null;
-  if (!table || !get(`SELECT id FROM ${table} WHERE id = ?`, Number(idStr))) throw new UserError('Please choose the plant or vehicle.');
+  const asset = table && get(`SELECT * FROM ${table} WHERE id = ?`, Number(idStr));
+  if (!asset) throw new UserError('Please choose the plant or vehicle.');
+  if (table === 'plant' ? !canUsePlant(req.user) : !canUseVehicle(req.user, asset)) throw new UserError('You can only report defects on your own vehicle.', 403);
   const description = text(req.body.description);
   if (!description) throw new UserError('Please describe the defect.');
   const severity = ['minor', 'major', 'unsafe'].includes(req.body.severity) ? req.body.severity : 'minor';

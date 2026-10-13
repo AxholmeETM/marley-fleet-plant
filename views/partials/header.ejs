@@ -6,19 +6,30 @@
   <title><%= title %> · Marley Fleet &amp; Plant</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <meta name="theme-color" content="#1d2733">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)"><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 </head>
 <body>
 <header class="topbar">
   <div class="topbar-inner">
     <a class="brand" href="/"><span class="brand-mark">M</span><span>Marley Construction<small>Fleet &amp; Plant Register</small></span></a>
     <nav class="nav">
-      <% const nav = isAdmin
-        ? [['/', 'Dashboard'], ['/plant', 'Plant'], ['/vehicles', 'Fleet'], ['/checks', 'Checks'], ['/defects', 'Defects'], ['/fuel', 'Fuel'], ['/users', 'Users']]
-        : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/checks/plant/new', 'Plant check'], ['/defects/new', 'Report defect']];
-      for (const [href, label] of nav) {
-        const active = href === '/' ? path === '/' : path === href || (isAdmin && path.startsWith(href + '/')); %>
-        <a href="<%= href %>" class="<%= active ? 'active' : '' %>"><%= label %></a>
+      <%
+        // [href, label, other paths that belong to the same section]
+        const nav = isAdmin
+          ? [['/', 'Dashboard'], ['/plant', 'Plant'], ['/vehicles', 'Fleet'], ['/fuel-cards', 'Fuel cards', ['/fuel']], ['/equipment', 'Equipment'], ['/admin', 'Admin', ['/users', '/checks', '/defects']]]
+          : user.employee_type === 'site_manager'
+            ? [['/', 'Home'], ['/plant', 'Plant'], ['/equipment', 'Equipment'], ['/checks/plant/new', 'Plant check'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']]
+            : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']];
+        const under = (base) => path === base || path.startsWith(base + '/');
+        const isActive = ([href, , also = []]) => {
+          if (typeof navActive !== 'undefined') return navActive === href;
+          if (href === '/') return path === '/';
+          if (isAdmin || href === '/plant' || href === '/equipment') return [href, ...also].some(under);
+          return path === href;
+        };
+        const current = nav.find(isActive);
+        for (const item of nav) { %>
+        <a href="<%= item[0] %>" class="<%= item === current ? 'active' : '' %>"><%= item[1] %></a>
       <% } %>
     </nav>
     <div class="userbox">
@@ -28,4 +39,14 @@
   </div>
 </header>
 <main>
+<%
+  // Second-level tabs for the sections that hold more than one page.
+  const SUBNAV = {
+    '/fuel-cards': [['/fuel', 'Fuel log & receipts', (p) => p === '/fuel' || /^\/fuel\/(\d+|next)$/.test(p)], ['/fuel-cards', 'Cards', (p) => p === '/fuel-cards' || /^\/fuel-cards\/(new|\d+)/.test(p)], ['/fuel-cards/assign', 'Assign cards to people', (p) => p === '/fuel-cards/assign']],
+    '/admin': [['/admin', 'Overview', (p) => p === '/admin'], ['/users', 'Users', (p) => p.startsWith('/users')], ['/checks', 'Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
+  };
+  const subnav = isAdmin && current && SUBNAV[current[0]];
+  if (subnav) { %>
+<nav class="subnav"><% for (const [href, label, on] of subnav) { %><a href="<%= href %>" class="<%= on(path) ? 'active' : '' %>"><%= label %></a><% } %></nav>
+<% } %>
 <% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.msg %></div><% } %>

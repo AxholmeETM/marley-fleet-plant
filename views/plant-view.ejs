@@ -7,7 +7,7 @@
   <div class="actions">
     <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a>
-    <a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a>
+    <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a><% } %>
   </div>
 </div>
 <div class="kpis">
@@ -49,9 +49,11 @@
         <% if (item.swl) { %><dt>SWL</dt><dd><%= item.swl %></dd><% } %>
         <% if (item.loler.level !== 'none') { %><dt><%= insp %></dt><dd>Every <%= item.loler_interval_months %> months · last <%= ukDate(item.last_loler_date) %><%= item.cert_no ? ' · cert ' + item.cert_no : '' %></dd><% } %>
         <dt>Owner</dt><dd><%= OWNERS[item.owner] || item.owner %></dd>
+        <% if (isAdmin) { %>
         <dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd>
         <% if (item.owner === 'MPL') { %><dt>Agreed price from MCL</dt><dd><%= money(item.transfer_price) %></dd><% } %>
         <dt>Weekly hire rate</dt><dd><%= money(item.weekly_hire_rate) %></dd>
+        <% } %>
       </dl>
       <% if (item.notes) { %><p style="white-space:pre-wrap;margin:12px 0 0"><%= item.notes %></p><% } %>
     </div>
@@ -62,7 +64,7 @@
         <tr><td class="nowrap"><%= ukDate(d.reported_at) %></td><td><%= d.description %><div class="small muted"><%= d.reported_by_name %><%= d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : '' %></div></td>
           <td><% if (d.status === 'open') { %><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span><% } else { %><span class="pill ok">Resolved</span><% } %></td></tr>
       <% } %></tbody></table></div>
-      <p class="empty" style="padding-top:8px"><a href="/defects?asset=plant">Manage defects →</a></p><% } %>
+      <% if (isAdmin) { %><p class="empty" style="padding-top:8px"><a href="/defects?asset=plant">Manage defects →</a></p><% } %><% } %>
     </div>
     <% if (item.weekly_checks || checks.length) { %>
     <div class="card flush">

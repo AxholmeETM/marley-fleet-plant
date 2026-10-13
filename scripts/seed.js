@@ -25,14 +25,15 @@ transaction(() => {
   for (const f of fs.readdirSync(UPLOAD_DIR)) if (f.startsWith('receipt-demo-')) fs.rmSync(path.join(UPLOAD_DIR, f));
 
   const hash = bcrypt.hashSync('password123', 10);
-  const user = (name, email, role) => run('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)', name, email, hash, role).lastInsertRowid;
-  const admin = user('Office Admin', 'admin@marley.local', 'admin');
-  user('Sarah Admin Assistant', 'office@marley.local', 'admin');
+  const user = (name, email, role, type, title) => run('INSERT INTO users (name, email, password_hash, role, employee_type, job_title) VALUES (?, ?, ?, ?, ?, ?)',
+    name, email, hash, role, role === 'admin' ? null : type, title).lastInsertRowid;
+  const admin = user('Office Admin', 'admin@marley.local', 'admin', null, 'Office Manager');
+  user('Sarah Admin Assistant', 'office@marley.local', 'admin', null, 'Admin Assistant');
   const drivers = [
-    user('Dave Thompson', 'dave@marley.local', 'driver'),
-    user('Gary Hughes', 'gary@marley.local', 'driver'),
-    user('Lee Parker', 'lee@marley.local', 'driver'),
-    user('Kieran Walsh', 'kieran@marley.local', 'driver'),
+    user('Dave Thompson', 'dave@marley.local', 'driver', 'driver', 'Groundworker'),
+    user('Gary Hughes', 'gary@marley.local', 'driver', 'driver', 'Plant Operator'),
+    user('Lee Parker', 'lee@marley.local', 'driver', 'driver', 'Ganger'),
+    user('Kieran Walsh', 'kieran@marley.local', 'driver', 'site_manager', 'Site Manager'),
   ];
 
   // Demo assets only – not Marley's real register.
@@ -86,10 +87,19 @@ transaction(() => {
   ['Esso', 'Key Fuels (The Fuelcard Company)'].forEach((provider, k) => vehicles.forEach((vid, i) => {
     if ((i + k) % 2) return;
     const v = get('SELECT v.*, u.name FROM vehicles v LEFT JOIN users u ON u.id = v.driver_id WHERE v.id = ?', vid);
-    run(`INSERT INTO fuel_cards (provider, card_ref, last4, holder, vehicle_id, card_type, expiry, status) VALUES (?, ?, ?, ?, ?, 'Diesel / Unleaded', ?, 'active')`,
-      provider, String(i + 1), String(1000 + Math.floor(rand() * 8999)), v.name, vid, addMonths(today, 6 + i * 7).slice(0, 7));
+    // Some cards left unassigned so the assign board has something to drag.
+    const userId = k === 1 && i > 3 ? null : v.driver_id;
+    run(`INSERT INTO fuel_cards (provider, card_ref, last4, user_id, vehicle_id, card_type, expiry, status) VALUES (?, ?, ?, ?, ?, 'Diesel / Unleaded', ?, 'active')`,
+      provider, String(i + 1), String(1000 + Math.floor(rand() * 8999)), userId, vid, addMonths(today, 6 + i * 7).slice(0, 7));
   }));
   run(`UPDATE fuel_cards SET expiry = ? WHERE id = 1`, addMonths(today, 1).slice(0, 7));
+  // Spare cards in the office, not given to anyone yet.
+  for (const [provider, ref, last4] of [['Esso', 'S1', '2281'], ['Key Fuels (The Fuelcard Company)', 'S2', '6043'], ['FastFuels (Silvey)', 'S3', '9152']]) {
+    run(`INSERT INTO fuel_cards (provider, card_ref, last4, card_type, expiry, status) VALUES (?, ?, ?, 'Diesel / Unleaded', ?, 'active')`, provider, ref, last4, addMonths(today, 20).slice(0, 7));
+  }
+  // Drivers can hold more than one card: give Dave a second, AdBlue-only card.
+  run(`INSERT INTO fuel_cards (provider, card_ref, last4, user_id, card_type, expiry, status)
+       VALUES ('FastFuels (Silvey)', 'F3', '4410', (SELECT id FROM users WHERE email = 'dave@marley.local'), 'Diesel / AdBlue', ?, 'active')`, addMonths(today, 14).slice(0, 7));
 
   // Weekly plant checks (one machine left overdue), daily walk-arounds (one vehicle not done today).
   plant.forEach((pid, i) => {
@@ -168,4 +178,4 @@ function receiptSvg(station, date, type, litres, cost) {
 <text x="160" y="400" text-anchor="middle">THANK YOU</text></g></svg>`;
 }
 
-console.log('Demo data loaded. Sign in as admin@marley.local / password123 (admin) or dave@marley.local / password123 (driver).');
+console.log('Demo data loaded. Password password123 for admin@marley.local (admin), kieran@marley.local (site manager) and dave@marley.local (fleet driver).');

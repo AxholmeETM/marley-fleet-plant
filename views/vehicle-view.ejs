@@ -6,7 +6,7 @@
   <div class="actions">
     <a class="btn" href="/checks/vehicle/new?vehicle=<%= item.id %>">New walk-around</a>
     <a class="btn" href="/fuel/new?vehicle=<%= item.id %>">Log fuel</a>
-    <a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit</a>
+    <% if (isAdmin) { %><a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit</a><% } else { %><a class="btn" href="/defects/new?asset=vehicle:<%= item.id %>">Report defect</a><% } %>
   </div>
 </div>
 <% const cls = (s) => ({ overdue: 'bad', soon: 'warn', ok: 'good' }[s.level] || ''); %>
@@ -25,9 +25,9 @@
       <dl class="facts">
         <dt>Tracked</dt><dd><%= TRACKED[item.tracked] || 'Not known' %></dd>
         <dt>Driver app account</dt><dd><%= item.driver_name || 'None – walk-arounds not expected' %></dd>
-        <dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd>
-        <dt>Fuel cards</dt><dd><% if (!cards.length) { %>None linked · <a href="/fuel-cards/new?vehicle=<%= item.id %>">Add</a><% } else { for (const c of cards) { %>
-          <div><a href="/fuel-cards/<%= c.id %>/edit"><%= c.provider %><%= c.card_ref ? ' #' + c.card_ref : '' %><%= c.last4 ? ' ••' + c.last4 : '' %></a> <span class="pill <%= c.status === 'active' ? 'ok' : 'none' %>"><%= FUEL_CARD_STATUSES[c.status] %></span></div>
+        <% if (isAdmin) { %><dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd><% } %>
+        <dt>Fuel cards</dt><dd><% if (!cards.length) { %>None linked<% if (isAdmin) { %> · <a href="/fuel-cards/new?vehicle=<%= item.id %>">Add</a><% } %><% } else { for (const c of cards) { const label = `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''}${c.last4 ? ' ••' + c.last4 : ''}`; %>
+          <div><% if (isAdmin) { %><a href="/fuel-cards/<%= c.id %>/edit"><%= label %></a><% } else { %><%= label %><% } %> <span class="pill <%= c.status === 'active' ? 'ok' : 'none' %>"><%= FUEL_CARD_STATUSES[c.status] %></span></div>
         <% } } %></dd>
       </dl>
     </div>
@@ -48,12 +48,13 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Date</th><th>Driver</th><th>Fuel</th><th class="num">Litres</th><th class="num">Cost</th><th></th></tr></thead>
         <tbody><% for (const f of fuel) { %>
-          <tr><td><%= ukDate(f.fill_date) %></td><td><%= f.driver_name %></td><td><%= FUEL_LABELS[f.fuel_type] %></td><td class="num"><%= num(f.litres, 2) %></td><td class="num"><%= money(f.cost) %></td><td><a href="/fuel/<%= f.id %>">Receipt</a></td></tr>
+          <tr><td><%= ukDate(f.fill_date) %></td><td><%= f.driver_name %></td><td><%= FUEL_LABELS[f.fuel_type] %></td><td class="num"><%= num(f.litres, 2) %></td><td class="num"><%= money(f.cost) %></td><td><a href="<%= isAdmin ? '/fuel/' + f.id : '/receipts/' + f.receipt_file %>">Receipt</a></td></tr>
         <% } %></tbody>
       </table></div><% } %>
     </div>
   </div>
   <div>
+    <% if (isAdmin) { %>
     <form class="card" method="post" action="/vehicles/<%= item.id %>/records">
       <h2>Record a service, MOT or tax renewal</h2>
       <div class="form-grid">
@@ -67,6 +68,7 @@
       <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text"></div>
       <button class="btn dark" type="submit">Save record</button>
     </form>
+    <% } %>
     <div class="card flush">
       <h2>History</h2>
       <% if (!records.length) { %><p class="empty">No service, MOT or tax records yet.</p><% } else { %>
@@ -84,13 +86,14 @@
         <tr><td class="nowrap"><%= ukDate(d.reported_at) %></td><td><%= d.description %><div class="small muted"><%= d.reported_by_name %><%= d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : '' %></div></td>
           <td><% if (d.status === 'open') { %><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span><% } else { %><span class="pill ok">Resolved</span><% } %></td></tr>
       <% } %></tbody></table></div>
-      <p class="empty" style="padding-top:8px"><a href="/defects?asset=vehicle">Manage defects →</a></p><% } %>
+      <% if (isAdmin) { %><p class="empty" style="padding-top:8px"><a href="/defects?asset=vehicle">Manage defects →</a></p><% } %><% } %>
     </div>
     <% if (item.notes) { %><div class="card"><h2>Notes</h2><p style="white-space:pre-wrap;margin:0"><%= item.notes %></p></div><% } %>
   </div>
 </div>
 <script>
   (function () {
+    if (!document.getElementById('kind')) return;
     const kind = document.getElementById('kind'), field = document.getElementById('next-due-field'), input = document.getElementById('next_due'), hint = document.getElementById('next-hint');
     function upd() {
       field.style.display = kind.value === 'mot' || kind.value === 'tax' ? '' : 'none';

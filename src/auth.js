@@ -3,6 +3,22 @@ function requireAdmin(req, res, next) {
   res.status(403).render('error', { title: 'Admins only', message: 'You need an admin account to see this page.' });
 }
 
+// Who can see what:
+// - admin users: everything
+// - site managers: all plant (view, checks, defects, service and inspection records) plus their own vehicles
+// - fleet drivers: only the vehicles assigned to them
+const isAdmin = (u) => !!u && u.role === 'admin';
+const isSiteManager = (u) => !!u && u.role === 'driver' && u.employee_type === 'site_manager';
+const canUsePlant = (u) => isAdmin(u) || isSiteManager(u);
+
+function requirePlantAccess(req, res, next) {
+  if (canUsePlant(req.user)) return next();
+  res.status(403).render('error', { title: 'No access', message: 'Plant is only available to site managers and the office.' });
+}
+
+// A vehicle an employee may use: one assigned to them. Admins can use any.
+const canUseVehicle = (u, vehicle) => !!vehicle && (isAdmin(u) || vehicle.driver_id === u.id);
+
 class UserError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -21,4 +37,4 @@ function numberField(value, label, { integer = false, min = 0 } = {}) {
 
 const text = (v) => (v == null ? null : String(v).trim() || null);
 
-module.exports = { requireAdmin, UserError, numberField, text };
+module.exports = { requireAdmin, requirePlantAccess, isAdmin, isSiteManager, canUsePlant, canUseVehicle, UserError, numberField, text };

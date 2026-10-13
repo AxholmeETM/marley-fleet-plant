@@ -81,7 +81,10 @@ test('admin and driver flows', async () => {
   assert.equal((await admin('POST', '/login', { email: 'admin@test.local', password: 'adminpass1' })).location, '/');
 
   // Admin sets up a driver, a vehicle and a machine.
-  await admin('POST', '/users', { name: 'Dave Driver', email: 'dave@test.local', password: 'driverpass1', role: 'driver' });
+  assert.equal((await admin('POST', '/users', { name: 'No Type', email: 'x@test.local', password: 'driverpass1', role: 'driver' })).status, 400);
+  await admin('POST', '/users', { name: 'Dave Driver', email: 'dave@test.local', password: 'driverpass1', role: 'driver', employee_type: 'driver', job_title: 'Groundworker' });
+  await admin('POST', '/users', { name: 'Sam Site', email: 'sam@test.local', password: 'managerpass1', role: 'driver', employee_type: 'site_manager', job_title: 'Site Manager' });
+  assert.deepEqual({ ...get("SELECT employee_type, job_title FROM users WHERE email = 'sam@test.local'") }, { employee_type: 'site_manager', job_title: 'Site Manager' });
   const dave = get("SELECT id FROM users WHERE email = 'dave@test.local'").id;
   assert.match((await admin('POST', '/vehicles', { reg: 'yx21 kpl', make: 'Ford', model: 'Transit', fuel_type: 'diesel', driver_id: dave, mot_due: status.addDays(status.isoDate(), 5) })).location, /^\/vehicles\/\d+$/);
   const vehicle = get("SELECT * FROM vehicles WHERE reg = 'YX21 KPL'");
@@ -98,7 +101,22 @@ test('admin and driver flows', async () => {
   // Fuel card (no PIN, only last 4 digits kept).
   await admin('POST', '/fuel-cards', { provider: 'Esso', card_ref: '12', last4: '7064056072235900127', holder: 'Dave Driver', status: 'active', expiry: '2027-06' });
   assert.equal(get('SELECT last4 FROM fuel_cards').last4, '0127');
+  await admin('POST', '/fuel-cards', { provider: 'Key Fuels', card_ref: 'K7', last4: '5555', status: 'active' });
+  await admin('POST', '/fuel-cards', { provider: 'FastFuels', card_ref: 'Spare', last4: '9999', status: 'active' });
+  const [esso, key] = [get("SELECT id FROM fuel_cards WHERE card_ref = '12'").id, get("SELECT id FROM fuel_cards WHERE card_ref = 'K7'").id];
+  // Assign two cards to Dave: one from the board by drag (fetch), one through the plain form.
+  const moved = await admin('POST', `/fuel-cards/${esso}/assign`, { user_id: dave });
+  assert.equal(moved.status, 302);
+  assert.equal((await admin('POST', `/fuel-cards/${key}/assign`, { user_id: dave })).status, 302);
+  assert.equal((await admin('POST', `/fuel-cards/${key}/assign`, { user_id: '99999' })).status, 400);
+  assert.equal(get('SELECT COUNT(*) AS n FROM fuel_cards WHERE user_id = ?', dave).n, 2);
+  const json = await fetch(`${base}/fuel-cards/${key}/assign`, { method: 'POST', redirect: 'manual' });
+  assert.notEqual(json.status, 200); // not signed in
+  const board = await admin('GET', '/fuel-cards/assign');
+  assert.match(board.text, /Dave Driver/);
+  assert.match(board.text, /Not assigned/);
 
+  assert.match((await admin('GET', '/admin')).text, /Fleet drivers/);
   const dash = await admin('GET', '/');
   assert.match(dash.text, /Needs attention/);
   assert.match(dash.text, /MOT/);
@@ -109,6 +127,11 @@ test('admin and driver flows', async () => {
   assert.match((await driver('GET', '/')).text, /Do today&#39;s walk-around check|Do today's walk-around check/);
   assert.equal((await driver('GET', '/plant')).status, 403);
   assert.equal((await driver('GET', '/fuel')).status, 403);
+  assert.equal((await driver('GET', '/fuel-cards/assign')).status, 403);
+  // Dave's own two cards are offered as choices; the spare card is only in the "different card" list.
+  const fuelForm = (await driver('GET', '/fuel/new')).text;
+  assert.equal((fuelForm.match(/name="card_choice" value="\d+"/g) || []).length, 2);
+  assert.match(fuelForm, /<option value="\d+"[^>]*>FastFuels #Spare/);
 
   const missing = await driver('POST', '/checks/vehicle', { asset_id: vehicle.id, check_date: status.isoDate() });
   assert.equal(missing.status, 400);
@@ -118,7 +141,30 @@ test('admin and driver flows', async () => {
   assert.equal(get('SELECT mileage FROM vehicles WHERE id = ?', vehicle.id).mileage, 48000);
   assert.match((await driver('GET', '/')).text, /Walk-around done today/);
 
-  await driver('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'J200', ...checklist(PLANT_ITEMS, -1) });
+  // Fleet drivers: only their own vehicle, no plant.
+  assert.equal((await driver('GET', `/vehicles/${vehicle.id}`)).status, 200);
+  assert.equal((await driver('GET', `/vehicles/${vehicle.id}/edit`)).status, 403);
+  assert.equal((await driver('GET', '/checks/plant/new')).status, 403);
+  assert.equal((await driver('GET', '/equipment')).status, 403);
+  await admin('POST', '/vehicles', { reg: 'AB12 CDE', make: 'Ford', model: 'Ranger', fuel_type: 'diesel' });
+  const other = get("SELECT id FROM vehicles WHERE reg = 'AB12 CDE'").id;
+  assert.equal((await driver('GET', `/vehicles/${other}`)).status, 403);
+  assert.doesNotMatch((await driver('GET', '/fuel/new')).text, /AB12 CDE/);
+  assert.equal((await driver('POST', '/checks/vehicle', { asset_id: other, check_date: status.isoDate(), reading: '1', ...checklist(VEHICLE_ITEMS, -1) })).status, 403);
+  assert.equal((await driver('POST', '/defects', { asset: `plant:${plant.id}`, description: 'x' })).status, 403);
+
+  // Site managers: all plant and equipment (no prices, no editing the asset record), plus their own vehicles.
+  const manager = client();
+  await manager('POST', '/login', { email: 'sam@test.local', password: 'managerpass1' });
+  assert.match((await manager('GET', '/plant')).text, /MCL-EX-0001/);
+  assert.match((await manager('GET', '/equipment')).text, /2 leg chain sling/);
+  assert.doesNotMatch((await manager('GET', '/plant')).text, /2 leg chain sling/);
+  assert.equal((await manager('GET', `/plant/${plant.id}/edit`)).status, 403);
+  assert.doesNotMatch((await manager('GET', `/plant/${plant.id}`)).text, /Weekly hire rate/);
+  assert.equal((await manager('GET', `/vehicles/${vehicle.id}`)).status, 403);
+  assert.equal((await manager('GET', '/users')).status, 403);
+
+  await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'J200', ...checklist(PLANT_ITEMS, -1) });
   const updated = get('SELECT running_hours, job_ref FROM plant WHERE id = ?', plant.id);
   assert.equal(updated.running_hours, 1004.5);
   assert.equal(updated.job_ref, 'J200');

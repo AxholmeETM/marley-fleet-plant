@@ -2,7 +2,7 @@ const express = require('express');
 const { all, get, run, transaction } = require('../db');
 const { listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
 const { VEHICLE_ITEMS, PLANT_ITEMS, RESULTS } = require('../checklists');
-const { requireAdmin, UserError, numberField, text } = require('../auth');
+const { requireAdmin, requirePlantAccess, isAdmin, canUsePlant, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isoDate, isValidDate, addDays } = require('../status');
 
 const router = express.Router();
@@ -26,19 +26,21 @@ const SEVERITIES = ['minor', 'major', 'unsafe'];
 // ---- Vehicle daily walk-around ----
 
 router.get('/checks/vehicle/new', (req, res) => {
-  const vehicles = listVehicles();
+  // Employees only see the vehicles assigned to them.
+  const vehicles = listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id });
   const mine = vehicles.filter((v) => v.driver_id === req.user.id);
   const selectedId = Number(req.query.vehicle) || (mine[0] && mine[0].id) || null;
   const vehicle = selectedId ? vehicles.find((v) => v.id === selectedId) : null;
   res.render('check-form', {
     title: 'Daily walk-around check', kind: 'vehicle', items: VEHICLE_ITEMS,
-    assets: vehicles, mineIds: mine.map((v) => v.id), asset: vehicle,
+    assets: vehicles, mineIds: isAdmin(req.user) ? mine.map((v) => v.id) : [], asset: vehicle,
   });
 });
 
 router.post('/checks/vehicle', (req, res) => {
   const vehicle = getVehicle(Number(req.body.asset_id));
   if (!vehicle || !vehicle.active) throw new UserError('Please choose a vehicle.');
+  if (!canUseVehicle(req.user, vehicle)) throw new UserError('That vehicle is not assigned to you.', 403);
   const results = readResults(req.body, VEHICLE_ITEMS);
   const date = checkDate(req.body.check_date);
   const mileage = numberField(req.body.reading, 'Mileage', { integer: true });
@@ -65,7 +67,7 @@ router.post('/checks/vehicle', (req, res) => {
 
 // ---- Plant weekly check sheet ----
 
-router.get('/checks/plant/new', (req, res) => {
+router.get('/checks/plant/new', requirePlantAccess, (req, res) => {
   const plant = listPlant().filter((p) => p.weekly_checks && p.status !== 'repair');
   const selectedId = Number(req.query.plant) || null;
   res.render('check-form', {
@@ -74,7 +76,7 @@ router.get('/checks/plant/new', (req, res) => {
   });
 });
 
-router.post('/checks/plant', (req, res) => {
+router.post('/checks/plant', requirePlantAccess, (req, res) => {
   const plant = getPlant(Number(req.body.asset_id));
   if (!plant || !plant.active) throw new UserError('Please choose a piece of plant.');
   const results = readResults(req.body, PLANT_ITEMS);
@@ -133,7 +135,9 @@ router.get('/checks/:type/:id', (req, res) => {
     check = get(`SELECT c.*, c.hours AS reading, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name FROM plant_checks c
       JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
   }
-  if (!check || (req.user.role !== 'admin' && check.user_id !== req.user.id)) {
+  // Admins see every check, site managers every plant check, everyone else only their own.
+  const allowed = check && (isAdmin(req.user) || check.user_id === req.user.id || (type === 'plant' && canUsePlant(req.user)));
+  if (!allowed) {
     return res.status(404).render('error', { title: 'Not found', message: 'Check not found.' });
   }
   const defect = get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);

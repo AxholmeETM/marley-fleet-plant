@@ -7,7 +7,11 @@
       <datalist id="providers"><% for (const p of FUEL_CARD_PROVIDERS) { %><option value="<%= p %>"><% } %></datalist></div>
     <div class="field"><label for="card_ref">Card no / name on your list</label><input id="card_ref" name="card_ref" type="text" value="<%= item.card_ref || '' %>" placeholder="e.g. 12 or TE"></div>
     <div class="field"><label for="last4">Last 4 digits of card</label><input id="last4" name="last4" type="text" inputmode="numeric" maxlength="4" pattern="\d{4}" value="<%= item.last4 || '' %>" autocomplete="off"></div>
-    <div class="field"><label for="holder">Card holder</label><input id="holder" name="holder" type="text" value="<%= item.holder || '' %>"></div>
+    <div class="field"><label for="user_id">Assigned to <span class="hint">(sees it when logging fuel)</span></label>
+      <select id="user_id" name="user_id"><option value="">Nobody</option>
+        <% for (const u of users) { %><option value="<%= u.id %>" <%= item.user_id === u.id ? 'selected' : '' %>><%= u.name %></option><% } %>
+      </select></div>
+    <div class="field"><label for="holder">Name on card <span class="hint">(if different)</span></label><input id="holder" name="holder" type="text" value="<%= item.holder || '' %>"></div>
     <div class="field"><label for="vehicle_id">Vehicle</label>
       <select id="vehicle_id" name="vehicle_id"><option value="">Not tied to a vehicle</option>
         <% for (const v of vehicles) { %><option value="<%= v.id %>" <%= item.vehicle_id === v.id ? 'selected' : '' %>><%= v.reg %><%= v.driver_display ? ' – ' + v.driver_display : '' %></option><% } %>

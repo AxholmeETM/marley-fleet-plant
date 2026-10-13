@@ -1,7 +1,7 @@
 const express = require('express');
 const { all, run, get, transaction } = require('../db');
 const { listVehicles, getVehicle, listDefects, listDrivers } = require('../queries');
-const { requireAdmin, UserError, numberField, text } = require('../auth');
+const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
 const { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, FUEL_CARD_STATUSES } = require('../categories');
 
@@ -15,7 +15,11 @@ function nextVanNumber(owner = 'MCL') {
 }
 
 const router = express.Router();
-router.use('/vehicles', requireAdmin);
+// Employees may open the page of a vehicle assigned to them (read-only). Everything else is for admin users.
+router.use('/vehicles', (req, res, next) => {
+  const own = req.method === 'GET' && /^\/\d+$/.test(req.path) && canUseVehicle(req.user, get('SELECT id, driver_id FROM vehicles WHERE id = ?', Number(req.path.slice(1))));
+  return own ? next() : requireAdmin(req, res, next);
+});
 
 function dateField(v, label) {
   if (!v) return null;
@@ -97,7 +101,7 @@ router.get('/vehicles/:id', (req, res) => {
     WHERE c.vehicle_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 30`, item.id);
   const records = all(`SELECT * FROM service_records WHERE asset_type = 'vehicle' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
   const fuel = all(`SELECT f.*, u.name AS driver_name FROM fuel_entries f JOIN users u ON u.id = f.user_id
-    WHERE f.vehicle_id = ? ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
+    WHERE f.vehicle_id = ? ${isAdmin(req.user) ? '' : 'AND f.user_id = ' + Number(req.user.id)} ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
   const defects = listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
   const cards = all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
   res.render('vehicle-view', { title: item.reg, item, checks, records, fuel, defects, cards, addMonths, addDays, ...LOOKUPS });

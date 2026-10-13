@@ -1,0 +1,81 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Assign fuel cards</h1><p class="muted" style="margin:0">Drag a card onto a person to give it to them. A person can hold several cards; their cards are shown to them when they log fuel.</p></div>
+  <div class="actions"><a class="btn" href="/fuel-cards">Card list</a><a class="btn primary" href="/fuel-cards/new">Add fuel card</a></div>
+</div>
+<div class="field" style="max-width:320px"><label for="who">Find a person</label><input id="who" type="search" placeholder="Type a name…" autocomplete="off"></div>
+<p id="board-msg" class="small muted" role="status" aria-live="polite">&nbsp;</p>
+<div class="board">
+  <% for (const lane of lanes) { %>
+  <section class="lane <%= lane.id === '' ? 'unassigned' : '' %>" data-user="<%= lane.id %>" data-name="<%= lane.name.toLowerCase() %>">
+    <h3><%= lane.name %><% if (lane.role === 'admin') { %> <span class="small muted">office</span><% } %> <span class="count"><%= lane.cards.length %></span></h3>
+    <div class="drop">
+      <% for (const c of lane.cards) { %>
+      <article class="fcard" draggable="true" data-id="<%= c.id %>">
+        <div><strong><%= c.provider %></strong> <%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.last4 ? '••' + c.last4 : '' %></span></div>
+        <div class="small muted"><%= [c.reg, c.card_type, c.expiry ? 'exp ' + c.expiry.slice(5, 7) + '/' + c.expiry.slice(2, 4) : '', !c.user_name && c.holder ? 'holder ' + c.holder : ''].filter(Boolean).join(' · ') %></div>
+        <form method="post" action="/fuel-cards/<%= c.id %>/assign" class="move">
+          <label class="small muted" for="mv-<%= c.id %>">Move to</label>
+          <select id="mv-<%= c.id %>" name="user_id">
+            <option value="">Not assigned</option>
+            <% for (const u of users) { %><option value="<%= u.id %>" <%= c.user_id === u.id ? 'selected' : '' %>><%= u.name %></option><% } %>
+          </select>
+          <noscript><button class="btn" type="submit">Move</button></noscript>
+        </form>
+      </article>
+      <% } %>
+      <p class="lane-empty small muted">Drop a card here</p>
+    </div>
+  </section>
+  <% } %>
+</div>
+<script>
+  (function () {
+    const msg = document.getElementById('board-msg');
+    let dragged = null;
+
+    function counts() {
+      document.querySelectorAll('.lane').forEach((lane) => { lane.querySelector('.count').textContent = lane.querySelectorAll('.fcard').length; });
+    }
+    async function assign(card, lane) {
+      const from = card.closest('.lane');
+      if (from === lane) return;
+      lane.querySelector('.drop').insertBefore(card, lane.querySelector('.lane-empty'));
+      card.querySelector('select').value = lane.dataset.user;
+      counts();
+      try {
+        const res = await fetch('/fuel-cards/' + card.dataset.id + '/assign', {
+          method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', 'x-requested-with': 'fetch' },
+          body: new URLSearchParams({ user_id: lane.dataset.user }),
+        });
+        if (!res.ok) throw new Error();
+        msg.textContent = (await res.json()).message;
+        card.classList.add('saved'); setTimeout(() => card.classList.remove('saved'), 900);
+      } catch (e) {
+        from.querySelector('.drop').insertBefore(card, from.querySelector('.lane-empty'));
+        card.querySelector('select').value = from.dataset.user;
+        counts();
+        msg.textContent = 'Could not save that change. Please try again.';
+      }
+    }
+
+    document.querySelectorAll('.fcard').forEach((card) => {
+      card.addEventListener('dragstart', (e) => { dragged = card; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', card.dataset.id); });
+      card.addEventListener('dragend', () => { card.classList.remove('dragging'); dragged = null; });
+      // The "Move to" list does the same job on phones and tablets, where dragging isn't available.
+      card.querySelector('select').addEventListener('change', function () {
+        assign(card, document.querySelector('.lane[data-user="' + this.value + '"]'));
+      });
+    });
+    document.querySelectorAll('.lane').forEach((lane) => {
+      lane.addEventListener('dragover', (e) => { if (dragged) { e.preventDefault(); lane.classList.add('over'); } });
+      lane.addEventListener('dragleave', (e) => { if (!lane.contains(e.relatedTarget)) lane.classList.remove('over'); });
+      lane.addEventListener('drop', (e) => { e.preventDefault(); lane.classList.remove('over'); if (dragged) assign(dragged, lane); });
+    });
+    document.getElementById('who').addEventListener('input', function () {
+      const q = this.value.trim().toLowerCase();
+      document.querySelectorAll('.lane:not(.unassigned)').forEach((lane) => { lane.hidden = q && !lane.dataset.name.includes(q); });
+    });
+  })();
+</script>
+<%- include('partials/footer') %>

@@ -18,6 +18,10 @@ const PLAN_DIESEL = { schedule: '50, 250, 500', every: 500, serviceMonths: 12 };
 const PLAN_DUMPER = { schedule: '100, 250, 500', every: 500, serviceMonths: 12 };
 const PLAN_PETROL = { schedule: '20', every: 100, serviceMonths: 6 };
 
+// The menu splits the register in two: Plant (the machines) and Equipment (everything else).
+const PLANT_SECTION = ['excavator', 'dumper', 'roller'];
+const SECTIONS = { plant: { href: '/plant', label: 'Plant', noun: 'plant' }, equipment: { href: '/equipment', label: 'Equipment', noun: 'equipment' } };
+
 const CATEGORIES = [
   { key: 'excavator', label: 'Excavators', code: 'EX', hours: true, checks: true, inspection: 'loler', months: 12, ...PLAN_DIESEL },
   { key: 'dumper', label: 'Dumpers', code: 'DU', hours: true, checks: true, inspection: 'thorough', months: 12, ...PLAN_DUMPER },
@@ -37,7 +41,7 @@ const CATEGORIES = [
   { key: 'misc', label: 'Misc Tools', code: 'MISC', hours: false, checks: false, inspection: 'none', months: 12 },
   { key: 'pump', label: 'Drainage Pumps', code: 'DP', hours: false, checks: false, inspection: 'none', months: 12 },
   { key: 'mower', label: 'Lawn Mowers', code: 'LM', hours: true, checks: false, inspection: 'none', months: 12, ...PLAN_PETROL },
-].map((c) => ({ ...PLAN_DIESEL, ...c }));
+].map((c) => ({ ...PLAN_DIESEL, section: PLANT_SECTION.includes(c.key) ? 'plant' : 'equipment', ...c }));
 
 // What a service at a given hour mark typically involves. A guide only: the machine's own manual wins.
 function serviceWork(hours, isFirst, every) {
@@ -68,10 +72,14 @@ const VEHICLE_STATUSES = { active: 'On the road', sorn: 'SORN', off_road: 'Off r
 const VEHICLE_INACTIVE = ['sold'];
 const TRACKED = { yes: 'Yes (tracker company)', own: 'Yes (we own the tracker)', no: 'No' };
 
+// Admins run the office side. Employees (role 'driver' in the database) are fleet drivers or site managers.
+const EMPLOYEE_TYPES = { driver: 'Fleet driver', site_manager: 'Site manager' };
+const userLabel = (u) => (u.role === 'admin' ? 'Admin' : EMPLOYEE_TYPES[u.employee_type] || 'Employee');
+
 const FUEL_CARD_PROVIDERS = ['Esso', 'Key Fuels (The Fuelcard Company)', 'FastFuels (Silvey)'];
 const FUEL_CARD_STATUSES = { active: 'Active', expired: 'Expired', stopped: 'Stopped', cancelled: 'Cancelled', lost: 'Lost / stolen' };
 
 module.exports = {
-  serviceWork, INSPECTION_TYPES, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE,
-  VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES,
+  serviceWork, INSPECTION_TYPES, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE,
+  VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, EMPLOYEE_TYPES, userLabel, FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES,
 };

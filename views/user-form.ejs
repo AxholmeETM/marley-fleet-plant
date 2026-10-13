@@ -1,12 +1,31 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1><%= title %></h1></div></div>
-<form class="card" method="post" action="/users<%= item.id ? '/' + item.id : '' %>" style="max-width:640px">
+<form class="card" method="post" action="/users<%= item.id ? '/' + item.id : '' %>" style="max-width:680px">
+  <fieldset>
+    <legend>Account type</legend>
+    <span class="seg">
+      <input type="radio" id="role-emp" name="role" value="driver" <%= item.role !== 'admin' ? 'checked' : '' %>><label for="role-emp">Employee</label>
+      <input type="radio" id="role-admin" name="role" value="admin" <%= item.role === 'admin' ? 'checked' : '' %>><label for="role-admin">Admin user</label>
+    </span>
+    <p class="hint" id="role-hint"></p>
+  </fieldset>
+  <fieldset id="emp-type">
+    <legend>Employee type</legend>
+    <span class="seg">
+      <% for (const [k, l] of Object.entries(EMPLOYEE_TYPES)) { %>
+      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type || 'driver') === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
+      <% } %>
+    </span>
+  </fieldset>
   <div class="form-grid">
     <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" value="<%= item.name || '' %>" required></div>
+    <div class="field"><label for="job_title">Role within the company</label>
+      <input id="job_title" name="job_title" type="text" list="job-titles" value="<%= item.job_title || '' %>" placeholder="e.g. Groundworker, Site Manager, Plant Fitter">
+      <datalist id="job-titles">
+        <% for (const t of ['Groundworker', 'Plant Operator', 'Labourer', 'Ganger', 'Site Manager', 'Assistant Site Manager', 'Contracts Manager', 'Plant Fitter', 'Fleet Driver', 'Admin Assistant', 'Office Manager', 'Director']) { %><option value="<%= t %>"><% } %>
+      </datalist></div>
     <div class="field"><label for="email">Email <span class="hint">(used to sign in)</span></label><input id="email" name="email" type="email" value="<%= item.email || '' %>" required></div>
     <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" value="<%= item.phone || '' %>"></div>
-    <div class="field"><label for="role">Role</label>
-      <select id="role" name="role"><option value="driver">Driver / operative</option><option value="admin" <%= item.role === 'admin' ? 'selected' : '' %>>Admin</option></select></div>
     <div class="field"><label for="password"><%= item.id ? 'Reset password' : 'Password' %> <span class="hint"><%= item.id ? '(leave blank to keep)' : '(at least 8 characters)' %></span></label>
       <input id="password" name="password" type="text" minlength="8" autocomplete="new-password" <%= item.id ? '' : 'required' %>></div>
     <div class="field"><label for="active">Status</label>
@@ -14,4 +33,16 @@
   </div>
   <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="/users">Cancel</a></div>
 </form>
+<script>
+  (function () {
+    const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards, users and exports.' };
+    function upd() {
+      const role = document.querySelector('input[name="role"]:checked').value;
+      document.getElementById('emp-type').hidden = role === 'admin';
+      document.getElementById('role-hint').textContent = hints[role];
+    }
+    document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener('change', upd));
+    upd();
+  })();
+</script>
 <%- include('partials/footer') %>

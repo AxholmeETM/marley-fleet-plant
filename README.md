@@ -2,12 +2,23 @@
 
 A web app for Marley Construction Limited to run the plant register, the fleet register, driver checks and fuel.
 
-- **Admin interface** (office): overall dashboard, plant register, fleet register, checks, defects, fuel dashboard, users, CSV exports.
-- **Driver / operative interface** (phone friendly): daily walk-around check, log fuel with a receipt photo, weekly plant check sheet, report a defect.
+A website: people open it in any browser (desktop or phone), nothing to install. Apple-style design with automatic dark mode.
+
+Menu for admin users: **Dashboard · Plant · Fleet · Fuel cards · Equipment · Admin**.
+
+## Users and what they can see
+
+| Account | Who | Can see and do |
+| --- | --- | --- |
+| Admin user | Office | Everything: registers, fuel dashboard and receipts, fuel cards, users, exports |
+| Employee – site manager | Site managers | All plant and equipment (view, check sheets, defects, service / inspection / repair records; no purchase prices or hire rates, can't edit the asset record) plus their own vehicles |
+| Employee – fleet driver | Drivers | Only the vehicles assigned to them: walk-around checks, fuel with their fuel cards, defects |
+
+Each account also records the person's **role within the company** (Groundworker, Site Manager, Plant Fitter…).
 
 ## What it records
 
-**Plant & equipment** (matches the sheets in the plant & equipment log)
+**Plant & equipment** (matches the sheets in the plant & equipment log). The menu splits them: **Plant** is the machines (excavators, dumpers, rollers) and **Equipment** is everything else; change the split in `PLANT_SECTION` in `src/categories.js`.
 - Asset number (e.g. `MCL-EX-0001`, `MPL-DU-0001` – suggested automatically), category (Excavators, Dumpers, Rollers, Trailers, Fuel Tanks & Jetting, Compaction Plates, Attachments, Survey Equipment, Road Plates, Cutting Tools, Cement Mixers, Generators, CAT & Genny, Chains & Slings, Containers, Misc Tools, Drainage Pumps, Lawn Mowers), owner (Marley Construction or Marley Plant), status (in use, in yard, at repair, sold, stolen, disposed)
 - Manufacturer, model, serial/chassis no, registered year, SWL, **job reference**, site/location/person
 - **Service plan per machine on running hours**: by default 50, 250 and 500 hrs, then every 500 hrs or 12 months, whichever comes first (dumpers start at 100 hrs; small petrol plant 20 hrs then every 100 hrs or 6 months). Editable per machine; the plan shows typical work at each service as a guide. Shows each service as done / next / upcoming, and flags the next one amber within 50 hrs and red when overdue. Running hours update from each weekly check sheet.
@@ -23,7 +34,8 @@ A web app for Marley Construction Limited to run the plant register, the fleet r
 - Service / MOT / tax / repair history
 
 **Fuel cards**
-- Company (Esso, Key Fuels, FastFuels…), card no on your list, last 4 digits, holder, vehicle, card type, expiry and status. **PINs and full card numbers are never stored.** Cards expiring within 45 days show on the dashboard.
+- Company (Esso, Key Fuels, FastFuels…), card no on your list, last 4 digits, who it's assigned to, vehicle, card type, expiry and status. **PINs and full card numbers are never stored.** Cards expiring within 45 days show on the dashboard.
+- **Assign cards to people** by dragging a card onto a person (or the "Move to" list on a phone). A person can hold several cards. When they log fuel, their own cards are shown first; they can still pick a different card or "paid another way".
 
 **Fuel**
 - Drivers log **diesel, unleaded or AdBlue**: vehicle, date, litres, mileage, station, fuel card used and a **photo or PDF of the receipt** (required)
@@ -49,7 +61,7 @@ npm run seed -- --force   # WIPES the database and loads demo plant, vehicles, c
 npm start
 ```
 
-Demo logins (password `password123`): `admin@marley.local` (admin), `office@marley.local` (admin), `dave@marley.local` (driver).
+Demo logins (password `password123`): `admin@marley.local` and `office@marley.local` (admin users), `kieran@marley.local` (site manager), `dave@marley.local` (fleet driver).
 
 ### Settings (environment variables)
 

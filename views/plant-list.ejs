@@ -3,12 +3,12 @@
   const qs = (over) => new URLSearchParams(Object.fromEntries(Object.entries({ q, filter, owner, category, ...over }).filter(([, x]) => x))).toString();
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   const cat = category ? CATEGORY[category] : null;
-  const showHours = !cat || cat.hours;
-  const showChecks = !cat || cat.checks;
+  const showHours = cat ? cat.hours : plant.some((p) => p.tracks_hours);
+  const showChecks = cat ? cat.checks : plant.some((p) => p.weekly_checks);
 %>
 <div class="page-head">
-  <div><h1>Plant &amp; equipment</h1><p class="muted" style="margin:0"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %><% if (hireTotal) { %> · £<%= num(hireTotal, 2) %> a week on hire rates<% } %></p></div>
-  <div class="actions"><a class="btn" href="/export/plant.csv">Export CSV</a><a class="btn primary" href="/plant/new<%= category ? '?category=' + category : '' %>">Add <%= cat ? cat.label.replace(/s$/, '').toLowerCase() : 'plant or equipment' %></a></div>
+  <div><h1><%= section.label %></h1><p class="muted" style="margin:0"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %><% if (hireTotal && isAdmin) { %> · £<%= num(hireTotal, 2) %> a week on hire rates<% } %></p></div>
+  <% if (isAdmin) { %><div class="actions"><a class="btn" href="/export/plant.csv">Export CSV</a><a class="btn primary" href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add <%= cat ? cat.label.replace(/s$/, '').toLowerCase() : section.noun %></a></div><% } else { %><div class="actions"><a class="btn primary" href="/checks/plant/new">New check sheet</a></div><% } %>
 </div>
 <div class="tabs">
   <a href="?<%= qs({ category: '' }) %>" class="<%= !category ? 'active' : '' %>">All (<%= total %>)</a>
@@ -33,7 +33,7 @@
   <button class="btn" type="submit">Apply</button>
 </form>
 <div class="card flush">
-  <% if (!plant.length) { %><p class="empty">Nothing here yet. <a href="/plant/new<%= category ? '?category=' + category : '' %>">Add an item.</a></p><% } else { %>
+  <% if (!plant.length) { %><p class="empty">Nothing here yet.<% if (isAdmin) { %> <a href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add an item.</a><% } %></p><% } else { %>
   <div class="table-wrap"><table>
     <thead><tr><th>Asset no</th><th>Item</th><% if (!category) { %><th>Category</th><% } else { %><th>Serial no</th><% } %><th>Location / job</th>
       <% if (showHours) { %><th class="num">Hours</th><th>Service</th><% } else { %><th>Last service</th><% } %>

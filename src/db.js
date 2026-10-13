@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS fuel_cards (
   card_ref TEXT,
   last4 TEXT,
   holder TEXT,
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
   vehicle_id INTEGER REFERENCES vehicles(id) ON DELETE SET NULL,
   card_type TEXT,
   expiry TEXT,
@@ -192,6 +193,8 @@ const MIGRATIONS = {
     'inspection_type TEXT NOT NULL DEFAULT \'loler\'', 'inspection_due TEXT', 'cert_no TEXT', 'service_schedule TEXT', 'service_months INTEGER'],
   vehicles: ['asset_no TEXT', 'owner TEXT NOT NULL DEFAULT \'MCL\'', 'category TEXT NOT NULL DEFAULT \'van\'', 'status TEXT NOT NULL DEFAULT \'active\'',
     'colour TEXT', 'tracked TEXT', 'user_name TEXT', 'purchase_price REAL', 'purchase_date TEXT'],
+  users: ['employee_type TEXT', 'job_title TEXT'],
+  fuel_cards: ['user_id INTEGER REFERENCES users(id) ON DELETE SET NULL'],
   fuel_entries: ['fuel_card_id INTEGER REFERENCES fuel_cards(id) ON DELETE SET NULL'],
 };
 for (const [table, cols] of Object.entries(MIGRATIONS)) {

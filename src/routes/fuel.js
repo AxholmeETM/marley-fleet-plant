@@ -5,8 +5,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 const { all, get, run, UPLOAD_DIR } = require('../db');
 const { listVehicles, getVehicle } = require('../queries');
-const { requireAdmin, UserError, numberField, text } = require('../auth');
+const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isoDate, isValidDate, addMonths } = require('../status');
+const { CARD_SQL, decorate: decorateCard } = require('./fuel-cards');
 
 const router = express.Router();
 const FUEL_TYPES = ['diesel', 'unleaded', 'adblue'];
@@ -32,11 +33,15 @@ const upload = multer({
 // ---- Driver: log fuel ----
 
 router.get('/fuel/new', (req, res) => {
-  const vehicles = listVehicles();
+  // Employees only see the vehicles assigned to them.
+  const vehicles = listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id });
   const mine = vehicles.filter((v) => v.driver_id === req.user.id);
   const selected = vehicles.find((v) => v.id === Number(req.query.vehicle)) || mine[0] || null;
-  const cards = all(`SELECT id, provider, card_ref, last4, holder, vehicle_id FROM fuel_cards WHERE status = 'active' ORDER BY provider, card_ref`);
-  res.render('fuel-form', { title: 'Log fuel', vehicles, mineIds: mine.map((v) => v.id), selected, cards });
+  const cards = all(`${CARD_SQL} WHERE c.status = 'active' ORDER BY c.provider, CAST(c.card_ref AS INTEGER), c.card_ref`).map(decorateCard);
+  // The cards assigned to this person are shown first; any other active card can still be picked.
+  const myCards = cards.filter((c) => c.user_id === req.user.id);
+  const otherCards = cards.filter((c) => c.user_id !== req.user.id);
+  res.render('fuel-form', { title: 'Log fuel', vehicles, mineIds: isAdmin(req.user) ? mine.map((v) => v.id) : [], selected, myCards, otherCards });
 });
 
 router.post('/fuel', upload.single('receipt'), (req, res) => {
@@ -44,6 +49,7 @@ router.post('/fuel', upload.single('receipt'), (req, res) => {
   try {
     const vehicle = getVehicle(Number(req.body.vehicle_id));
     if (!vehicle || !vehicle.active) throw new UserError('Please choose a vehicle.');
+    if (!canUseVehicle(req.user, vehicle)) throw new UserError('That vehicle is not assigned to you.', 403);
     if (!FUEL_TYPES.includes(req.body.fuel_type)) throw new UserError('Please choose diesel, unleaded or AdBlue.');
     const date = req.body.fill_date || isoDate();
     if (!isValidDate(date) || date > isoDate()) throw new UserError('Date must be today or earlier.');
@@ -51,7 +57,8 @@ router.post('/fuel', upload.single('receipt'), (req, res) => {
     if (!litres) throw new UserError('Please enter how many litres you put in.');
     if (!req.file) throw new UserError('Please attach a photo of the receipt.');
     const mileage = numberField(req.body.mileage, 'Mileage', { integer: true });
-    const card = Number(req.body.fuel_card_id) ? get('SELECT id FROM fuel_cards WHERE id = ?', Number(req.body.fuel_card_id)) : null;
+    const card = Number(req.body.fuel_card_id) ? get("SELECT id FROM fuel_cards WHERE id = ? AND status = 'active'", Number(req.body.fuel_card_id)) : null;
+    if (Number(req.body.fuel_card_id) && !card) throw new UserError('That fuel card is no longer active. Please choose another.');
     run(`INSERT INTO fuel_entries (vehicle_id, user_id, fill_date, fuel_type, litres, mileage, station, notes, fuel_card_id, receipt_file, receipt_name)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       vehicle.id, req.user.id, date, req.body.fuel_type, litres, mileage, text(req.body.station), text(req.body.notes), card ? card.id : null,

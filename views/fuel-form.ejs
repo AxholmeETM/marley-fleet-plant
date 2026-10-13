@@ -28,12 +28,26 @@
     <div class="field"><label for="mileage">Mileage <span class="hint">(odometer)</span></label><input id="mileage" name="mileage" type="number" inputmode="numeric" min="0" step="1"></div>
     <div class="field"><label for="station">Fuel station <span class="hint">(optional)</span></label><input id="station" name="station" type="text"></div>
   </div>
-  <% if (cards.length) { %>
-  <div class="field"><label for="fuel_card_id">Fuel card used</label>
-    <select id="fuel_card_id" name="fuel_card_id">
-      <option value="">Not a fuel card / paid another way</option>
-      <% for (const c of cards) { %><option value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>"><%= c.provider %><%= c.card_ref ? ' #' + c.card_ref : '' %><%= c.last4 ? ' ••' + c.last4 : '' %><%= c.holder ? ' – ' + c.holder : '' %></option><% } %>
-    </select></div>
+  <% if (myCards.length || otherCards.length) { const opt = (c) => `${c.label}${c.holder_display ? ' – ' + c.holder_display : ''}`; %>
+  <fieldset>
+    <legend>Fuel card used</legend>
+    <div class="card-pick">
+      <% for (const c of myCards) { %>
+      <label><input type="radio" name="card_choice" value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>" <%= myCards.length === 1 ? 'checked' : '' %>>
+        <span><strong><%= c.provider %></strong> <%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.last4 ? '••' + c.last4 : '' %></span>
+          <% if (c.reg || c.card_type) { %><span class="small muted" style="display:block"><%= [c.reg, c.card_type].filter(Boolean).join(' · ') %></span><% } %></span></label>
+      <% } %>
+      <% if (otherCards.length) { %>
+      <label><input type="radio" name="card_choice" value="other"> <span><%= myCards.length ? 'A different fuel card' : 'A fuel card' %></span></label>
+      <select id="other_card" aria-label="Which fuel card" hidden>
+        <option value="">Choose the card…</option>
+        <% for (const c of otherCards) { %><option value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>"><%= opt(c) %></option><% } %>
+      </select>
+      <% } %>
+      <label><input type="radio" name="card_choice" value="" <%= myCards.length === 1 ? '' : 'checked' %>> <span>Not a fuel card / paid another way</span></label>
+    </div>
+    <input type="hidden" id="fuel_card_id" name="fuel_card_id">
+  </fieldset>
   <% } %>
   <div class="field">
     <label for="receipt">Receipt <span class="hint">(photo or PDF, up to 15 MB)</span></label>
@@ -43,14 +57,29 @@
   <button class="btn primary big" type="submit">Save fuel entry</button>
 </form>
 <script>
-  function pickCard() {
-    const card = document.getElementById('fuel_card_id');
-    if (!card) return;
-    const vid = document.getElementById('vehicle_id').value;
-    const match = [...card.options].find((o) => o.dataset.vehicle && o.dataset.vehicle === vid);
-    if (match) card.value = match.value;
+  const choices = [...document.querySelectorAll('input[name="card_choice"]')];
+  const other = document.getElementById('other_card');
+  function syncCard() {
+    const picked = choices.find((r) => r.checked);
+    if (other) other.hidden = !picked || picked.value !== 'other';
+    const hidden = document.getElementById('fuel_card_id');
+    if (hidden) hidden.value = picked && picked.value === 'other' ? other.value : (picked ? picked.value : '');
   }
+  // If the person holds several cards, preselect the one linked to the chosen vehicle.
+  function pickCard() {
+    const vid = document.getElementById('vehicle_id').value;
+    const mine = choices.find((r) => r.dataset.vehicle && r.dataset.vehicle === vid);
+    if (mine) mine.checked = true;
+    syncCard();
+  }
+  choices.forEach((r) => r.addEventListener('change', syncCard));
+  if (other) other.addEventListener('change', syncCard);
   pickCard();
+  document.querySelector('form.card').addEventListener('submit', (e) => {
+    syncCard();
+    const picked = choices.find((r) => r.checked);
+    if (picked && picked.value === 'other' && !other.value) { e.preventDefault(); other.focus(); alert('Please choose which fuel card you used.'); }
+  });
   document.getElementById('vehicle_id').addEventListener('change', function () {
     pickCard();
     const opt = this.selectedOptions[0];

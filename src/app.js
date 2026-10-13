@@ -6,6 +6,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { get, run, DATA_DIR } = require('./db');
 const status = require('./status');
+const { userLabel } = require('./categories');
 
 function sessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
@@ -54,14 +55,14 @@ function createApp() {
 
   app.use((req, res, next) => {
     const uid = req.session && req.session.uid;
-    req.user = uid ? get('SELECT id, name, email, role FROM users WHERE id = ? AND active = 1', uid) : null;
+    req.user = uid ? get('SELECT id, name, email, role, employee_type, job_title FROM users WHERE id = ? AND active = 1', uid) : null;
     res.locals.user = req.user;
     res.locals.isAdmin = !!(req.user && req.user.role === 'admin');
     res.locals.flash = req.session.flash || null;
     if (req.session.flash) req.session.flash = null;
     res.locals.path = req.path;
     res.locals.today = status.isoDate();
-    Object.assign(res.locals, { ukDate: status.ukDate, ukDateTime: status.ukDateTime, money, num, fmtHours: status.fmtHours, FUEL_LABELS, SEVERITY_LABELS, pill });
+    Object.assign(res.locals, { ukDate: status.ukDate, ukDateTime: status.ukDateTime, money, num, fmtHours: status.fmtHours, FUEL_LABELS, SEVERITY_LABELS, pill, userLabel });
     req.flash = (type, msg) => { req.session.flash = { type, msg }; };
     next();
   });
@@ -77,6 +78,7 @@ function createApp() {
   app.use(require('./routes/plant'));
   app.use(require('./routes/vehicles'));
   app.use(require('./routes/users'));
+  app.use(require('./routes/admin'));
   app.use(require('./routes/exports'));
 
   app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'That page does not exist.' }));
