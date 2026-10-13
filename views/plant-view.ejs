@@ -110,9 +110,13 @@
     // Size the box to the first six rows of the full list and keep it that size whichever filter is picked.
     const box = document.querySelector('.tl-scroll');
     let current = 'all';
+    // On a computer screen, shrink it further if needed so the page itself doesn't scroll.
     function fit() {
       if (!box || current !== 'all') return;
       box.style.height = rows.length > 6 ? rows[6].offsetTop + 'px' : '';
+      if (innerWidth <= 900 || rows.length <= 6) return;
+      const over = document.documentElement.scrollHeight - innerHeight;
+      if (over > 0) box.style.height = Math.max(200, box.offsetHeight - over) + 'px';
     }
     fit(); addEventListener('resize', fit);
     document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', (e) => {
