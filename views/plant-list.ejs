@@ -11,7 +11,7 @@
   <% if (isAdmin) { %><div class="actions"><a class="btn primary" href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add <%= cat ? cat.label.replace(/s$/, '').toLowerCase() : section.noun %></a></div><% } else { %><div class="actions"><a class="btn primary" href="/checks/plant/new">New check sheet</a></div><% } %>
 </div>
 <form class="filters" method="get">
-  <div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Asset no, serial, job ref, site…"></div>
+  <div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Asset no, serial, project no…"></div>
   <div class="field"><label for="category">Type</label>
     <select id="category" name="category"><option value="">All types (<%= total %>)</option>
       <% for (const c of CATEGORIES) { if (!counts[c.key] && category !== c.key) continue; %><option value="<%= c.key %>" <%= category === c.key ? 'selected' : '' %>><%= c.label %> (<%= counts[c.key] || 0 %>)</option><% } %>
@@ -33,7 +33,7 @@
 <div class="card flush">
   <% if (!plant.length) { %><p class="empty">Nothing here yet.<% if (isAdmin) { %> <a href="/plant/new?category=<%= category || CATEGORIES[0].key %>">Add an item.</a><% } %></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Asset no</th><th>Item</th><% if (!category) { %><th>Category</th><% } else { %><th>Serial no</th><% } %><th>Location / job</th>
+    <thead><tr><th>Asset no</th><th>Item</th><% if (!category) { %><th>Category</th><% } else { %><th>Serial no</th><% } %><th>Project No.</th>
       <% if (showHours) { %><th class="num">Hours</th><th>Service</th><% } else { %><th>Last service</th><% } %>
       <% if (showChecks) { %><th>Weekly check</th><% } %><th>LOLER / test / calibration</th><th>Status</th></tr></thead>
     <tbody><% for (const p of plant) { %>
@@ -42,7 +42,7 @@
         <td><%= p.description %><div class="small muted"><%= [p.description !== [p.make, p.model].filter(Boolean).join(' ') ? [p.make, p.model].filter(Boolean).join(' ') : '', p.swl ? 'SWL ' + p.swl : ''].filter(Boolean).join(' · ') %></div></td>
         <% if (!category) { %><td class="small"><%= CATEGORY[p.category] ? CATEGORY[p.category].label : p.category %></td><% } %>
         <% if (category) { %><td class="small"><%= p.serial_no || '—' %></td><% } %>
-        <td><%= p.location || '—' %><% if (p.job_ref) { %><div class="small muted">Job <%= p.job_ref %></div><% } %></td>
+        <td><%= p.job_ref || '—' %></td>
         <% if (showHours) { %>
           <td class="num"><%= p.tracks_hours ? fmtHours(p.running_hours) : '—' %></td>
           <td><%- pill(p.service) %><% if (p.service.nextAt) { %><div class="small muted">at <%= fmtHours(p.service.nextAt) %> hrs</div><% } %></td>

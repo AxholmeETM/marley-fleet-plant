@@ -22,7 +22,7 @@
   <div class="section-title" style="margin-top:0"><h2>Plant needing attention</h2><a class="small" href="/plant?filter=attention">See all plant →</a></div>
   <% if (!plantAttention.length) { %><p class="muted" style="margin:0">Nothing due. All plant is up to date.</p><% } else { %>
   <div class="table-wrap"><table><tbody><% for (const p of plantAttention.slice(0, 8)) { %>
-    <tr><td><a href="/plant/<%= p.id %>"><strong class="nowrap"><%= p.plant_no %></strong></a><div class="small"><%= p.description %></div><div class="small muted"><%= p.location || '' %></div></td>
+    <tr><td><a href="/plant/<%= p.id %>"><strong class="nowrap"><%= p.plant_no %></strong></a><div class="small"><%= p.description %></div><% if (p.job_ref) { %><div class="small muted">Project <%= p.job_ref %></div><% } %></td>
       <td><div class="pills"><%- [p.service, p.loler, p.check].filter((s) => s.level === 'overdue' || s.level === 'soon').map(pill).join(' ') %><% if (p.open_defects) { %> <span class="pill overdue"><%= p.open_defects %> defect<%= p.open_defects > 1 ? 's' : '' %></span><% } %></div></td></tr>
   <% } %></tbody></table></div><% } %>
 </div>

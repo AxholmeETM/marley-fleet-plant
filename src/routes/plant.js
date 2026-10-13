@@ -39,7 +39,6 @@ function readPlant(body) {
     registered: text(body.registered),
     swl: text(body.swl),
     job_ref: text(body.job_ref),
-    location: text(body.location),
     purchase_price: numberField(body.purchase_price, 'Purchase price'),
     purchase_date: dateField(body.purchase_date, 'Purchase date'),
     transfer_price: owner === 'MPL' ? numberField(body.transfer_price, 'Agreed price from MCL') : null,
@@ -110,7 +109,7 @@ router.get(['/plant', '/equipment'], async (req, res) => {
   for (const p of plant) counts[p.category] = (counts[p.category] || 0) + 1;
   if (category) plant = plant.filter((p) => p.category === category);
   const q = String(req.query.q || '').trim().toLowerCase();
-  if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.location, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
+  if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
   const hireTotal = plant.filter((p) => p.active && p.weekly_hire_rate).reduce((t, p) => t + p.weekly_hire_rate, 0);
   res.render('plant-list', { title: SECTIONS[section].label, section: SECTIONS[section], plant, filter, category, owner, counts, hireTotal, q: req.query.q || '', CATEGORIES: categories, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });

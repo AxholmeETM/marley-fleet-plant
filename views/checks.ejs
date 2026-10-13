@@ -16,7 +16,7 @@
 <div class="card flush">
   <h2><%= type === 'vehicle' ? 'No walk-around today' : 'Weekly check sheet due or overdue' %> (<%= missing.length %>)</h2>
   <div class="table-wrap"><table>
-    <thead><tr><th><%= type === 'vehicle' ? 'Vehicle' : 'Plant' %></th><th><%= type === 'vehicle' ? 'Driver' : 'Job ref' %></th><th>Status</th></tr></thead>
+    <thead><tr><th><%= type === 'vehicle' ? 'Vehicle' : 'Plant' %></th><th><%= type === 'vehicle' ? 'Driver' : 'Project No.' %></th><th>Status</th></tr></thead>
     <tbody><% for (const m of missing) { %>
       <tr><% if (type === 'vehicle') { %>
         <td><a href="/vehicles/<%= m.id %>"><span class="reg"><%= m.reg %></span></a></td><td><%= m.driver_name || '—' %></td><td><%- pill(m.walkaround) %></td>
@@ -31,7 +31,7 @@
 <div class="card flush">
   <% if (!rows.length) { %><p class="empty">No checks in this period.</p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Date</th><th><%= type === 'vehicle' ? 'Vehicle' : 'Plant' %></th><th>By</th><th class="num"><%= type === 'vehicle' ? 'Mileage' : 'Hours' %></th><% if (type === 'plant') { %><th>Job ref</th><% } %><th>Result</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th><%= type === 'vehicle' ? 'Vehicle' : 'Plant' %></th><th>By</th><th class="num"><%= type === 'vehicle' ? 'Mileage' : 'Hours' %></th><% if (type === 'plant') { %><th>Project No.</th><% } %><th>Result</th><th></th></tr></thead>
     <tbody><% for (const r of rows) { %>
       <tr>
         <td class="nowrap"><%= ukDate(r.check_date) %></td>

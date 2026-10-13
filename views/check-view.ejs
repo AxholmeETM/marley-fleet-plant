@@ -20,7 +20,7 @@
     <div class="card">
       <dl class="facts">
         <dt><%= type === 'plant' ? 'Running hours' : 'Mileage' %></dt><dd><%= type === 'plant' ? fmtHours(check.reading) : num(check.reading) %></dd>
-        <% if (type === 'plant') { %><dt>Job ref</dt><dd><%= check.job_ref || '—' %></dd><% } %>
+        <% if (type === 'plant') { %><dt>Project No.</dt><dd><%= check.job_ref || '—' %></dd><% } %>
         <dt>Submitted</dt><dd><%= ukDateTime(check.created_at) %> (UTC)</dd>
         <dt>Notes</dt><dd><%= check.notes || '—' %></dd>
       </dl>

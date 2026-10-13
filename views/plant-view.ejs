@@ -12,7 +12,7 @@
 </div>
 <%- include('partials/pane-end') %>
 <div class="kpis">
-  <div class="kpi"><div class="label">Location / job</div><div class="value" style="font-size:1.2rem"><%= item.location || '—' %></div><div class="sub"><%= item.job_ref ? 'Job ' + item.job_ref : '\u00a0' %></div></div>
+  <div class="kpi"><div class="label">Project No.</div><div class="value" style="font-size:1.2rem"><%= item.job_ref || '—' %></div><div class="sub"><%= '\u00a0' %></div></div>
   <% if (item.tracks_hours) { %>
   <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '\u00a0' %></div></div>
   <div class="kpi <%= cls(item.service) %>"><div class="label">Next service</div><div class="value" style="font-size:1.3rem"><%= item.service.name %></div><div class="sub"><%- pill(item.service) %></div></div>
@@ -72,7 +72,7 @@
       <h2>Check sheets</h2>
       <% if (!checks.length) { %><p class="empty">No check sheets yet.</p><% } else { %>
       <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>By</th><th class="num">Hours</th><th>Job ref</th><th>Result</th></tr></thead>
+        <thead><tr><th>Date</th><th>By</th><th class="num">Hours</th><th>Project No.</th><th>Result</th></tr></thead>
         <tbody><% for (const c of checks) { %>
           <tr><td><a href="/checks/plant/<%= c.id %>"><%= ukDate(c.check_date) %></a></td><td><%= c.user_name %></td><td class="num"><%= fmtHours(c.hours) %></td><td><%= c.job_ref || '—' %></td>
             <td><%- c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' %></td></tr>

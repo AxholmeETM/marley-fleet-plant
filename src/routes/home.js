@@ -18,7 +18,7 @@ async function attentionList(plant, vehicles) {
     if (st.level === 'overdue' || st.level === 'soon') items.push({ asset, href, what, status: st });
   };
   for (const p of plant) {
-    const name = `${p.plant_no} ${p.description}${p.location ? ' (' + p.location + ')' : ''}`;
+    const name = `${p.plant_no} ${p.description}${p.job_ref ? ' (Project ' + p.job_ref + ')' : ''}`;
     add(name, `/plant/${p.id}`, p.service.name || 'Service', p.service);
     add(name, `/plant/${p.id}`, INSPECTION_TYPES[p.inspection_type] || 'LOLER', p.loler);
     add(name, `/plant/${p.id}`, 'Weekly check', p.check);
