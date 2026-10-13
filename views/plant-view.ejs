@@ -33,6 +33,7 @@
       <h2>Details</h2>
       <dl class="facts">
         <dt>Status</dt><dd><span class="pill <%= item.status === 'in_use' ? 'ok' : ['stolen', 'repair'].includes(item.status) ? 'overdue' : 'none' %>"><%= PLANT_STATUSES[item.status] || item.status %></span></dd>
+        <dt>Category</dt><dd><%= cat ? cat.label.replace(/s$/, '') : item.category %></dd>
         <dt>Manufacturer / model</dt><dd><%= [item.make, item.model].filter(Boolean).join(' ') || '—' %></dd>
         <dt>Serial / chassis no</dt><dd><%= item.serial_no || '—' %></dd>
         <dt>Registered</dt><dd><%= item.registered || '—' %></dd>
