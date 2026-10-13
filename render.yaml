@@ -1,0 +1,20 @@
+# One-click setup on Render (render.com): New > Blueprint, pick this repository.
+# The disk keeps the database and receipt photos between deploys; Render backs it up daily.
+services:
+  - type: web
+    name: marley-fleet-plant
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /login
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 5
+    envVars:
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
