@@ -67,8 +67,8 @@
         <tbody><% for (const e of events) { %>
           <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %></td></tr>
         <% } %></tbody>
-      </table></div>
-      <p class="empty tl-none" hidden>Nothing of this type yet.</p><% } %>
+      </table>
+      <p class="empty tl-none" hidden>Nothing of this type yet.</p></div><% } %>
     </div>
   </div>
 </div>
@@ -101,22 +101,24 @@
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
     const rows = document.querySelectorAll('#history tr[data-type]'), none = document.querySelector('.tl-none');
     function filter(t) {
+      current = t;
       let shown = 0;
       rows.forEach((r) => { const on = t === 'all' || r.dataset.type === t; r.hidden = !on; if (on) shown++; });
       document.querySelectorAll('.tl-filter a').forEach((a) => a.classList.toggle('active', a.dataset.filter === t));
       if (none) none.hidden = shown > 0;
-      fit();
     }
-    // Show six rows; scroll inside the box for older entries.
+    // Size the box to the first six rows of the full list and keep it that size whichever filter is picked.
     const box = document.querySelector('.tl-scroll');
+    let current = 'all';
     function fit() {
-      if (!box) return;
-      const vis = [...rows].filter((r) => !r.hidden);
-      if (vis.length <= 6) { box.style.maxHeight = ''; return; }
-      box.style.maxHeight = (vis[6].offsetTop) + 'px';
+      if (!box || current !== 'all') return;
+      box.style.height = rows.length > 6 ? rows[6].offsetTop + 'px' : '';
     }
     fit(); addEventListener('resize', fit);
-    document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', () => filter(a.dataset.filter)));
+    document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', (e) => {
+      if (a.closest('.tl-filter')) e.preventDefault(); // filter in place, don't jump the page
+      filter(a.dataset.filter);
+    }));
   })();
 </script>
 <%- include('partials/footer') %>
