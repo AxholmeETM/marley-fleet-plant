@@ -6,7 +6,11 @@ const PLANT_CHECK_DAYS = 7;
 
 const pad = (n) => String(n).padStart(2, '0');
 
-function isoDate(d = new Date()) {
+// Today's date in the UK, whatever time zone the server runs in (Cloudflare runs on UTC).
+const UK_DATE = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' });
+
+function isoDate(d) {
+  if (!d) return UK_DATE.format(new Date());
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 

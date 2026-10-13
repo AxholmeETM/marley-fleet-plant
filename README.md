@@ -44,7 +44,9 @@ Each account also records the person's **role within the company** (Groundworker
 
 ## Running it
 
-Needs **Node.js 22.5 or newer** (uses Node's built-in SQLite, so there is nothing else to install).
+Online it runs on Cloudflare Workers, with the data in Supabase. See **[DEPLOY.md](DEPLOY.md)** for the step-by-step setup.
+
+To run it on your own computer you need **Node.js 22.5 or newer**. Without `DATABASE_URL` it uses a built-in database in `./data`, so there is nothing else to install.
 
 ```bash
 npm install
@@ -63,24 +65,24 @@ npm start
 
 Demo logins (password `password123`): `admin@marley.local` and `office@marley.local` (admin users), `kieran@marley.local` (site manager), `dave@marley.local` (fleet driver).
 
-### Settings (environment variables)
+To try the Cloudflare version locally, put the settings in a `.dev.vars` file (it is ignored by git) and run `npm run cf:dev`.
+
+### Settings (environment variables, or secrets in Cloudflare)
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `PORT` | `3000` | Web server port |
-| `DATA_DIR` | `./data` | Where the database (`marley.db`) and receipt uploads are kept. **Back this folder up.** |
+| `DATABASE_URL` | none (built-in database) | Postgres connection string, e.g. Supabase's transaction pooler URI. Required on Cloudflare. |
+| `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` | none (files in `DATA_DIR/uploads`) | Keep receipt photos in a private Supabase Storage bucket (`receipts`, created automatically). Required on Cloudflare. |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | `admin@marley.local` / `changeme` | First admin account (only used when there are no users) |
-| `SESSION_SECRET` | generated and saved in `DATA_DIR` | Cookie signing key |
-| `COOKIE_SECURE` | `false` | Set to `true` when served over HTTPS |
+| `SESSION_SECRET` | generated and saved in the database | Cookie signing key |
+| `COOKIE_SECURE` | `false` (`true` on Cloudflare) | Set to `true` when served over HTTPS |
+| `PORT` | `3000` | Web server port (Node only) |
+| `DATA_DIR` | `./data` | Built-in database and receipts when `DATABASE_URL` / Supabase aren't set (Node only) |
 | `DEFAULT_SERVICE_SCHEDULE` | `50, 250, 500` | Default first services (hours) for new machines |
 | `DEFAULT_SERVICE_HOURS` | `500` | Default repeat service interval (hours) after the first services |
 | `DUE_SOON_DAYS` | `30` | How far ahead MOT, tax, LOLER and vehicle services show as "due soon" |
 
 The check sheet items are in `src/checklists.js` – edit them to match your own sheets.
-
-### Hosting
-
-Any machine or small VPS that runs Node works (a Windows PC in the office, a Linux VPS, Render, Railway, Fly.io with a volume). Keep `DATA_DIR` on persistent storage and put it behind HTTPS (e.g. Caddy or nginx) if it is reachable from the internet, so drivers can use it on their phones on site.
 
 ### Tests
 
@@ -92,12 +94,15 @@ npm test
 
 ```
 src/app.js          Express app, sign-in, shared helpers
-src/db.js           SQLite schema
+src/server.js       Start as a normal Node.js server
+src/worker.mjs      Start on Cloudflare Workers (settings in wrangler.jsonc)
+src/db.js           Postgres schema and queries (Supabase, or built-in PGlite)
+src/storage.js      Receipt photos (Supabase Storage, or local files)
 src/status.js       Due / overdue rules (service hours, LOLER, MOT, tax, checks)
 src/checklists.js   Walk-around and plant check sheet items
 src/categories.js   Asset categories, owners, statuses, inspection types
 src/routes/         Pages: dashboard, plant, vehicles, checks, defects, fuel, users, exports
-views/              Page templates (EJS)
-public/style.css    Styling
+views/              Page templates (EJS), pre-built by scripts/build-views.js
+public/static/      Styling and icon
 scripts/seed.js     Demo data
 ```

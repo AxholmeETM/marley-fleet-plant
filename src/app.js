@@ -3,9 +3,10 @@ const cookieSession = require('cookie-session');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { ready, get, run } = require('./db');
+const { ready, get, run, ON_WORKERS } = require('./db');
 const status = require('./status');
 const { userLabel } = require('./categories');
+const views = require('./views');
 
 async function sessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
@@ -37,13 +38,23 @@ async function createApp() {
   await ensureAdmin();
   const secret = await sessionSecret();
   const app = express();
-  app.set('view engine', 'ejs');
-  app.set('views', path.join(__dirname, '..', 'views'));
-  // Behind Render and/or Cloudflare. TRUST_PROXY=2 when both are in front.
+  // Behind Cloudflare's proxy, which says whether the visitor used HTTPS.
   app.set('trust proxy', Number(process.env.TRUST_PROXY || 1));
   app.disable('x-powered-by');
 
-  app.use('/static', express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
+  // On Cloudflare the files in public/ are served before requests reach the app.
+  if (!ON_WORKERS) app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h', index: false }));
+  // Templates are pre-built (scripts/build-views.js) because Cloudflare Workers can't compile them.
+  app.use((req, res, next) => {
+    res.render = (name, locals) => {
+      try {
+        res.send(views.render(name, { ...app.locals, ...res.locals, ...locals }));
+      } catch (err) {
+        next(err);
+      }
+    };
+    next();
+  });
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieSession({
     name: 'marley_session',

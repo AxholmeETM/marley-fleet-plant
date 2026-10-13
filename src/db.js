@@ -1,10 +1,12 @@
 // Database: Postgres. In production this is Supabase (set DATABASE_URL).
 // Without DATABASE_URL it runs an embedded Postgres (PGlite) in DATA_DIR, so `npm start` works with nothing else installed.
+// On Cloudflare Workers a connection can't be shared between requests, so each request opens its own (see src/worker.js).
 const path = require('path');
 const fs = require('fs');
 const { AsyncLocalStorage } = require('async_hooks');
 
-const DATA_DIR = path.resolve(process.env.DATA_DIR || path.join(__dirname, '..', 'data'));
+// (__dirname doesn't exist on Cloudflare Workers, which never use DATA_DIR.)
+const DATA_DIR = path.resolve(process.env.DATA_DIR || (typeof __dirname === 'string' ? path.join(__dirname, '..', 'data') : 'data'));
 const UPLOAD_DIR = path.join(DATA_DIR, 'uploads');
 
 const SCHEMA = `
@@ -207,12 +209,25 @@ function numbered(sql) {
   return out;
 }
 
+const ON_WORKERS = globalThis.navigator?.userAgent === 'Cloudflare-Workers';
+
 let driver;
 const txClient = new AsyncLocalStorage();
+const requestScope = new AsyncLocalStorage();
+
+// Workers: run fn with its own database connection, closed when the request is done.
+function perRequest(fn) {
+  const scope = {};
+  return requestScope.run(scope, () => fn(scope));
+}
+async function endRequest(scope) {
+  if (scope && scope.client) (await scope.client.catch(() => null))?.end().catch(() => {});
+}
+const currentScope = () => requestScope.getStore();
 
 function connect() {
   if (process.env.DATABASE_URL) {
-    const { Pool, types } = require('pg');
+    const { Pool, Client, types } = require('pg');
     types.setTypeParser(20, (v) => Number(v)); // COUNT(*) and SUM of integers
     types.setTypeParser(1700, (v) => Number(v)); // numeric
     const url = new URL(process.env.DATABASE_URL);
@@ -220,6 +235,36 @@ function connect() {
     // Supabase needs SSL. Its certificate isn't in Node's default CA list, so verify only if a CA is given.
     const ssl = local || process.env.DATABASE_SSL === 'off' ? false
       : process.env.DATABASE_CA ? { ca: process.env.DATABASE_CA } : { rejectUnauthorized: false };
+    if (ON_WORKERS) {
+      const conn = () => {
+        const scope = currentScope();
+        if (!scope) throw new Error('Database used outside a request.');
+        scope.client ||= (async () => {
+          const client = new Client({ connectionString: process.env.DATABASE_URL, ssl });
+          await client.connect();
+          return client;
+        })();
+        return scope.client;
+      };
+      return {
+        name: 'postgres',
+        query: async (sql, params) => (txClient.getStore() || await conn()).query(sql, params),
+        exec: async (sql) => (await conn()).query(sql),
+        async transaction(fn) {
+          const client = await conn();
+          await client.query('BEGIN');
+          try {
+            const result = await txClient.run(client, fn);
+            await client.query('COMMIT');
+            return result;
+          } catch (err) {
+            await client.query('ROLLBACK').catch(() => {});
+            throw err;
+          }
+        },
+        close: async () => {},
+      };
+    }
     const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl, max: Number(process.env.DATABASE_POOL || 5) });
     pool.on('error', (err) => console.error('Database connection error:', err.message));
     return {
@@ -243,6 +288,7 @@ function connect() {
       close: () => pool.end(),
     };
   }
+  if (ON_WORKERS) throw new Error('DATABASE_URL is not set. Add it as a secret in Cloudflare (see DEPLOY.md).');
   const { PGlite } = require('@electric-sql/pglite');
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const pg = new PGlite(path.join(DATA_DIR, 'pgdata'));
@@ -261,14 +307,22 @@ function connect() {
   };
 }
 
+// Supabase exposes the public schema through its web API. Row level security with no policies
+// shuts that door; this app connects as the database owner, which isn't affected.
+const RLS = TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`).join('\n');
+
 async function init() {
   driver = connect();
-  await driver.exec(SCHEMA);
-  // Supabase exposes the public schema through its web API. Row level security with no policies
-  // shuts that door; this app connects as the database owner, which isn't affected.
-  for (const t of TABLES) await driver.exec(`ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY`);
+  await driver.exec(`${SCHEMA}\n${RLS}`);
 }
-const ready = init();
+// Started on first use: on Workers that has to be inside a request. A failure is retried next time.
+let started = null;
+const ready = {
+  then(resolve, reject) {
+    started ||= init().catch((err) => { started = null; throw err; });
+    return started.then(resolve, reject);
+  },
+};
 
 async function query(sql, params) {
   await ready;
@@ -304,4 +358,4 @@ async function close() {
   await driver.close();
 }
 
-module.exports = { ready, all, get, run, exec, transaction, close, isUniqueViolation, TABLES, DATA_DIR, UPLOAD_DIR, driverName: () => driver && driver.name };
+module.exports = { ready, perRequest, endRequest, ON_WORKERS, all, get, run, exec, transaction, close, isUniqueViolation, TABLES, DATA_DIR, UPLOAD_DIR, driverName: () => driver && driver.name };

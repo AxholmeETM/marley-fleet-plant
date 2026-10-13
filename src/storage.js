@@ -3,7 +3,7 @@
 // Either way they are only ever served through the app, after its own permission check.
 const fs = require('fs/promises');
 const path = require('path');
-const { UPLOAD_DIR } = require('./db');
+const { UPLOAD_DIR, ON_WORKERS } = require('./db');
 
 const BUCKET = process.env.SUPABASE_BUCKET || 'receipts';
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -14,8 +14,14 @@ const TYPES = {
 const contentType = (name) => TYPES[path.extname(name).toLowerCase()] || 'application/octet-stream';
 const safeName = (name) => path.basename(String(name));
 
-const supabase = () => (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY
-  ? { url: process.env.SUPABASE_URL.replace(/\/+$/, ''), key: process.env.SUPABASE_SERVICE_ROLE_KEY } : null);
+function supabase() {
+  if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return { url: process.env.SUPABASE_URL.replace(/\/+$/, ''), key: process.env.SUPABASE_SERVICE_ROLE_KEY };
+  }
+  // Cloudflare Workers have no disk to keep files on.
+  if (ON_WORKERS) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set. Add them as secrets in Cloudflare (see DEPLOY.md).');
+  return null;
+}
 
 function headers(key, extra = {}) {
   // Legacy service_role keys are JWTs and go in Authorization too; new sb_secret_ keys only go in apikey.
@@ -72,4 +78,4 @@ async function remove(name) {
   });
 }
 
-module.exports = { save, read, remove, contentType, where: () => (supabase() ? `Supabase Storage (${BUCKET})` : UPLOAD_DIR) };
+module.exports = { save, read, remove, contentType, where: () => (process.env.SUPABASE_URL ? `Supabase Storage (${BUCKET})` : UPLOAD_DIR) };

@@ -8,18 +8,25 @@
     "node": ">=22.5"
   },
   "scripts": {
-    "start": "node --disable-warning=ExperimentalWarning src/server.js",
-    "dev": "node --watch --disable-warning=ExperimentalWarning src/server.js",
+    "build": "node scripts/build-views.js",
+    "start": "npm run build && node --disable-warning=ExperimentalWarning src/server.js",
+    "dev": "node --watch-path=src --watch-path=views --disable-warning=ExperimentalWarning scripts/dev.js",
     "seed": "node --disable-warning=ExperimentalWarning scripts/seed.js",
-    "test": "node --disable-warning=ExperimentalWarning --test"
+    "pretest": "npm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test",
+    "cf:dev": "wrangler dev",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.3.16",
     "bcryptjs": "^3.0.3",
     "cookie-session": "^2.1.1",
-    "ejs": "^7.0.1",
     "express": "^5.3.0",
     "multer": "^2.4.0",
     "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "ejs": "^7.0.1",
+    "wrangler": "^4.150.0"
   }
 }

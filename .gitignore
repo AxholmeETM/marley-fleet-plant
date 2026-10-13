@@ -1,3 +1,6 @@
 node_modules/
 data/
 .env
+src/views.generated.js
+.wrangler/
+.dev.vars

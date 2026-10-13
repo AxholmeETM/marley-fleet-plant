@@ -1,0 +1,30 @@
+// Cloudflare Workers entry point. Runs the same Express app as src/server.js, through
+// Cloudflare's Node.js HTTP server support. Files in public/ are served by Cloudflare directly.
+import { createServer } from 'node:http';
+import { httpServerHandler } from 'cloudflare:node';
+import { createApp } from './app.js';
+import { perRequest, endRequest } from './db.js';
+
+let app = null;
+
+const server = createServer((req, res) => {
+  // Tell the app whether the visitor is on HTTPS, so it can set secure sign-in cookies.
+  if (!req.headers['x-forwarded-proto']) {
+    req.headers['x-forwarded-proto'] = /"scheme":"http"/.test(req.headers['cf-visitor'] || '') ? 'http' : 'https';
+  }
+  perRequest(async (scope) => {
+    res.on('close', () => endRequest(scope));
+    try {
+      // The first request starts the app: it checks the database tables and the first admin account.
+      app ||= createApp().catch((err) => { app = null; throw err; });
+      (await app)(req, res);
+    } catch (err) {
+      console.error('Could not start:', err);
+      if (!res.headersSent) res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('The site could not reach its database. Check the DATABASE_URL secret in Cloudflare.');
+    }
+  });
+});
+server.listen(8080);
+
+export default httpServerHandler({ port: 8080 });
