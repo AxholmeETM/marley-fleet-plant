@@ -23,7 +23,7 @@ async function main() {
   }
   const receipts = [];
   await transaction(async () => {
-  await exec(`TRUNCATE ${TABLES.filter((t) => t !== 'settings').join(', ')} RESTART IDENTITY CASCADE`);
+  await exec(`TRUNCATE ${TABLES.filter((t) => !['settings', 'projects'].includes(t)).join(', ')} RESTART IDENTITY CASCADE`);
 
   const hash = bcrypt.hashSync('password123', 10);
   const user = async (name, email, role, type, title) => (await run('INSERT INTO users (name, email, password_hash, role, employee_type, job_title) VALUES (?, ?, ?, ?, ?, ?)',

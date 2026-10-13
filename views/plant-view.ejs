@@ -12,7 +12,7 @@
 </div>
 <%- include('partials/pane-end') %>
 <div class="kpis">
-  <div class="kpi"><div class="label">Project No.</div><div class="value" style="font-size:1.2rem"><%= item.job_ref || '—' %></div><div class="sub"><%= '\u00a0' %></div></div>
+  <div class="kpi"><div class="label">Project No.</div><div class="value" style="font-size:1.2rem"><%= item.job_ref || '—' %></div><div class="sub"><%= item.project_name || '\u00a0' %></div></div>
   <% if (item.tracks_hours) { %>
   <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '\u00a0' %></div></div>
   <div class="kpi <%= cls(item.service) %>"><div class="label">Next service</div><div class="value" style="font-size:1.3rem"><%= item.service.name %></div><div class="sub"><%- pill(item.service) %></div></div>

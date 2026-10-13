@@ -30,7 +30,7 @@
 
   <fieldset class="card"><legend>Where it is</legend>
     <div class="form-grid">
-      <div class="field"><label for="job_ref">Project No.</label><input id="job_ref" name="job_ref" type="text" value="<%= v('job_ref') %>"></div>
+      <div class="field"><label for="job_ref">Project No.</label><select id="job_ref" name="job_ref"><option value="">None</option><% for (const pr of projects) { %><option value="<%= pr.code %>" <%= v('job_ref') === pr.code ? 'selected' : '' %>><%= pr.code %> – <%= pr.name %><%= pr.active ? '' : ' (closed)' %></option><% } %></select></div>
     </div>
   </fieldset>
 

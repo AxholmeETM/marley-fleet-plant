@@ -42,7 +42,7 @@
         <td><%= p.description %><div class="small muted"><%= [p.description !== [p.make, p.model].filter(Boolean).join(' ') ? [p.make, p.model].filter(Boolean).join(' ') : '', p.swl ? 'SWL ' + p.swl : ''].filter(Boolean).join(' · ') %></div></td>
         <% if (!category) { %><td class="small"><%= CATEGORY[p.category] ? CATEGORY[p.category].label : p.category %></td><% } %>
         <% if (category) { %><td class="small serial"><%= p.serial_no || '—' %></td><% } %>
-        <td><%= p.job_ref || '—' %></td>
+        <td><span class="nowrap"><%= p.job_ref || '—' %></span><% if (p.project_name) { %><div class="small muted"><%= p.project_name %></div><% } %></td>
         <% if (showHours) { %>
           <td class="num"><%= p.tracks_hours ? fmtHours(p.running_hours) : '—' %></td>
           <td><%- pill(p.service) %></td>

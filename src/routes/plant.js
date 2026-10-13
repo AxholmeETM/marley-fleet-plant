@@ -1,6 +1,6 @@
 const express = require('express');
 const { all, run, get, transaction, isUniqueViolation } = require('../db');
-const { listPlant, getPlant, listDefects } = require('../queries');
+const { listProjects, listPlant, getPlant, listDefects } = require('../queries');
 const { requireAdmin, requirePlantAccess, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
 const { serviceWork, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE, INSPECTION_TYPES } = require('../categories');
@@ -86,7 +86,7 @@ async function nextAssetNumbers() {
 }
 
 async function formLocals(item) {
-  return { item, CATEGORIES, OWNERS, PLANT_STATUSES, INSPECTION_TYPES, nextNumbers: await nextAssetNumbers() };
+  return { item, CATEGORIES, OWNERS, PLANT_STATUSES, INSPECTION_TYPES, nextNumbers: await nextAssetNumbers(), projects: await listProjects(item.job_ref) };
 }
 
 function saveError(err) {
@@ -109,7 +109,7 @@ router.get(['/plant', '/equipment'], async (req, res) => {
   for (const p of plant) counts[p.category] = (counts[p.category] || 0) + 1;
   if (category) plant = plant.filter((p) => p.category === category);
   const q = String(req.query.q || '').trim().toLowerCase();
-  if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
+  if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.project_name, p.make, p.model, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
   res.render('plant-list', { title: SECTIONS[section].label, section: SECTIONS[section], plant, filter, category, owner, counts, q: req.query.q || '', CATEGORIES: categories, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 

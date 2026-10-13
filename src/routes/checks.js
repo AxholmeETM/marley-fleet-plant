@@ -1,6 +1,6 @@
 const express = require('express');
 const { all, get, run, transaction } = require('../db');
-const { listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
+const { listProjects, listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
 const { VEHICLE_ITEMS, PLANT_ITEMS, RESULTS } = require('../checklists');
 const { requireAdmin, requirePlantAccess, isAdmin, canUsePlant, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isoDate, isValidDate, addDays, ukDate } = require('../status');
@@ -71,7 +71,7 @@ router.get('/checks/plant/new', requirePlantAccess, async (req, res) => {
   const plant = (await listPlant()).filter((p) => p.weekly_checks && p.status !== 'repair');
   const selectedId = Number(req.query.plant) || null;
   res.render('check-form', {
-    title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS,
+    title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS, projects: await listProjects(),
     assets: plant, mineIds: [], asset: selectedId ? plant.find((p) => p.id === selectedId) : null,
   });
 });

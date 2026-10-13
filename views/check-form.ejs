@@ -28,7 +28,7 @@
       <% } else { %>
         <div class="field"><label for="reading">Running hours <span class="hint">(hour meter)</span></label>
           <input id="reading" name="reading" type="number" inputmode="decimal" min="0" step="0.1" <%= !asset || asset.tracks_hours ? 'required' : '' %> placeholder="<%= asset ? 'Last: ' + fmtHours(asset.running_hours) : '' %>"></div>
-        <div class="field"><label for="job_ref">Project No.</label><input id="job_ref" name="job_ref" type="text" value="<%= asset && asset.job_ref || '' %>"></div>
+        <div class="field"><label for="job_ref">Project No.</label><select id="job_ref" name="job_ref"><option value="">None</option><% for (const pr of projects) { %><option value="<%= pr.code %>" <%= (asset && asset.job_ref) === pr.code ? 'selected' : '' %>><%= pr.code %> – <%= pr.name %><%= pr.active ? '' : ' (closed)' %></option><% } %></select></div>
       <% } %>
     </div>
     <% if (asset && asset.open_defects) { %><div class="flash warning" style="margin:0">This <%= isVehicle ? 'vehicle' : 'machine' %> already has <%= asset.open_defects %> open defect<%= asset.open_defects > 1 ? 's' : '' %> reported.</div><% } %>

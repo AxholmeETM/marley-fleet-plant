@@ -196,9 +196,29 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 ALTER TABLE fuel_cards ADD COLUMN IF NOT EXISTS card_number TEXT;
+
+-- Marley's project numbers. Plant and equipment are booked to one (plant.job_ref holds the code).
+CREATE TABLE IF NOT EXISTS projects (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  active INTEGER NOT NULL DEFAULT 1
+);
+INSERT INTO projects (code, name) VALUES
+  ('M25-000', 'Plant'),
+  ('M25-001', 'Malthouses'),
+  ('M25-002', 'Owston Road, Carcroft'),
+  ('M25-003', 'Birley'),
+  ('M25-004', 'Rossington'),
+  ('M25-005', 'Newstead Way'),
+  ('M25-006', 'Osgodby, Selby'),
+  ('M26-007', 'Willow Bank'),
+  ('M26-008', 'Barmby Moor'),
+  ('M26-009', 'Bessacarr'),
+  ('M26-010', 'Harworth, Doncaster')
+ON CONFLICT (code) DO NOTHING;
 `;
 
-const TABLES = ['users', 'plant', 'vehicles', 'service_records', 'plant_checks', 'vehicle_checks', 'defects', 'fuel_cards', 'fuel_entries', 'settings'];
+const TABLES = ['users', 'plant', 'vehicles', 'service_records', 'plant_checks', 'vehicle_checks', 'defects', 'fuel_cards', 'fuel_entries', 'projects', 'settings'];
 
 // The SQL in this app is written with ? placeholders; Postgres wants $1, $2...
 function numbered(sql) {

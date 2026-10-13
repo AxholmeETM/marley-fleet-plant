@@ -316,3 +316,9 @@ legend + * { clear: both; }
 }
 .pills { display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
 div.pills .pill { white-space: normal; }
+
+/* One-line edit row (Admin > Projects) */
+.inline-edit { display: flex; align-items: center; gap: 10px; margin: 0; }
+.inline-edit input[type=text] { flex: 1; min-width: 160px; }
+.inline-edit select { width: auto; }
+.inline-edit .num { min-width: 70px; text-align: right; }

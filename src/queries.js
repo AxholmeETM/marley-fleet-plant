@@ -4,7 +4,8 @@ const { decoratePlant, decorateVehicle } = require('./status');
 const PLANT_SQL = `
   SELECT p.*,
     (SELECT MAX(check_date) FROM plant_checks c WHERE c.plant_id = p.id) AS last_check,
-    (SELECT COUNT(*) FROM defects d WHERE d.asset_type = 'plant' AND d.asset_id = p.id AND d.status = 'open') AS open_defects
+    (SELECT COUNT(*) FROM defects d WHERE d.asset_type = 'plant' AND d.asset_id = p.id AND d.status = 'open') AS open_defects,
+    (SELECT name FROM projects pr WHERE pr.code = p.job_ref) AS project_name
   FROM plant p`;
 
 const VEHICLE_SQL = `
@@ -62,4 +63,9 @@ async function listDrivers() {
   return await all("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name");
 }
 
-module.exports = { listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };
+// Project numbers offered in the drop-downs; keeps a code already on an item even if it has since been closed.
+async function listProjects(keep = null) {
+  return await all('SELECT code, name, active FROM projects WHERE active = 1 OR code = ? ORDER BY code', keep);
+}
+
+module.exports = { listProjects, listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };

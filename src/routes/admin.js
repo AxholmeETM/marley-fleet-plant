@@ -14,7 +14,8 @@ router.get('/admin', async (req, res) => {
   const today = isoDate();
   const checks = await get(`SELECT (SELECT COUNT(*) FROM vehicle_checks WHERE check_date = ?) AS walkarounds,
     (SELECT COUNT(*) FROM plant_checks WHERE check_date >= to_char(?::date - 6, 'YYYY-MM-DD')) AS plant`, today, today);
-  res.render('admin', { title: 'Admin', users, defects, checks });
+  const { projects } = await get('SELECT COUNT(*) AS projects FROM projects WHERE active = 1');
+  res.render('admin', { title: 'Admin', users, defects, checks, projects });
 });
 
 module.exports = router;
