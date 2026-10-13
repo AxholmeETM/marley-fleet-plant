@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1><span class="reg" style="font-size:1.4rem"><%= item.reg %></span> <span style="font-weight:400"><%= [item.make, item.model].filter(Boolean).join(' ') %></span></h1>
+  <div><h1><span class="reg"><%= item.reg %></span> <span style="font-weight:400"><%= [item.make, item.model].filter(Boolean).join(' ') %></span></h1>
     <p class="muted" style="margin:0"><%= [item.asset_no, VEHICLE_CATEGORIES[item.category], OWNERS[item.owner], item.colour, item.vehicle_type, FUEL_LABELS[item.fuel_type]].filter(Boolean).join(' · ') %> · User: <%= item.driver_display || 'none' %>
       <% if (item.status !== 'active') { %> · <span class="pill none"><%= VEHICLE_STATUSES[item.status] %></span><% } %></p></div>
   <div class="actions">
