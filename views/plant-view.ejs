@@ -1,8 +1,7 @@
 <%- include('partials/header') %>
 <% const cls = (s) => ({ overdue: 'bad', soon: 'warn', ok: 'good' }[s.level] || ''); const insp = INSPECTION_TYPES[item.inspection_type] || 'LOLER'; const cat = CATEGORY[item.category]; %>
 <div class="page-head">
-  <div><h1><%= item.plant_no %> <span class="muted" style="font-weight:400">– <%= item.description %></span></h1>
-    <p class="muted" style="margin:0"><%= cat ? cat.label.replace(/s$/, '') : item.category %> · <%= OWNERS[item.owner] || item.owner %></p></div>
+  <div><h1><%= item.plant_no %> <span class="muted" style="font-weight:400">– <%= item.description %></span></h1></div>
   <div class="actions">
     <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a>
