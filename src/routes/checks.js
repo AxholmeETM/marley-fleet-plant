@@ -3,7 +3,7 @@ const { all, get, run, transaction } = require('../db');
 const { listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
 const { VEHICLE_ITEMS, PLANT_ITEMS, RESULTS } = require('../checklists');
 const { requireAdmin, requirePlantAccess, isAdmin, canUsePlant, canUseVehicle, UserError, numberField, text } = require('../auth');
-const { isoDate, isValidDate, addDays } = require('../status');
+const { isoDate, isValidDate, addDays, ukDate } = require('../status');
 
 const router = express.Router();
 
@@ -141,7 +141,9 @@ router.get('/checks/:type/:id', async (req, res) => {
     return res.status(404).render('error', { title: 'Not found', message: 'Check not found.' });
   }
   const defect = await get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);
-  res.render('check-view', { title: type === 'vehicle' ? 'Walk-around check' : 'Plant check sheet', type, check, results: JSON.parse(check.results), defect });
+  const title = type === 'vehicle' ? 'Walk-around check' : 'Plant check sheet';
+  const crumbs = isAdmin(req.user) ? [['Admin', '/admin'], ['Checks', `/checks?type=${type}`], [`${title} · ${ukDate(check.check_date)}`]] : [['Home', '/'], [title]];
+  res.render('check-view', { title, crumbs, type, check, results: JSON.parse(check.results), defect });
 });
 
 module.exports = router;

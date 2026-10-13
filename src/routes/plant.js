@@ -64,6 +64,13 @@ function readPlant(body) {
   };
 }
 
+// Plant › Excavators › MCL-EX-0001 (the last one a link when it isn't the current page).
+function plantCrumbs(item, link = false) {
+  const cat = CATEGORY[item.category] || CATEGORY.misc;
+  const section = SECTIONS[cat.section];
+  return [[section.label, section.href], [cat.label, `${section.href}?category=${cat.key}`], [item.plant_no, link ? `/plant/${item.id}` : null]];
+}
+
 // Next free asset number for an owner and category, e.g. MCL-EX-0015.
 async function nextAssetNumbers() {
   const used = new Set((await all('SELECT plant_no FROM plant')).map((r) => r.plant_no.toUpperCase()));
@@ -112,6 +119,7 @@ router.get('/plant/new', requireAdmin, async (req, res) => {
   const c = CATEGORY[req.query.category] || CATEGORIES[0];
   res.render('plant-form', {
     title: 'Add plant or equipment',
+    crumbs: [[SECTIONS[c.section].label, SECTIONS[c.section].href], ['Add']],
     ...await formLocals({ category: c.key, owner: 'MCL', status: 'in_use', service_schedule: c.schedule, service_interval_hours: c.every, service_months: c.serviceMonths, tracks_hours: c.hours ? 1 : 0,
       weekly_checks: c.checks ? 1 : 0, inspection_type: c.inspection, loler_interval_months: c.months, active: 1 }),
   });
@@ -136,13 +144,14 @@ router.get('/plant/:id', async (req, res) => {
   const records = await all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
   const defects = await listDefects({ status: 'all', assetType: 'plant', assetId: item.id, limit: 50 });
   res.locals.navActive = SECTIONS[(CATEGORY[item.category] || CATEGORY.misc).section].href;
-  res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, item, checks, records, defects, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
+  res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, crumbs: plantCrumbs(item), item, checks, records, defects, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
 router.get('/plant/:id/edit', requireAdmin, async (req, res) => {
   const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Plant not found.' });
-  res.render('plant-form', { title: `Edit ${item.plant_no}`, ...await formLocals(item) });
+  res.locals.navActive = SECTIONS[(CATEGORY[item.category] || CATEGORY.misc).section].href;
+  res.render('plant-form', { title: `Edit ${item.plant_no}`, crumbs: [...plantCrumbs(item, true), ['Edit']], ...await formLocals(item) });
 });
 
 router.post('/plant/:id', requireAdmin, async (req, res) => {

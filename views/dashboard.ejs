@@ -8,7 +8,7 @@
   </div>
 </div>
 
-<div class="section-title"><h2>Plant</h2><a class="small" href="/plant">Plant register →</a></div>
+<div class="section-title"><h2>Plant</h2></div>
 <div class="kpis">
   <a class="kpi <%= stats.plantServiceOverdue ? 'bad' : stats.plantService ? 'warn' : 'good' %>" href="/plant?filter=attention">
     <div class="label">Services due</div><div class="value"><%= stats.plantService %></div>
@@ -24,7 +24,7 @@
     <div class="sub"><%= stats.defectsUnsafe %> marked unsafe</div></a>
 </div>
 
-<div class="section-title"><h2>Fleet</h2><a class="small" href="/vehicles">Fleet register →</a></div>
+<div class="section-title"><h2>Fleet</h2></div>
 <div class="kpis">
   <a class="kpi <%= stats.walkaroundsDone < stats.walkaroundsExpected ? 'warn' : 'good' %>" href="/checks?type=vehicle">
     <div class="label">Walk-arounds today</div><div class="value"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></div>

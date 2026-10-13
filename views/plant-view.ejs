@@ -11,9 +11,9 @@
   </div>
 </div>
 <div class="kpis">
-  <div class="kpi"><div class="label">Location / job</div><div class="value" style="font-size:1.2rem"><%= item.location || '—' %></div><div class="sub"><%= item.job_ref ? 'Job ' + item.job_ref : '&nbsp;' %></div></div>
+  <div class="kpi"><div class="label">Location / job</div><div class="value" style="font-size:1.2rem"><%= item.location || '—' %></div><div class="sub"><%= item.job_ref ? 'Job ' + item.job_ref : '\u00a0' %></div></div>
   <% if (item.tracks_hours) { %>
-  <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '&nbsp;' %></div></div>
+  <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '\u00a0' %></div></div>
   <div class="kpi <%= cls(item.service) %>"><div class="label">Next service</div><div class="value" style="font-size:1.3rem"><%= item.service.name %></div><div class="sub"><%- pill(item.service) %></div></div>
   <% } else { %>
   <div class="kpi"><div class="label">Last service</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_service_date) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : 'No hour meter' %></div></div>

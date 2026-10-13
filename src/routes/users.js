@@ -20,7 +20,7 @@ router.get('/users', async (req, res) => {
   res.render('users', { title: 'Users', users, show, counts });
 });
 
-const userForm = (res, title, item) => res.render('user-form', { title, item, EMPLOYEE_TYPES });
+const userForm = (res, title, item) => res.render('user-form', { title, crumbs: [['Admin', '/admin'], ['Users', '/users'], [item.id ? item.name : title]], item, EMPLOYEE_TYPES });
 
 router.get('/users/new', async (req, res) => {
   const role = req.query.role === 'admin' ? 'admin' : 'driver';

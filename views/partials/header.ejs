@@ -45,8 +45,11 @@
     '/fuel-cards': [['/fuel', 'Fuel log & receipts', (p) => p === '/fuel' || /^\/fuel\/(\d+|next)$/.test(p)], ['/fuel-cards', 'Cards', (p) => p === '/fuel-cards' || /^\/fuel-cards\/(new|\d+)/.test(p)], ['/fuel-cards/assign', 'Assign cards to people', (p) => p === '/fuel-cards/assign']],
     '/admin': [['/admin', 'Overview', (p) => p === '/admin'], ['/users', 'Users', (p) => p.startsWith('/users')], ['/checks', 'Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
   };
-  const subnav = isAdmin && current && SUBNAV[current[0]];
-  if (subnav) { %>
+  // The Admin overview's tiles already link to its tabs, so the tabs start on the pages below it.
+  const subnav = !crumbs && isAdmin && current && path !== '/admin' && SUBNAV[current[0]];
+  if (crumbs) { %>
+<nav class="crumbs" aria-label="Breadcrumb"><% crumbs.forEach(([label, href], i) => { %><%- i ? '<span class="sep">›</span>' : '' %><% if (href) { %><a href="<%= href %>"><%= label %></a><% } else { %><span aria-current="page"><%= label %></span><% } %><% }) %></nav>
+<% } else if (subnav) { %>
 <nav class="subnav"><% for (const [href, label, on] of subnav) { %><a href="<%= href %>" class="<%= on(path) ? 'active' : '' %>"><%= label %></a><% } %></nav>
 <% } %>
 <% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.msg %></div><% } %>

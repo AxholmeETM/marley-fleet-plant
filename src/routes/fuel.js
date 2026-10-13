@@ -6,7 +6,7 @@ const { all, get, run } = require('../db');
 const storage = require('../storage');
 const { listVehicles, getVehicle } = require('../queries');
 const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
-const { isoDate, isValidDate, addMonths } = require('../status');
+const { isoDate, isValidDate, addMonths, ukDate } = require('../status');
 const { CARD_SQL, decorate: decorateCard } = require('./fuel-cards');
 
 const router = express.Router();
@@ -193,7 +193,7 @@ router.get('/fuel/:id', requireAdmin, async (req, res) => {
   if (!entry) return res.status(404).render('error', { title: 'Not found', message: 'Fuel entry not found.' });
   const remaining = (await get('SELECT COUNT(*) AS n FROM fuel_entries WHERE verified = 0 AND id != ?', entry.id)).n;
   const cards = await all('SELECT id, provider, card_ref, last4, holder, status FROM fuel_cards ORDER BY status, provider, card_ref');
-  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, entry, remaining, FUEL_TYPES, cards });
+  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, crumbs: [['Fuel log & receipts', '/fuel'], [`${entry.reg} · ${ukDate(entry.fill_date)}`]], entry, remaining, FUEL_TYPES, cards });
 });
 
 router.post('/fuel/:id', requireAdmin, async (req, res) => {

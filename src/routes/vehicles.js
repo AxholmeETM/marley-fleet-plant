@@ -80,7 +80,7 @@ router.get('/vehicles', async (req, res) => {
 });
 
 router.get('/vehicles/new', async (req, res) => {
-  res.render('vehicle-form', { title: 'Add vehicle', item: { fuel_type: 'diesel', service_interval_months: 12, active: 1, owner: 'MCL', category: 'van', status: 'active', asset_no: await nextVanNumber() }, drivers: await listDrivers(), ...LOOKUPS });
+  res.render('vehicle-form', { title: 'Add vehicle', crumbs: [['Fleet', '/vehicles'], ['Add vehicle']], item: { fuel_type: 'diesel', service_interval_months: 12, active: 1, owner: 'MCL', category: 'van', status: 'active', asset_no: await nextVanNumber() }, drivers: await listDrivers(), ...LOOKUPS });
 });
 
 router.post('/vehicles', async (req, res) => {
@@ -104,13 +104,14 @@ router.get('/vehicles/:id', async (req, res) => {
     WHERE f.vehicle_id = ? ${isAdmin(req.user) ? '' : 'AND f.user_id = ' + Number(req.user.id)} ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
   const defects = await listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
   const cards = await all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
-  res.render('vehicle-view', { title: item.reg, item, checks, records, fuel, defects, cards, addMonths, addDays, ...LOOKUPS });
+  const crumbs = isAdmin(req.user) ? [['Fleet', '/vehicles'], [VEHICLE_CATEGORIES[item.category] || 'Vehicles', `/vehicles?category=${item.category}`], [item.reg]] : [['Home', '/'], [item.reg]];
+  res.render('vehicle-view', { title: item.reg, crumbs, item, checks, records, fuel, defects, cards, addMonths, addDays, ...LOOKUPS });
 });
 
 router.get('/vehicles/:id/edit', async (req, res) => {
   const item = await get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
-  res.render('vehicle-form', { title: `Edit ${item.reg}`, item, drivers: await listDrivers(), ...LOOKUPS });
+  res.render('vehicle-form', { title: `Edit ${item.reg}`, crumbs: [['Fleet', '/vehicles'], [item.reg, `/vehicles/${item.id}`], ['Edit']], item, drivers: await listDrivers(), ...LOOKUPS });
 });
 
 router.post('/vehicles/:id', async (req, res) => {

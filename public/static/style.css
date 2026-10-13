@@ -72,6 +72,12 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .subnav a:hover { text-decoration: none; }
 .subnav a.active { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
 
+/* Breadcrumb trail on inner pages */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -8px 0 18px; font-size: .86rem; color: var(--muted); }
+.crumbs a { color: var(--blue); }
+.crumbs .sep { color: var(--line-strong); }
+.crumbs [aria-current] { color: var(--ink-2); }
+
 main { max-width: 1280px; margin: 0 auto; padding: 32px 22px 64px; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 24px; }
 .page-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -278,7 +284,7 @@ legend + * { clear: both; }
   .card { padding: 18px; }
 }
 @media print {
-  .topbar, .subnav, .page-head .actions, .form-actions, .filters { display: none; }
+  .topbar, .subnav, .crumbs, .page-head .actions, .form-actions, .filters { display: none; }
   body { background: #fff; }
   .card { box-shadow: none; }
 }

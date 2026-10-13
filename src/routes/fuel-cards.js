@@ -65,7 +65,7 @@ router.get('/fuel-cards', async (req, res) => {
 });
 
 async function form(res, title, item) {
-  res.render('fuel-card-form', { title, item, vehicles: await listVehicles(), users: await activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
+  res.render('fuel-card-form', { title, crumbs: [['Fuel cards', '/fuel-cards'], [item.id ? cardLabel(item) : 'Add card']], item, vehicles: await listVehicles(), users: await activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
 }
 
 // Drag-and-drop board: one column per user, plus the cards nobody has.
