@@ -26,15 +26,15 @@ function decorate(c) {
   };
 }
 
-const activeUsers = () => all("SELECT id, name, role FROM users WHERE active = 1 ORDER BY role = 'admin', name");
+const activeUsers = async () => await all("SELECT id, name, role FROM users WHERE active = 1 ORDER BY role = 'admin', name");
 
-function checkUser(value) {
+async function checkUser(value) {
   const id = Number(value) || null;
-  if (id && !get('SELECT id FROM users WHERE id = ? AND active = 1', id)) throw new UserError('That person is not an active user.');
+  if (id && !await get('SELECT id FROM users WHERE id = ? AND active = 1', id)) throw new UserError('That person is not an active user.');
   return id;
 }
 
-function readCard(body) {
+async function readCard(body) {
   const provider = text(body.provider);
   if (!provider) throw new UserError('Please choose the fuel card company.');
   const digits = String(body.last4 || '').replace(/\D/g, '');
@@ -48,7 +48,7 @@ function readCard(body) {
     card_ref: text(body.card_ref),
     last4,
     holder: text(body.holder),
-    user_id: checkUser(body.user_id),
+    user_id: await checkUser(body.user_id),
     vehicle_id: vehicleId,
     card_type: text(body.card_type),
     expiry: expiry ? expiry.slice(0, 7) : null,
@@ -57,56 +57,56 @@ function readCard(body) {
   };
 }
 
-router.get('/fuel-cards', (req, res) => {
+router.get('/fuel-cards', async (req, res) => {
   const show = req.query.show === 'all' ? 'all' : 'active';
-  const cards = all(`${CARD_SQL} ${show === 'active' ? "WHERE c.status = 'active'" : ''} ORDER BY c.provider, c.status, CAST(c.card_ref AS INTEGER), c.card_ref`).map(decorate);
+  const cards = (await all(`${CARD_SQL} ${show === 'active' ? "WHERE c.status = 'active'" : ''} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorate);
   res.render('fuel-cards', { title: 'Fuel cards', cards, show, FUEL_CARD_STATUSES });
 });
 
-function form(res, title, item) {
-  res.render('fuel-card-form', { title, item, vehicles: listVehicles(), users: activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
+async function form(res, title, item) {
+  res.render('fuel-card-form', { title, item, vehicles: await listVehicles(), users: await activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
 }
 
 // Drag-and-drop board: one column per user, plus the cards nobody has.
-router.get('/fuel-cards/assign', (req, res) => {
-  const users = activeUsers();
+router.get('/fuel-cards/assign', async (req, res) => {
+  const users = await activeUsers();
   const ids = new Set(users.map((u) => u.id));
-  const cards = all(`${CARD_SQL} WHERE c.status = 'active' ORDER BY c.provider, CAST(c.card_ref AS INTEGER), c.card_ref`).map(decorate);
+  const cards = (await all(`${CARD_SQL} WHERE c.status = 'active' ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorate);
   const lanes = [{ id: '', name: 'Not assigned', cards: cards.filter((c) => !ids.has(c.user_id)) },
     ...users.map((u) => ({ ...u, cards: cards.filter((c) => c.user_id === u.id) }))];
   res.render('fuel-card-assign', { title: 'Assign fuel cards', lanes, users });
 });
 
-router.post('/fuel-cards/:id/assign', (req, res) => {
-  const card = get('SELECT * FROM fuel_cards WHERE id = ?', Number(req.params.id));
+router.post('/fuel-cards/:id/assign', async (req, res) => {
+  const card = await get('SELECT * FROM fuel_cards WHERE id = ?', Number(req.params.id));
   if (!card) throw new UserError('Fuel card not found.', 404);
-  const userId = checkUser(req.body.user_id);
-  run('UPDATE fuel_cards SET user_id = ? WHERE id = ?', userId, card.id);
-  const who = userId ? get('SELECT name FROM users WHERE id = ?', userId).name : null;
+  const userId = await checkUser(req.body.user_id);
+  await run('UPDATE fuel_cards SET user_id = ? WHERE id = ?', userId, card.id);
+  const who = userId ? (await get('SELECT name FROM users WHERE id = ?', userId)).name : null;
   const message = who ? `${cardLabel(card)} assigned to ${who}.` : `${cardLabel(card)} unassigned.`;
   if (req.get('x-requested-with') === 'fetch') return res.json({ ok: true, message });
   req.flash('success', message);
   res.redirect('/fuel-cards/assign');
 });
 
-router.get('/fuel-cards/new', (req, res) => form(res, 'Add fuel card', { status: 'active', vehicle_id: Number(req.query.vehicle) || null }));
+router.get('/fuel-cards/new', async (req, res) => await form(res, 'Add fuel card', { status: 'active', vehicle_id: Number(req.query.vehicle) || null }));
 
-router.post('/fuel-cards', (req, res) => {
-  const c = readCard(req.body);
-  run(`INSERT INTO fuel_cards (${Object.keys(c).join(', ')}) VALUES (${Object.keys(c).map(() => '?').join(', ')})`, ...Object.values(c));
+router.post('/fuel-cards', async (req, res) => {
+  const c = await readCard(req.body);
+  await run(`INSERT INTO fuel_cards (${Object.keys(c).join(', ')}) VALUES (${Object.keys(c).map(() => '?').join(', ')})`, ...Object.values(c));
   req.flash('success', `${c.provider} card added.`);
   res.redirect('/fuel-cards');
 });
 
-router.get('/fuel-cards/:id/edit', (req, res) => {
-  const item = get('SELECT * FROM fuel_cards WHERE id = ?', Number(req.params.id));
+router.get('/fuel-cards/:id/edit', async (req, res) => {
+  const item = await get('SELECT * FROM fuel_cards WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Fuel card not found.' });
-  form(res, 'Edit fuel card', item);
+  await form(res, 'Edit fuel card', item);
 });
 
-router.post('/fuel-cards/:id', (req, res) => {
-  const c = readCard(req.body);
-  run(`UPDATE fuel_cards SET ${Object.keys(c).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...Object.values(c), Number(req.params.id));
+router.post('/fuel-cards/:id', async (req, res) => {
+  const c = await readCard(req.body);
+  await run(`UPDATE fuel_cards SET ${Object.keys(c).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...Object.values(c), Number(req.params.id));
   req.flash('success', 'Fuel card updated.');
   res.redirect('/fuel-cards');
 });

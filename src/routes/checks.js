@@ -25,9 +25,9 @@ const SEVERITIES = ['minor', 'major', 'unsafe'];
 
 // ---- Vehicle daily walk-around ----
 
-router.get('/checks/vehicle/new', (req, res) => {
+router.get('/checks/vehicle/new', async (req, res) => {
   // Employees only see the vehicles assigned to them.
-  const vehicles = listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id });
+  const vehicles = await listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id });
   const mine = vehicles.filter((v) => v.driver_id === req.user.id);
   const selectedId = Number(req.query.vehicle) || (mine[0] && mine[0].id) || null;
   const vehicle = selectedId ? vehicles.find((v) => v.id === selectedId) : null;
@@ -37,8 +37,8 @@ router.get('/checks/vehicle/new', (req, res) => {
   });
 });
 
-router.post('/checks/vehicle', (req, res) => {
-  const vehicle = getVehicle(Number(req.body.asset_id));
+router.post('/checks/vehicle', async (req, res) => {
+  const vehicle = await getVehicle(Number(req.body.asset_id));
   if (!vehicle || !vehicle.active) throw new UserError('Please choose a vehicle.');
   if (!canUseVehicle(req.user, vehicle)) throw new UserError('That vehicle is not assigned to you.', 403);
   const results = readResults(req.body, VEHICLE_ITEMS);
@@ -49,13 +49,13 @@ router.post('/checks/vehicle', (req, res) => {
   if (defectItems.length && !details) throw new UserError('Please describe the defects you found.');
   const severity = SEVERITIES.includes(req.body.severity) ? req.body.severity : 'minor';
 
-  const id = transaction(() => {
-    const { lastInsertRowid } = run(
+  const id = await transaction(async () => {
+    const { lastInsertRowid } = await run(
       'INSERT INTO vehicle_checks (vehicle_id, user_id, check_date, mileage, results, defects_found, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
       vehicle.id, req.user.id, date, mileage, JSON.stringify(results), defectItems.length, text(req.body.notes));
-    if (mileage != null) run('UPDATE vehicles SET mileage = MAX(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, vehicle.id);
+    if (mileage != null) await run('UPDATE vehicles SET mileage = GREATEST(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, vehicle.id);
     if (defectItems.length) {
-      run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
+      await run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
         'vehicle', vehicle.id, lastInsertRowid, `${defectItems.map((r) => r.item).join('; ')}: ${details}`, severity, req.user.id);
     }
     return lastInsertRowid;
@@ -67,8 +67,8 @@ router.post('/checks/vehicle', (req, res) => {
 
 // ---- Plant weekly check sheet ----
 
-router.get('/checks/plant/new', requirePlantAccess, (req, res) => {
-  const plant = listPlant().filter((p) => p.weekly_checks && p.status !== 'repair');
+router.get('/checks/plant/new', requirePlantAccess, async (req, res) => {
+  const plant = (await listPlant()).filter((p) => p.weekly_checks && p.status !== 'repair');
   const selectedId = Number(req.query.plant) || null;
   res.render('check-form', {
     title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS,
@@ -76,8 +76,8 @@ router.get('/checks/plant/new', requirePlantAccess, (req, res) => {
   });
 });
 
-router.post('/checks/plant', requirePlantAccess, (req, res) => {
-  const plant = getPlant(Number(req.body.asset_id));
+router.post('/checks/plant', requirePlantAccess, async (req, res) => {
+  const plant = await getPlant(Number(req.body.asset_id));
   if (!plant || !plant.active) throw new UserError('Please choose a piece of plant.');
   const results = readResults(req.body, PLANT_ITEMS);
   const date = checkDate(req.body.check_date);
@@ -89,13 +89,13 @@ router.post('/checks/plant', requirePlantAccess, (req, res) => {
   if (defectItems.length && !details) throw new UserError('Please describe the defects you found.');
   const severity = SEVERITIES.includes(req.body.severity) ? req.body.severity : 'minor';
 
-  const id = transaction(() => {
-    const { lastInsertRowid } = run(
+  const id = await transaction(async () => {
+    const { lastInsertRowid } = await run(
       'INSERT INTO plant_checks (plant_id, user_id, check_date, hours, job_ref, results, defects_found, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       plant.id, req.user.id, date, hours, jobRef, JSON.stringify(results), defectItems.length, text(req.body.notes));
-    run('UPDATE plant SET running_hours = MAX(running_hours, COALESCE(?, 0)), job_ref = COALESCE(?, job_ref) WHERE id = ?', hours, jobRef, plant.id);
+    await run('UPDATE plant SET running_hours = GREATEST(running_hours, COALESCE(?::double precision, 0)), job_ref = COALESCE(?, job_ref) WHERE id = ?', hours, jobRef, plant.id);
     if (defectItems.length) {
-      run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
+      await run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
         'plant', plant.id, lastInsertRowid, `${defectItems.map((r) => r.item).join('; ')}: ${details}`, severity, req.user.id);
     }
     return lastInsertRowid;
@@ -108,31 +108,31 @@ router.post('/checks/plant', requirePlantAccess, (req, res) => {
 
 // ---- Viewing checks ----
 
-router.get('/checks', requireAdmin, (req, res) => {
+router.get('/checks', requireAdmin, async (req, res) => {
   const type = req.query.type === 'plant' ? 'plant' : 'vehicle';
   const from = isValidDate(req.query.from) ? req.query.from : addDays(isoDate(), -13);
   const to = isValidDate(req.query.to) ? req.query.to : isoDate();
   const rows = type === 'vehicle'
-    ? all(`SELECT c.id, c.check_date, c.mileage AS reading, c.defects_found, c.created_at, v.reg AS asset, v.id AS asset_id, u.name AS user_name
+    ? await all(`SELECT c.id, c.check_date, c.mileage AS reading, c.defects_found, c.created_at, v.reg AS asset, v.id AS asset_id, u.name AS user_name
            FROM vehicle_checks c JOIN vehicles v ON v.id = c.vehicle_id JOIN users u ON u.id = c.user_id
            WHERE c.check_date BETWEEN ? AND ? ORDER BY c.check_date DESC, c.id DESC`, from, to)
-    : all(`SELECT c.id, c.check_date, c.hours AS reading, c.job_ref, c.defects_found, c.created_at, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name
+    : await all(`SELECT c.id, c.check_date, c.hours AS reading, c.job_ref, c.defects_found, c.created_at, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name
            FROM plant_checks c JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id
            WHERE c.check_date BETWEEN ? AND ? ORDER BY c.check_date DESC, c.id DESC`, from, to);
   const missing = type === 'vehicle'
-    ? listVehicles().filter((v) => v.walkaround.level === 'overdue')
-    : listPlant().filter((p) => p.check.level === 'overdue' || p.check.level === 'soon');
+    ? (await listVehicles()).filter((v) => v.walkaround.level === 'overdue')
+    : (await listPlant()).filter((p) => p.check.level === 'overdue' || p.check.level === 'soon');
   res.render('checks', { title: 'Checks', type, from, to, rows, missing });
 });
 
-router.get('/checks/:type/:id', (req, res) => {
+router.get('/checks/:type/:id', async (req, res) => {
   const { type } = req.params;
   let check;
   if (type === 'vehicle') {
-    check = get(`SELECT c.*, c.mileage AS reading, v.reg AS asset, v.id AS asset_id, u.name AS user_name FROM vehicle_checks c
+    check = await get(`SELECT c.*, c.mileage AS reading, v.reg AS asset, v.id AS asset_id, u.name AS user_name FROM vehicle_checks c
       JOIN vehicles v ON v.id = c.vehicle_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
   } else if (type === 'plant') {
-    check = get(`SELECT c.*, c.hours AS reading, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name FROM plant_checks c
+    check = await get(`SELECT c.*, c.hours AS reading, p.plant_no || ' – ' || p.description AS asset, p.id AS asset_id, u.name AS user_name FROM plant_checks c
       JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
   }
   // Admins see every check, site managers every plant check, everyone else only their own.
@@ -140,7 +140,7 @@ router.get('/checks/:type/:id', (req, res) => {
   if (!allowed) {
     return res.status(404).render('error', { title: 'Not found', message: 'Check not found.' });
   }
-  const defect = get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);
+  const defect = await get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);
   res.render('check-view', { title: type === 'vehicle' ? 'Walk-around check' : 'Plant check sheet', type, check, results: JSON.parse(check.results), defect });
 });
 

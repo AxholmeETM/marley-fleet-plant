@@ -1,5 +1,5 @@
 const express = require('express');
-const { all, run, get, transaction } = require('../db');
+const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listPlant, getPlant, listDefects } = require('../queries');
 const { requireAdmin, requirePlantAccess, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
@@ -65,8 +65,8 @@ function readPlant(body) {
 }
 
 // Next free asset number for an owner and category, e.g. MCL-EX-0015.
-function nextAssetNumbers() {
-  const used = new Set(all('SELECT plant_no FROM plant').map((r) => r.plant_no.toUpperCase()));
+async function nextAssetNumbers() {
+  const used = new Set((await all('SELECT plant_no FROM plant')).map((r) => r.plant_no.toUpperCase()));
   const out = {};
   for (const owner of Object.keys(OWNERS)) {
     for (const c of CATEGORIES) {
@@ -79,22 +79,22 @@ function nextAssetNumbers() {
   return out;
 }
 
-function formLocals(item) {
-  return { item, CATEGORIES, OWNERS, PLANT_STATUSES, INSPECTION_TYPES, nextNumbers: nextAssetNumbers() };
+async function formLocals(item) {
+  return { item, CATEGORIES, OWNERS, PLANT_STATUSES, INSPECTION_TYPES, nextNumbers: await nextAssetNumbers() };
 }
 
 function saveError(err) {
-  if (String(err.message).includes('UNIQUE')) throw new UserError('Another asset already has that asset number.');
+  if (isUniqueViolation(err)) throw new UserError('Another asset already has that asset number.');
   throw err;
 }
 
-router.get(['/plant', '/equipment'], (req, res) => {
+router.get(['/plant', '/equipment'], async (req, res) => {
   const section = req.path === '/equipment' ? 'equipment' : 'plant';
   const categories = CATEGORIES.filter((c) => c.section === section);
   const filter = req.query.filter || '';
   const category = CATEGORY[req.query.category] && CATEGORY[req.query.category].section === section ? req.query.category : '';
   const owner = OWNERS[req.query.owner] ? req.query.owner : '';
-  let plant = listPlant({ includeInactive: filter === 'inactive' }).filter((p) => (CATEGORY[p.category] || CATEGORY.misc).section === section);
+  let plant = (await listPlant({ includeInactive: filter === 'inactive' })).filter((p) => (CATEGORY[p.category] || CATEGORY.misc).section === section);
   if (filter === 'inactive') plant = plant.filter((p) => !p.active);
   if (filter === 'attention') plant = plant.filter((p) => [p.service, p.loler, p.check].some((s) => s.level === 'overdue' || s.level === 'soon') || p.open_defects);
   if (filter === 'repair') plant = plant.filter((p) => p.status === 'repair');
@@ -108,55 +108,55 @@ router.get(['/plant', '/equipment'], (req, res) => {
   res.render('plant-list', { title: SECTIONS[section].label, section: SECTIONS[section], plant, filter, category, owner, counts, hireTotal, q: req.query.q || '', CATEGORIES: categories, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
-router.get('/plant/new', requireAdmin, (req, res) => {
+router.get('/plant/new', requireAdmin, async (req, res) => {
   const c = CATEGORY[req.query.category] || CATEGORIES[0];
   res.render('plant-form', {
     title: 'Add plant or equipment',
-    ...formLocals({ category: c.key, owner: 'MCL', status: 'in_use', service_schedule: c.schedule, service_interval_hours: c.every, service_months: c.serviceMonths, tracks_hours: c.hours ? 1 : 0,
+    ...await formLocals({ category: c.key, owner: 'MCL', status: 'in_use', service_schedule: c.schedule, service_interval_hours: c.every, service_months: c.serviceMonths, tracks_hours: c.hours ? 1 : 0,
       weekly_checks: c.checks ? 1 : 0, inspection_type: c.inspection, loler_interval_months: c.months, active: 1 }),
   });
 });
 
-router.post('/plant', requireAdmin, (req, res) => {
+router.post('/plant', requireAdmin, async (req, res) => {
   const p = readPlant(req.body);
   const cols = Object.keys(p);
   let id;
   try {
-    id = run(`INSERT INTO plant (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, ...Object.values(p)).lastInsertRowid;
+    id = (await run(`INSERT INTO plant (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, ...Object.values(p))).lastInsertRowid;
   } catch (err) { saveError(err); }
   req.flash('success', `${p.plant_no} added to the plant register.`);
   res.redirect(`/plant/${id}`);
 });
 
-router.get('/plant/:id', (req, res) => {
-  const item = getPlant(Number(req.params.id));
+router.get('/plant/:id', async (req, res) => {
+  const item = await getPlant(Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Plant not found.' });
-  const checks = all(`SELECT c.*, u.name AS user_name FROM plant_checks c JOIN users u ON u.id = c.user_id
+  const checks = await all(`SELECT c.*, u.name AS user_name FROM plant_checks c JOIN users u ON u.id = c.user_id
     WHERE c.plant_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 20`, item.id);
-  const records = all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
-  const defects = listDefects({ status: 'all', assetType: 'plant', assetId: item.id, limit: 50 });
+  const records = await all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
+  const defects = await listDefects({ status: 'all', assetType: 'plant', assetId: item.id, limit: 50 });
   res.locals.navActive = SECTIONS[(CATEGORY[item.category] || CATEGORY.misc).section].href;
   res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, item, checks, records, defects, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
-router.get('/plant/:id/edit', requireAdmin, (req, res) => {
-  const item = get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
+router.get('/plant/:id/edit', requireAdmin, async (req, res) => {
+  const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Plant not found.' });
-  res.render('plant-form', { title: `Edit ${item.plant_no}`, ...formLocals(item) });
+  res.render('plant-form', { title: `Edit ${item.plant_no}`, ...await formLocals(item) });
 });
 
-router.post('/plant/:id', requireAdmin, (req, res) => {
+router.post('/plant/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   const p = readPlant(req.body);
   try {
-    run(`UPDATE plant SET ${Object.keys(p).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(p), id);
+    await run(`UPDATE plant SET ${Object.keys(p).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(p), id);
   } catch (err) { saveError(err); }
   req.flash('success', `${p.plant_no} updated.`);
   res.redirect(`/plant/${id}`);
 });
 
-router.post('/plant/:id/records', (req, res) => {
-  const item = get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
+router.post('/plant/:id/records', async (req, res) => {
+  const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Plant not found.', 404);
   const kind = ['service', 'loler', 'repair'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
@@ -164,15 +164,15 @@ router.post('/plant/:id/records', (req, res) => {
   const hours = numberField(req.body.reading, 'Hours') ?? (kind === 'service' && item.tracks_hours ? item.running_hours : null);
   const nextDue = kind === 'loler' ? dateField(req.body.next_due, 'Next due date') : null;
   const certNo = text(req.body.cert_no);
-  transaction(() => {
-    run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?)`,
+  await transaction(async () => {
+    await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?)`,
       item.id, kind, date, hours, nextDue, text(req.body.done_by), [certNo && `Cert ${certNo}`, text(req.body.notes)].filter(Boolean).join(' · ') || null, req.user.id);
     if (kind === 'service') {
-      run('UPDATE plant SET last_service_date = ?, last_service_hours = ?, running_hours = MAX(running_hours, COALESCE(?, 0)) WHERE id = ?', date, hours, hours, item.id);
+      await run('UPDATE plant SET last_service_date = ?, last_service_hours = ?, running_hours = GREATEST(running_hours, COALESCE(?::double precision, 0)) WHERE id = ?', date, hours, hours, item.id);
     } else if (kind === 'loler') {
-      run('UPDATE plant SET last_loler_date = ?, inspection_due = ?, cert_no = COALESCE(?, cert_no) WHERE id = ?', date, nextDue, certNo, item.id);
+      await run('UPDATE plant SET last_loler_date = ?, inspection_due = ?, cert_no = COALESCE(?, cert_no) WHERE id = ?', date, nextDue, certNo, item.id);
     } else if (hours != null) {
-      run('UPDATE plant SET running_hours = MAX(running_hours, ?) WHERE id = ?', hours, item.id);
+      await run('UPDATE plant SET running_hours = GREATEST(running_hours, ?) WHERE id = ?', hours, item.id);
     }
   });
   const label = INSPECTION_TYPES[item.inspection_type] || 'Inspection';

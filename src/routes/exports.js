@@ -20,14 +20,14 @@ function csv(res, filename, header, rows) {
   res.send('﻿' + [header, ...rows].map((r) => r.map(esc).join(',')).join('\r\n'));
 }
 
-router.get('/export/plant.csv', (req, res) => {
+router.get('/export/plant.csv', async (req, res) => {
   csv(res, 'plant-register.csv',
     ['Asset no', 'Category', 'Owner', 'Status', 'Description', 'Manufacturer', 'Model', 'Serial no', 'Registered', 'SWL', 'Job ref', 'Location',
       'Running hours', 'Service plan (first services)', 'Then every (hrs)', 'Service plan included', 'Last service date', 'Hours at last service',
       'Next service at (hrs)', 'Service status', 'Last check sheet', 'Check status',
       'Inspection type', 'Last tested', 'Next due', 'Cert no', 'Inspection status',
       'Purchase price', 'Purchase date', 'Agreed price from MCL', 'Weekly hire rate', 'Open defects', 'Notes'],
-    listPlant({ includeInactive: true }).map((p) => [p.plant_no, CATEGORY[p.category]?.label || p.category, OWNERS[p.owner] || p.owner, PLANT_STATUSES[p.status] || p.status,
+    (await listPlant({ includeInactive: true })).map((p) => [p.plant_no, CATEGORY[p.category]?.label || p.category, OWNERS[p.owner] || p.owner, PLANT_STATUSES[p.status] || p.status,
       p.description, p.make, p.model, p.serial_no, p.registered, p.swl, p.job_ref, p.location,
       p.tracks_hours ? p.running_hours : '', p.tracks_hours ? p.service_schedule : '', p.tracks_hours ? p.service_interval_hours : '', p.service_plan ? 'Yes' : 'No',
       p.last_service_date, p.last_service_hours, p.service.nextAt, p.service.text, p.last_check, p.check.text,
@@ -35,19 +35,19 @@ router.get('/export/plant.csv', (req, res) => {
       p.purchase_price, p.purchase_date, p.transfer_price, p.weekly_hire_rate, p.open_defects, p.notes]));
 });
 
-router.get('/export/vehicles.csv', (req, res) => {
+router.get('/export/vehicles.csv', async (req, res) => {
   csv(res, 'fleet-register.csv',
     ['Asset no', 'Registration', 'Type', 'Owner', 'Status', 'Make', 'Model', 'Colour', 'Body', 'Fuel', 'User', 'Tracked', 'Mileage',
       'Last service', 'Service due', 'MOT expiry', 'Tax due', 'Last walk-around', 'Purchase price', 'Purchase date', 'Open defects', 'Notes'],
-    listVehicles({ includeInactive: true }).map((v) => [v.asset_no, v.reg, VEHICLE_CATEGORIES[v.category] || v.category, OWNERS[v.owner] || v.owner,
+    (await listVehicles({ includeInactive: true })).map((v) => [v.asset_no, v.reg, VEHICLE_CATEGORIES[v.category] || v.category, OWNERS[v.owner] || v.owner,
       VEHICLE_STATUSES[v.status] || v.status, v.make, v.model, v.colour, v.vehicle_type, v.fuel_type, v.driver_display, TRACKED[v.tracked] || '',
       v.mileage, v.last_service_date, v.service.due, v.mot_due, v.tax_due, v.last_check, v.purchase_price, v.purchase_date, v.open_defects, v.notes]));
 });
 
-router.get('/export/fuel.csv', (req, res) => {
+router.get('/export/fuel.csv', async (req, res) => {
   const from = isValidDate(req.query.from) ? req.query.from : '0000-01-01';
   const to = isValidDate(req.query.to) ? req.query.to : '9999-12-31';
-  const rows = all(`SELECT f.*, v.reg, u.name AS driver, c.provider AS card_provider, c.card_ref, c.last4 AS card_last4 FROM fuel_entries f
+  const rows = await all(`SELECT f.*, v.reg, u.name AS driver, c.provider AS card_provider, c.card_ref, c.last4 AS card_last4 FROM fuel_entries f
     JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = f.user_id LEFT JOIN fuel_cards c ON c.id = f.fuel_card_id
     WHERE f.fill_date BETWEEN ? AND ? ORDER BY f.fill_date, f.id`, from, to);
   csv(res, `fuel-log-${from === '0000-01-01' ? 'all' : from + '-to-' + to}.csv`,

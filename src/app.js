@@ -1,30 +1,28 @@
 const express = require('express');
 const cookieSession = require('cookie-session');
 const path = require('path');
-const fs = require('fs');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { get, run, DATA_DIR } = require('./db');
+const { ready, get, run } = require('./db');
 const status = require('./status');
 const { userLabel } = require('./categories');
 
-function sessionSecret() {
+async function sessionSecret() {
   if (process.env.SESSION_SECRET) return process.env.SESSION_SECRET;
-  // Keep a generated secret on disk so restarts don't sign everyone out.
-  const file = path.join(DATA_DIR, 'session-secret');
-  if (!fs.existsSync(file)) fs.writeFileSync(file, crypto.randomBytes(32).toString('hex'), { mode: 0o600 });
-  return fs.readFileSync(file, 'utf8').trim();
+  // Keep a generated secret in the database so restarts and redeploys don't sign everyone out.
+  await run("INSERT INTO settings (key, value) VALUES ('session_secret', ?) ON CONFLICT (key) DO NOTHING", crypto.randomBytes(32).toString('hex'));
+  return (await get("SELECT value FROM settings WHERE key = 'session_secret'")).value;
 }
 
 // First run: create an admin account so someone can sign in.
-function ensureAdmin() {
-  const count = get('SELECT COUNT(*) AS n FROM users').n;
-  if (count > 0) return;
+async function ensureAdmin() {
+  const { n } = await get('SELECT COUNT(*) AS n FROM users');
+  if (n > 0) return;
   const email = process.env.ADMIN_EMAIL || 'admin@marley.local';
   const password = process.env.ADMIN_PASSWORD || 'changeme';
-  run('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
+  await run('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)',
     'Administrator', email, bcrypt.hashSync(password, 10), 'admin');
-  console.log(`Created first admin account: ${email} / ${password}  (change this password after signing in)`);
+  console.log(`Created first admin account: ${email}${process.env.ADMIN_PASSWORD ? '' : ' / changeme'}  (change this password after signing in)`);
 }
 
 const money = (n) => (n == null ? '—' : '£' + Number(n).toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
@@ -34,28 +32,31 @@ const SEVERITY_LABELS = { minor: 'Minor', major: 'Major', unsafe: 'Unsafe – do
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const pill = (s) => `<span class="pill ${s.level}">${escapeHtml(s.text)}</span>`;
 
-function createApp() {
-  ensureAdmin();
+async function createApp() {
+  await ready;
+  await ensureAdmin();
+  const secret = await sessionSecret();
   const app = express();
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, '..', 'views'));
-  app.set('trust proxy', 1);
+  // Behind Render and/or Cloudflare. TRUST_PROXY=2 when both are in front.
+  app.set('trust proxy', Number(process.env.TRUST_PROXY || 1));
   app.disable('x-powered-by');
 
   app.use('/static', express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
   app.use(express.urlencoded({ extended: false }));
   app.use(cookieSession({
     name: 'marley_session',
-    keys: [sessionSecret()],
+    keys: [secret],
     maxAge: 30 * 24 * 60 * 60 * 1000,
     sameSite: 'lax',
     httpOnly: true,
     secure: process.env.COOKIE_SECURE === 'true',
   }));
 
-  app.use((req, res, next) => {
+  app.use(async (req, res, next) => {
     const uid = req.session && req.session.uid;
-    req.user = uid ? get('SELECT id, name, email, role, employee_type, job_title FROM users WHERE id = ? AND active = 1', uid) : null;
+    req.user = uid ? await get('SELECT id, name, email, role, employee_type, job_title FROM users WHERE id = ? AND active = 1', uid) : null;
     res.locals.user = req.user;
     res.locals.isAdmin = !!(req.user && req.user.role === 'admin');
     res.locals.flash = req.session.flash || null;

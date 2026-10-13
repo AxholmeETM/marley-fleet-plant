@@ -10,7 +10,7 @@ process.env.ADMIN_EMAIL = 'admin@test.local';
 process.env.ADMIN_PASSWORD = 'adminpass1';
 
 const { createApp } = require('../src/app');
-const { get, run } = require('../src/db');
+const { get, run, close } = require('../src/db');
 const { VEHICLE_ITEMS, PLANT_ITEMS } = require('../src/checklists');
 const status = require('../src/status');
 
@@ -18,11 +18,11 @@ let server;
 let base;
 
 before(async () => {
-  server = createApp().listen(0);
+  server = (await createApp()).listen(0);
   await new Promise((r) => server.once('listening', r));
   base = `http://127.0.0.1:${server.address().port}`;
 });
-after(() => server.close());
+after(async () => { server.close(); await close(); });
 
 function client() {
   let cookie = '';
@@ -84,32 +84,32 @@ test('admin and driver flows', async () => {
   assert.equal((await admin('POST', '/users', { name: 'No Type', email: 'x@test.local', password: 'driverpass1', role: 'driver' })).status, 400);
   await admin('POST', '/users', { name: 'Dave Driver', email: 'dave@test.local', password: 'driverpass1', role: 'driver', employee_type: 'driver', job_title: 'Groundworker' });
   await admin('POST', '/users', { name: 'Sam Site', email: 'sam@test.local', password: 'managerpass1', role: 'driver', employee_type: 'site_manager', job_title: 'Site Manager' });
-  assert.deepEqual({ ...get("SELECT employee_type, job_title FROM users WHERE email = 'sam@test.local'") }, { employee_type: 'site_manager', job_title: 'Site Manager' });
-  const dave = get("SELECT id FROM users WHERE email = 'dave@test.local'").id;
+  assert.deepEqual({ ...await get("SELECT employee_type, job_title FROM users WHERE email = 'sam@test.local'") }, { employee_type: 'site_manager', job_title: 'Site Manager' });
+  const dave = (await get("SELECT id FROM users WHERE email = 'dave@test.local'")).id;
   assert.match((await admin('POST', '/vehicles', { reg: 'yx21 kpl', make: 'Ford', model: 'Transit', fuel_type: 'diesel', driver_id: dave, mot_due: status.addDays(status.isoDate(), 5) })).location, /^\/vehicles\/\d+$/);
-  const vehicle = get("SELECT * FROM vehicles WHERE reg = 'YX21 KPL'");
+  const vehicle = await get("SELECT * FROM vehicles WHERE reg = 'YX21 KPL'");
   await admin('POST', '/plant', { plant_no: 'mcl-ex-0001', category: 'excavator', owner: 'MCL', make: 'JCB', model: '245', job_ref: 'J100', running_hours: 990,
     service_schedule: '50, 200, 500', service_interval_hours: 500, last_service_hours: 750, tracks_hours: '1', weekly_checks: '1', inspection_type: 'loler', loler_interval_months: 12 });
-  const plant = get("SELECT * FROM plant WHERE plant_no = 'MCL-EX-0001'");
+  const plant = await get("SELECT * FROM plant WHERE plant_no = 'MCL-EX-0001'");
   assert.equal(plant.description, 'JCB 245');
   assert.equal(plant.service_schedule, '50, 200, 500');
   await admin('POST', '/plant', { plant_no: 'MCL-C&S-0001', category: 'chains', owner: 'MCL', description: '2 leg chain sling', swl: '4.25T', inspection_type: 'thorough', loler_interval_months: 6, last_loler_date: '2026-01-01' });
-  const sling = get("SELECT * FROM plant WHERE plant_no = 'MCL-C&S-0001'");
+  const sling = await get("SELECT * FROM plant WHERE plant_no = 'MCL-C&S-0001'");
   assert.deepEqual([sling.tracks_hours, sling.weekly_checks, sling.inspection_type], [0, 0, 'thorough']);
   assert.doesNotMatch((await admin('GET', '/checks/plant/new')).text, /2 leg chain sling/);
 
   // Fuel card (no PIN, only last 4 digits kept).
   await admin('POST', '/fuel-cards', { provider: 'Esso', card_ref: '12', last4: '7064056072235900127', holder: 'Dave Driver', status: 'active', expiry: '2027-06' });
-  assert.equal(get('SELECT last4 FROM fuel_cards').last4, '0127');
+  assert.equal((await get('SELECT last4 FROM fuel_cards ORDER BY id LIMIT 1')).last4, '0127');
   await admin('POST', '/fuel-cards', { provider: 'Key Fuels', card_ref: 'K7', last4: '5555', status: 'active' });
   await admin('POST', '/fuel-cards', { provider: 'FastFuels', card_ref: 'Spare', last4: '9999', status: 'active' });
-  const [esso, key] = [get("SELECT id FROM fuel_cards WHERE card_ref = '12'").id, get("SELECT id FROM fuel_cards WHERE card_ref = 'K7'").id];
+  const [esso, key] = [(await get("SELECT id FROM fuel_cards WHERE card_ref = '12'")).id, (await get("SELECT id FROM fuel_cards WHERE card_ref = 'K7'")).id];
   // Assign two cards to Dave: one from the board by drag (fetch), one through the plain form.
   const moved = await admin('POST', `/fuel-cards/${esso}/assign`, { user_id: dave });
   assert.equal(moved.status, 302);
   assert.equal((await admin('POST', `/fuel-cards/${key}/assign`, { user_id: dave })).status, 302);
   assert.equal((await admin('POST', `/fuel-cards/${key}/assign`, { user_id: '99999' })).status, 400);
-  assert.equal(get('SELECT COUNT(*) AS n FROM fuel_cards WHERE user_id = ?', dave).n, 2);
+  assert.equal((await get('SELECT COUNT(*) AS n FROM fuel_cards WHERE user_id = ?', dave)).n, 2);
   const json = await fetch(`${base}/fuel-cards/${key}/assign`, { method: 'POST', redirect: 'manual' });
   assert.notEqual(json.status, 200); // not signed in
   const board = await admin('GET', '/fuel-cards/assign');
@@ -136,9 +136,9 @@ test('admin and driver flows', async () => {
   const missing = await driver('POST', '/checks/vehicle', { asset_id: vehicle.id, check_date: status.isoDate() });
   assert.equal(missing.status, 400);
   await driver('POST', '/checks/vehicle', { asset_id: vehicle.id, check_date: status.isoDate(), reading: '48000', ...checklist(VEHICLE_ITEMS, 1), defect_details: 'Bald tyre', severity: 'major' });
-  assert.equal(get('SELECT COUNT(*) AS n FROM vehicle_checks').n, 1);
-  assert.equal(get("SELECT severity FROM defects WHERE asset_type = 'vehicle'").severity, 'major');
-  assert.equal(get('SELECT mileage FROM vehicles WHERE id = ?', vehicle.id).mileage, 48000);
+  assert.equal((await get('SELECT COUNT(*) AS n FROM vehicle_checks')).n, 1);
+  assert.equal((await get("SELECT severity FROM defects WHERE asset_type = 'vehicle'")).severity, 'major');
+  assert.equal((await get('SELECT mileage FROM vehicles WHERE id = ?', vehicle.id)).mileage, 48000);
   assert.match((await driver('GET', '/')).text, /Walk-around done today/);
 
   // Fleet drivers: only their own vehicle, no plant.
@@ -147,7 +147,7 @@ test('admin and driver flows', async () => {
   assert.equal((await driver('GET', '/checks/plant/new')).status, 403);
   assert.equal((await driver('GET', '/equipment')).status, 403);
   await admin('POST', '/vehicles', { reg: 'AB12 CDE', make: 'Ford', model: 'Ranger', fuel_type: 'diesel' });
-  const other = get("SELECT id FROM vehicles WHERE reg = 'AB12 CDE'").id;
+  const other = (await get("SELECT id FROM vehicles WHERE reg = 'AB12 CDE'")).id;
   assert.equal((await driver('GET', `/vehicles/${other}`)).status, 403);
   assert.doesNotMatch((await driver('GET', '/fuel/new')).text, /AB12 CDE/);
   assert.equal((await driver('POST', '/checks/vehicle', { asset_id: other, check_date: status.isoDate(), reading: '1', ...checklist(VEHICLE_ITEMS, -1) })).status, 403);
@@ -165,7 +165,7 @@ test('admin and driver flows', async () => {
   assert.equal((await manager('GET', '/users')).status, 403);
 
   await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'J200', ...checklist(PLANT_ITEMS, -1) });
-  const updated = get('SELECT running_hours, job_ref FROM plant WHERE id = ?', plant.id);
+  const updated = await get('SELECT running_hours, job_ref FROM plant WHERE id = ?', plant.id);
   assert.equal(updated.running_hours, 1004.5);
   assert.equal(updated.job_ref, 'J200');
 
@@ -175,10 +175,10 @@ test('admin and driver flows', async () => {
   form.append('litres', '55.2');
   form.append('fill_date', status.isoDate());
   form.append('mileage', '48100');
-  form.append('fuel_card_id', String(get('SELECT id FROM fuel_cards').id));
+  form.append('fuel_card_id', String((await get('SELECT id FROM fuel_cards ORDER BY id LIMIT 1')).id));
   form.append('receipt', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xe0])], { type: 'image/jpeg' }), 'receipt.jpg');
   assert.equal((await driver('POST', '/fuel', form)).location, '/');
-  const entry = get('SELECT * FROM fuel_entries');
+  const entry = await get('SELECT * FROM fuel_entries');
   assert.equal(entry.litres, 55.2);
   assert.ok(entry.fuel_card_id);
   assert.ok(fs.existsSync(path.join(process.env.DATA_DIR, 'uploads', entry.receipt_file)));
@@ -193,7 +193,7 @@ test('admin and driver flows', async () => {
 
   // Office prices the receipt and the leaderboard picks it up.
   assert.equal((await admin('POST', `/fuel/${entry.id}`, { cost: '79.99', verified: '1' })).status, 302);
-  const priced = get('SELECT cost, verified FROM fuel_entries WHERE id = ?', entry.id);
+  const priced = await get('SELECT cost, verified FROM fuel_entries WHERE id = ?', entry.id);
   assert.deepEqual([priced.cost, priced.verified], [79.99, 1]);
   const fuelPage = await admin('GET', '/fuel');
   assert.match(fuelPage.text, /Dave Driver/);
@@ -201,18 +201,18 @@ test('admin and driver flows', async () => {
 
   // Recording a service resets the plant service due point.
   await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: status.isoDate(), reading: '1004.5' });
-  assert.equal(get('SELECT last_service_hours FROM plant WHERE id = ?', plant.id).last_service_hours, 1004.5);
+  assert.equal((await get('SELECT last_service_hours FROM plant WHERE id = ?', plant.id)).last_service_hours, 1004.5);
   assert.match((await admin('GET', `/plant/${plant.id}`)).text, /1,500 hr service/);
   await admin('POST', `/plant/${sling.id}/records`, { kind: 'loler', record_date: status.isoDate(), cert_no: 'C123' });
-  assert.equal(get('SELECT cert_no FROM plant WHERE id = ?', sling.id).cert_no, 'C123');
+  assert.equal((await get('SELECT cert_no FROM plant WHERE id = ?', sling.id)).cert_no, 'C123');
   await admin('POST', `/vehicles/${vehicle.id}/records`, { kind: 'mot', record_date: '2026-03-01' });
-  assert.equal(get('SELECT mot_due FROM vehicles WHERE id = ?', vehicle.id).mot_due, '2027-02-28');
+  assert.equal((await get('SELECT mot_due FROM vehicles WHERE id = ?', vehicle.id)).mot_due, '2027-02-28');
 
-  const defect = get("SELECT id FROM defects WHERE asset_type = 'vehicle'");
+  const defect = await get("SELECT id FROM defects WHERE asset_type = 'vehicle'");
   await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'Tyre replaced' });
-  assert.equal(get('SELECT status FROM defects WHERE id = ?', defect.id).status, 'resolved');
+  assert.equal((await get('SELECT status FROM defects WHERE id = ?', defect.id)).status, 'resolved');
 
   const csv = await admin('GET', '/export/fuel.csv');
   assert.match(csv.text, /YX21 KPL,Dave Driver,Esso #12 ••0127,diesel,55\.2/);
-  run('DELETE FROM fuel_entries');
+  await run('DELETE FROM fuel_entries');
 });

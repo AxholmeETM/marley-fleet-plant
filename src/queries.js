@@ -13,38 +13,38 @@ const VEHICLE_SQL = `
     (SELECT COUNT(*) FROM defects d WHERE d.asset_type = 'vehicle' AND d.asset_id = v.id AND d.status = 'open') AS open_defects
   FROM vehicles v LEFT JOIN users u ON u.id = v.driver_id`;
 
-function listPlant({ includeInactive = false } = {}) {
-  return all(`${PLANT_SQL} ${includeInactive ? '' : 'WHERE p.active = 1'} ORDER BY p.active DESC, p.plant_no`).map(decoratePlant);
+async function listPlant({ includeInactive = false } = {}) {
+  return (await all(`${PLANT_SQL} ${includeInactive ? '' : 'WHERE p.active = 1'} ORDER BY p.active DESC, p.plant_no`)).map(decoratePlant);
 }
 
-function getPlant(id) {
-  const row = get(`${PLANT_SQL} WHERE p.id = ?`, id);
+async function getPlant(id) {
+  const row = await get(`${PLANT_SQL} WHERE p.id = ?`, id);
   return row ? decoratePlant(row) : null;
 }
 
-function listVehicles({ includeInactive = false, driverId = null } = {}) {
+async function listVehicles({ includeInactive = false, driverId = null } = {}) {
   const where = [];
   const params = [];
   if (!includeInactive) where.push('v.active = 1');
   if (driverId) { where.push('v.driver_id = ?'); params.push(driverId); }
   const sql = `${VEHICLE_SQL} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY v.active DESC, v.reg`;
-  return all(sql, ...params).map(decorateVehicle);
+  return (await all(sql, ...params)).map(decorateVehicle);
 }
 
-function getVehicle(id) {
-  const row = get(`${VEHICLE_SQL} WHERE v.id = ?`, id);
+async function getVehicle(id) {
+  const row = await get(`${VEHICLE_SQL} WHERE v.id = ?`, id);
   return row ? decorateVehicle(row) : null;
 }
 
 // Defects with a readable asset name attached.
-function listDefects({ status = 'open', assetType = null, assetId = null, limit = 500 } = {}) {
+async function listDefects({ status = 'open', assetType = null, assetId = null, limit = 500 } = {}) {
   const where = [];
   const params = [];
   if (status && status !== 'all') { where.push('d.status = ?'); params.push(status); }
   if (assetType) { where.push('d.asset_type = ?'); params.push(assetType); }
   if (assetId) { where.push('d.asset_id = ?'); params.push(assetId); }
   params.push(limit);
-  return all(`
+  return await all(`
     SELECT d.*, r.name AS reported_by_name, s.name AS resolved_by_name,
       CASE d.asset_type
         WHEN 'plant' THEN (SELECT plant_no || ' – ' || description FROM plant WHERE id = d.asset_id)
@@ -58,8 +58,8 @@ function listDefects({ status = 'open', assetType = null, assetId = null, limit 
     LIMIT ?`, ...params);
 }
 
-function listDrivers() {
-  return all("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name");
+async function listDrivers() {
+  return await all("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name");
 }
 
 module.exports = { listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };

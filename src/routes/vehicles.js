@@ -1,5 +1,5 @@
 const express = require('express');
-const { all, run, get, transaction } = require('../db');
+const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listVehicles, getVehicle, listDefects, listDrivers } = require('../queries');
 const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
@@ -7,17 +7,17 @@ const { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED,
 
 const LOOKUPS = { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, TRACKED, FUEL_CARD_STATUSES };
 
-function nextVanNumber(owner = 'MCL') {
+async function nextVanNumber(owner = 'MCL') {
   const prefix = `${owner}-VAN-`;
-  const n = all('SELECT asset_no FROM vehicles WHERE asset_no LIKE ?', prefix + '%')
+  const n = (await all('SELECT asset_no FROM vehicles WHERE asset_no LIKE ?', prefix + '%'))
     .reduce((m, r) => Math.max(m, parseInt(r.asset_no.slice(prefix.length), 10) || 0), 0);
   return prefix + String(n + 1).padStart(4, '0');
 }
 
 const router = express.Router();
 // Employees may open the page of a vehicle assigned to them (read-only). Everything else is for admin users.
-router.use('/vehicles', (req, res, next) => {
-  const own = req.method === 'GET' && /^\/\d+$/.test(req.path) && canUseVehicle(req.user, get('SELECT id, driver_id FROM vehicles WHERE id = ?', Number(req.path.slice(1))));
+router.use('/vehicles', async (req, res, next) => {
+  const own = req.method === 'GET' && /^\/\d+$/.test(req.path) && canUseVehicle(req.user, await get('SELECT id, driver_id FROM vehicles WHERE id = ?', Number(req.path.slice(1))));
   return own ? next() : requireAdmin(req, res, next);
 });
 
@@ -27,11 +27,11 @@ function dateField(v, label) {
   return v;
 }
 
-function readVehicle(body) {
+async function readVehicle(body) {
   const reg = text(body.reg);
   if (!reg) throw new UserError('Registration is required.');
   const driverId = Number(body.driver_id) || null;
-  if (driverId && !get('SELECT id FROM users WHERE id = ?', driverId)) throw new UserError('Unknown driver.');
+  if (driverId && !await get('SELECT id FROM users WHERE id = ?', driverId)) throw new UserError('Unknown driver.');
   const status = VEHICLE_STATUSES[body.status] ? body.status : 'active';
   return {
     reg: reg.toUpperCase().replace(/\s+/g, ' '),
@@ -60,13 +60,13 @@ function readVehicle(body) {
 }
 
 function saveError(err) {
-  if (String(err.message).includes('UNIQUE')) throw new UserError('Another vehicle already has that registration.');
+  if (isUniqueViolation(err)) throw new UserError('Another vehicle already has that registration.');
   throw err;
 }
 
-router.get('/vehicles', (req, res) => {
+router.get('/vehicles', async (req, res) => {
   const filter = req.query.filter || '';
-  let vehicles = listVehicles({ includeInactive: filter === 'inactive' });
+  let vehicles = await listVehicles({ includeInactive: filter === 'inactive' });
   if (filter === 'inactive') vehicles = vehicles.filter((v) => !v.active);
   if (filter === 'sorn') vehicles = vehicles.filter((v) => v.status === 'sorn' || v.status === 'off_road');
   const category = VEHICLE_CATEGORIES[req.query.category] ? req.query.category : '';
@@ -79,53 +79,53 @@ router.get('/vehicles', (req, res) => {
   res.render('vehicle-list', { title: 'Fleet register', vehicles, filter, category, counts, q: req.query.q || '', ...LOOKUPS });
 });
 
-router.get('/vehicles/new', (req, res) => {
-  res.render('vehicle-form', { title: 'Add vehicle', item: { fuel_type: 'diesel', service_interval_months: 12, active: 1, owner: 'MCL', category: 'van', status: 'active', asset_no: nextVanNumber() }, drivers: listDrivers(), ...LOOKUPS });
+router.get('/vehicles/new', async (req, res) => {
+  res.render('vehicle-form', { title: 'Add vehicle', item: { fuel_type: 'diesel', service_interval_months: 12, active: 1, owner: 'MCL', category: 'van', status: 'active', asset_no: await nextVanNumber() }, drivers: await listDrivers(), ...LOOKUPS });
 });
 
-router.post('/vehicles', (req, res) => {
-  const v = readVehicle(req.body);
+router.post('/vehicles', async (req, res) => {
+  const v = await readVehicle(req.body);
   const cols = Object.keys(v);
   let id;
   try {
-    id = run(`INSERT INTO vehicles (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, ...Object.values(v)).lastInsertRowid;
+    id = (await run(`INSERT INTO vehicles (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, ...Object.values(v))).lastInsertRowid;
   } catch (err) { saveError(err); }
   req.flash('success', `${v.reg} added to the fleet register.`);
   res.redirect(`/vehicles/${id}`);
 });
 
-router.get('/vehicles/:id', (req, res) => {
-  const item = getVehicle(Number(req.params.id));
+router.get('/vehicles/:id', async (req, res) => {
+  const item = await getVehicle(Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
-  const checks = all(`SELECT c.*, u.name AS user_name FROM vehicle_checks c JOIN users u ON u.id = c.user_id
+  const checks = await all(`SELECT c.*, u.name AS user_name FROM vehicle_checks c JOIN users u ON u.id = c.user_id
     WHERE c.vehicle_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 30`, item.id);
-  const records = all(`SELECT * FROM service_records WHERE asset_type = 'vehicle' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
-  const fuel = all(`SELECT f.*, u.name AS driver_name FROM fuel_entries f JOIN users u ON u.id = f.user_id
+  const records = await all(`SELECT * FROM service_records WHERE asset_type = 'vehicle' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
+  const fuel = await all(`SELECT f.*, u.name AS driver_name FROM fuel_entries f JOIN users u ON u.id = f.user_id
     WHERE f.vehicle_id = ? ${isAdmin(req.user) ? '' : 'AND f.user_id = ' + Number(req.user.id)} ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
-  const defects = listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
-  const cards = all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
+  const defects = await listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
+  const cards = await all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
   res.render('vehicle-view', { title: item.reg, item, checks, records, fuel, defects, cards, addMonths, addDays, ...LOOKUPS });
 });
 
-router.get('/vehicles/:id/edit', (req, res) => {
-  const item = get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
+router.get('/vehicles/:id/edit', async (req, res) => {
+  const item = await get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
-  res.render('vehicle-form', { title: `Edit ${item.reg}`, item, drivers: listDrivers(), ...LOOKUPS });
+  res.render('vehicle-form', { title: `Edit ${item.reg}`, item, drivers: await listDrivers(), ...LOOKUPS });
 });
 
-router.post('/vehicles/:id', (req, res) => {
+router.post('/vehicles/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const v = readVehicle(req.body);
+  const v = await readVehicle(req.body);
   try {
-    run(`UPDATE vehicles SET ${Object.keys(v).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(v), id);
+    await run(`UPDATE vehicles SET ${Object.keys(v).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(v), id);
   } catch (err) { saveError(err); }
   req.flash('success', `${v.reg} updated.`);
   res.redirect(`/vehicles/${id}`);
 });
 
 // Record a service, MOT pass or tax renewal; updates the vehicle's due dates.
-router.post('/vehicles/:id/records', (req, res) => {
-  const item = get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
+router.post('/vehicles/:id/records', async (req, res) => {
+  const item = await get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Vehicle not found.', 404);
   const kind = ['service', 'mot', 'tax', 'repair'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
@@ -134,13 +134,13 @@ router.post('/vehicles/:id/records', (req, res) => {
   if (kind === 'mot' && !nextDue) nextDue = addDays(addMonths(date, 12), -1);
   if (kind === 'tax' && !nextDue) throw new UserError('Please enter the date the new tax runs until.');
   const mileage = numberField(req.body.reading, 'Mileage', { integer: true });
-  transaction(() => {
-    run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('vehicle', ?, ?, ?, ?, ?, ?, ?, ?)`,
+  await transaction(async () => {
+    await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('vehicle', ?, ?, ?, ?, ?, ?, ?, ?)`,
       item.id, kind, date, mileage, nextDue, text(req.body.done_by), text(req.body.notes), req.user.id);
-    if (kind === 'service') run('UPDATE vehicles SET last_service_date = ? WHERE id = ?', date, item.id);
-    if (kind === 'mot') run('UPDATE vehicles SET mot_due = ? WHERE id = ?', nextDue, item.id);
-    if (kind === 'tax') run('UPDATE vehicles SET tax_due = ? WHERE id = ?', nextDue, item.id);
-    if (mileage != null) run('UPDATE vehicles SET mileage = MAX(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, item.id);
+    if (kind === 'service') await run('UPDATE vehicles SET last_service_date = ? WHERE id = ?', date, item.id);
+    if (kind === 'mot') await run('UPDATE vehicles SET mot_due = ? WHERE id = ?', nextDue, item.id);
+    if (kind === 'tax') await run('UPDATE vehicles SET tax_due = ? WHERE id = ?', nextDue, item.id);
+    if (mileage != null) await run('UPDATE vehicles SET mileage = GREATEST(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, item.id);
   });
   req.flash('success', { service: 'Service recorded.', mot: 'MOT recorded.', tax: 'Tax renewal recorded.', repair: 'Repair recorded.' }[kind]);
   res.redirect(`/vehicles/${item.id}`);
