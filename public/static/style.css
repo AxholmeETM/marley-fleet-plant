@@ -337,6 +337,5 @@ div.pills .pill { white-space: normal; }
 .dlg-x { border: 0; background: var(--grey-bg); width: 30px; height: 30px; border-radius: 50%; font-size: 1.2rem; line-height: 1; cursor: pointer; color: var(--ink); flex: none; }
 .dlg .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 @media (max-width: 600px) { .dlg { width: 100vw; max-width: 100vw; height: 100dvh; max-height: 100dvh; margin: 0; } .dlg .card { min-height: 100%; border-radius: 0; } }
-.tl-scroll { max-height: 520px; overflow-y: auto; overscroll-behavior: contain; border-bottom: 1px solid var(--line, #e3e8ef); }
+.tl-scroll { overflow-y: auto; overscroll-behavior: contain; }
 .tl-scroll thead th { position: sticky; top: 0; background: var(--card); z-index: 1; box-shadow: inset 0 -1px 0 #e3e8ef; }
-@media (max-width: 900px) { .tl-scroll { max-height: 70vh; } }

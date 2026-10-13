@@ -69,7 +69,6 @@
         <% } %></tbody>
       </table></div>
       <p class="empty tl-none" hidden>Nothing of this type yet.</p><% } %>
-      <% if (isAdmin && defects.length) { %><p class="empty" style="padding-top:8px"><a href="/defects?asset=plant">Manage defects →</a></p><% } %>
     </div>
   </div>
 </div>
@@ -106,7 +105,17 @@
       rows.forEach((r) => { const on = t === 'all' || r.dataset.type === t; r.hidden = !on; if (on) shown++; });
       document.querySelectorAll('.tl-filter a').forEach((a) => a.classList.toggle('active', a.dataset.filter === t));
       if (none) none.hidden = shown > 0;
+      fit();
     }
+    // Show six rows; scroll inside the box for older entries.
+    const box = document.querySelector('.tl-scroll');
+    function fit() {
+      if (!box) return;
+      const vis = [...rows].filter((r) => !r.hidden);
+      if (vis.length <= 6) { box.style.maxHeight = ''; return; }
+      box.style.maxHeight = (vis[6].offsetTop) + 'px';
+    }
+    fit(); addEventListener('resize', fit);
     document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', () => filter(a.dataset.filter)));
   })();
 </script>
