@@ -23,7 +23,7 @@
 <div class="card flush">
   <% if (!vehicles.length) { %><p class="empty">No vehicles found. <a href="/vehicles/new">Add your first vehicle.</a></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Reg</th><th class="desc">Vehicle</th><th>User</th><th>Walk-around</th><th>Service</th><th>MOT</th><th>Tax</th><th>Defects</th></tr></thead>
+    <thead><tr><th>Reg</th><th class="desc">Vehicle</th><th>User</th><th>Walk-around</th><th>Next Service Due</th><th>MOT Expiry</th><th>Tax Due</th></tr></thead>
     <tbody><% for (const v of vehicles) { %>
       <tr>
         <td class="nowrap"><a href="/vehicles/<%= v.id %>"><span class="reg"><%= v.reg %></span></a><% if (v.asset_no) { %><div class="small muted"><%= v.asset_no %></div><% } %></td>
@@ -33,7 +33,6 @@
         <td><%- pill(v.service) %><% if (v.last_service_date) { %><div class="small muted">last <%= ukDate(v.last_service_date) %></div><% } %></td>
         <td><%- pill(v.mot) %></td>
         <td><%- pill(v.tax) %></td>
-        <td><%- v.open_defects ? `<span class="pill overdue">${v.open_defects} open</span>` : '<span class="muted">—</span>' %></td>
       </tr>
     <% } %></tbody>
   </table></div><% } %>
