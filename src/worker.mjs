@@ -21,7 +21,9 @@ const server = createServer((req, res) => {
     } catch (err) {
       console.error('Could not start:', err);
       if (!res.headersSent) res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' });
-      res.end('The site could not reach its database. Check the DATABASE_URL secret in Cloudflare.');
+      // Show the reason (never a connection string) so whoever set it up can fix the secret.
+      const reason = String(err && err.message || err).replace(/postgres(ql)?:\/\/\S+/gi, '[connection string]');
+      res.end(`The site could not reach its database. Check the DATABASE_URL secret in Cloudflare.\n\nReason: ${reason}`);
     }
   });
 });
