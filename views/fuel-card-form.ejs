@@ -6,7 +6,7 @@
       <input id="provider" name="provider" type="text" list="providers" value="<%= item.provider || '' %>" required>
       <datalist id="providers"><% for (const p of FUEL_CARD_PROVIDERS) { %><option value="<%= p %>"><% } %></datalist></div>
     <div class="field"><label for="card_ref">Card no / name on your list</label><input id="card_ref" name="card_ref" type="text" value="<%= item.card_ref || '' %>" placeholder="e.g. 12 or TE"></div>
-    <div class="field"><label for="last4">Last 4 digits of card</label><input id="last4" name="last4" type="text" inputmode="numeric" maxlength="4" pattern="\d{4}" value="<%= item.last4 || '' %>" autocomplete="off"></div>
+    <div class="field"><label for="card_number">Card number <span class="hint">(admins only)</span></label><input id="card_number" name="card_number" type="text" inputmode="numeric" maxlength="30" value="<%= item.card_number || item.last4 || '' %>" autocomplete="off"></div>
     <div class="field"><label for="user_id">Assigned to <span class="hint">(sees it when logging fuel)</span></label>
       <select id="user_id" name="user_id"><option value="">Nobody</option>
         <% for (const u of users) { %><option value="<%= u.id %>" <%= item.user_id === u.id ? 'selected' : '' %>><%= u.name %></option><% } %>
@@ -23,7 +23,7 @@
       <select id="status" name="status"><% for (const [k, l] of Object.entries(FUEL_CARD_STATUSES)) { %><option value="<%= k %>" <%= item.status === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
   </div>
   <div class="field"><label for="notes">Notes</label><input id="notes" name="notes" type="text" value="<%= item.notes || '' %>"></div>
-  <p class="hint">Don't record card PINs or full card numbers here. Keep PINs with the card company or in a password manager.</p>
+  <p class="hint">Never record card PINs here. Keep PINs with the card company or in a password manager.</p>
   <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="/fuel-cards">Cancel</a></div>
 </form>
 <%- include('partials/footer') %>

@@ -37,9 +37,9 @@ async function checkUser(value) {
 async function readCard(body) {
   const provider = text(body.provider);
   if (!provider) throw new UserError('Please choose the fuel card company.');
-  const digits = String(body.last4 || '').replace(/\D/g, '');
-  // Only ever keep the last 4 digits of the card number.
-  const last4 = digits ? digits.slice(-4) : null;
+  // The full number is only shown to admins; everyone else sees the last 4 digits.
+  const cardNumber = String(body.card_number || '').replace(/[^\dA-Za-z]/g, '');
+  const last4 = cardNumber ? cardNumber.slice(-4) : null;
   const expiry = text(body.expiry);
   if (expiry && !/^\d{4}-\d{2}$/.test(expiry) && !isValidDate(expiry)) throw new UserError('Expiry must be a month, e.g. 2027-06.');
   const vehicleId = Number(body.vehicle_id) || null;
@@ -47,6 +47,7 @@ async function readCard(body) {
     provider,
     card_ref: text(body.card_ref),
     last4,
+    card_number: cardNumber || null,
     holder: text(body.holder),
     user_id: await checkUser(body.user_id),
     vehicle_id: vehicleId,

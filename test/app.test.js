@@ -98,11 +98,13 @@ test('admin and driver flows', async () => {
   assert.deepEqual([sling.tracks_hours, sling.weekly_checks, sling.inspection_type], [0, 0, 'thorough']);
   assert.doesNotMatch((await admin('GET', '/checks/plant/new')).text, /2 leg chain sling/);
 
-  // Fuel card (no PIN, only last 4 digits kept).
-  await admin('POST', '/fuel-cards', { provider: 'Esso', card_ref: '12', last4: '7064056072235900127', holder: 'Dave Driver', status: 'active', expiry: '2027-06' });
-  assert.equal((await get('SELECT last4 FROM fuel_cards ORDER BY id LIMIT 1')).last4, '0127');
-  await admin('POST', '/fuel-cards', { provider: 'Key Fuels', card_ref: 'K7', last4: '5555', status: 'active' });
-  await admin('POST', '/fuel-cards', { provider: 'FastFuels', card_ref: 'Spare', last4: '9999', status: 'active' });
+  // Fuel card (no PIN; full number kept for admins, last 4 digits for everyone else).
+  await admin('POST', '/fuel-cards', { provider: 'Esso', card_ref: '12', card_number: '7064 0560 7223 5900 127', holder: 'Dave Driver', status: 'active', expiry: '2027-06' });
+  const essoCard = await get('SELECT last4, card_number FROM fuel_cards ORDER BY id LIMIT 1');
+  assert.deepEqual([essoCard.last4, essoCard.card_number], ['0127', '7064056072235900127']);
+  assert.match((await admin('GET', '/fuel-cards')).text, /7064 0560 7223 5900 127/);
+  await admin('POST', '/fuel-cards', { provider: 'Key Fuels', card_ref: 'K7', card_number: '5555', status: 'active' });
+  await admin('POST', '/fuel-cards', { provider: 'FastFuels', card_ref: 'Spare', card_number: '9999', status: 'active' });
   const [esso, key] = [(await get("SELECT id FROM fuel_cards WHERE card_ref = '12'")).id, (await get("SELECT id FROM fuel_cards WHERE card_ref = 'K7'")).id];
   // Assign two cards to Dave: one from the board by drag (fetch), one through the plain form.
   const moved = await admin('POST', `/fuel-cards/${esso}/assign`, { user_id: dave });
@@ -130,6 +132,7 @@ test('admin and driver flows', async () => {
   assert.equal((await driver('GET', '/fuel-cards/assign')).status, 403);
   // Dave's own two cards are offered as choices; the spare card is only in the "different card" list.
   const fuelForm = (await driver('GET', '/fuel/new')).text;
+  assert.doesNotMatch(fuelForm, /7064056072235900127|7064 0560/);
   assert.equal((fuelForm.match(/name="card_choice" value="\d+"/g) || []).length, 2);
   assert.match(fuelForm, /<option value="\d+"[^>]*>FastFuels #Spare/);
 

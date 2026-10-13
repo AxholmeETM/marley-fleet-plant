@@ -14,7 +14,7 @@
     <tbody><% for (const c of cards) { %>
       <tr>
         <td><%= c.provider %></td>
-        <td class="nowrap"><%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.last4 ? '••••' + c.last4 : '' %></span></td>
+        <td class="nowrap"><%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.card_number ? c.card_number.replace(/(.{4})(?=.)/g, '$1 ') : c.last4 ? '••••' + c.last4 : '' %></span></td>
         <td><%= c.holder_display || '—' %><% if (c.user_name && c.holder && c.holder !== c.user_name) { %><div class="small muted">Card name: <%= c.holder %></div><% } %></td>
         <td><% if (c.reg) { %><a href="/vehicles/<%= c.vehicle_id %>"><span class="reg"><%= c.reg %></span></a><% } else { %>—<% } %></td>
         <td class="small"><%= c.card_type || '—' %></td>
