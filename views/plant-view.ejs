@@ -18,13 +18,13 @@
 <div class="kpis">
   <div class="kpi"><div class="label">Project No.</div><div class="value" style="font-size:1.2rem"><%= item.job_ref || '—' %></div><div class="sub"><%= item.project_name || '\u00a0' %></div></div>
   <% if (item.tracks_hours) { %>
-  <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '\u00a0' %></div></div>
+  <div class="kpi"><div class="label">Current Running Hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '\u00a0' %></div></div>
   <div class="kpi <%= cls(item.service) %>"><div class="label">Next service</div><div class="value" style="font-size:1.3rem"><%= item.service.name %></div><div class="sub"><%- pill(item.service) %></div></div>
   <% } else { %>
   <div class="kpi"><div class="label">Last service</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_service_date) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : 'No hour meter' %></div></div>
   <% } %>
-  <% if (item.weekly_checks) { %><div class="kpi <%= cls(item.check) %>"><div class="label">Weekly check</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_check) %></div><div class="sub"><%- pill(item.check) %></div></div><% } %>
   <div class="kpi <%= cls(item.loler) %>"><div class="label"><%= item.loler.level === 'none' ? 'LOLER / test' : insp %></div><div class="value" style="font-size:1.3rem"><%= item.loler.due ? ukDate(item.loler.due) : item.loler.level === 'none' ? 'N/A' : '—' %></div><div class="sub"><%- pill(item.loler) %></div></div>
+  <% if (item.weekly_checks) { %><div class="kpi <%= cls(item.check) %>"><div class="label">Weekly check</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_check) %></div><div class="sub"><%- pill(item.check) %></div></div><% } %>
 </div>
 
 <div class="grid grid-2">
