@@ -57,6 +57,21 @@ test('status rules', () => {
   assert.equal(status.plantLoler({ loler_required: 0 }).level, 'none');
   assert.equal(status.dueStatus(status.addDays(today, 10)).level, 'soon');
   assert.equal(status.addMonths('2024-01-31', 1), '2024-02-29');
+  // Service plan: 50, 200, 500 then every 500 hrs.
+  const plan = { tracks_hours: 1, service_schedule: '50, 200, 500', service_interval_hours: 500 };
+  assert.equal(status.nextServiceAt({ ...plan, running_hours: 10, last_service_hours: null }), 50);
+  assert.equal(status.nextServiceAt({ ...plan, running_hours: 60, last_service_hours: 48 }), 200);
+  assert.equal(status.nextServiceAt({ ...plan, running_hours: 300, last_service_hours: 205 }), 500);
+  assert.equal(status.nextServiceAt({ ...plan, running_hours: 520, last_service_hours: 480 }), 1000);
+  assert.equal(status.nextServiceAt({ ...plan, running_hours: 1100, last_service_hours: 1090 }), 1500);
+  assert.equal(status.plantService({ ...plan, running_hours: 1100, last_service_hours: 480 }).level, 'overdue');
+  assert.equal(status.plantService({ ...plan, tracks_hours: 0 }).level, 'none');
+  // 12-month backstop: low hours but a year since the last service.
+  assert.equal(status.plantService({ ...plan, service_months: 12, running_hours: 600, last_service_hours: 500, last_service_date: status.addMonths(today, -13) }).level, 'overdue');
+  assert.equal(status.plantService({ ...plan, service_months: 12, running_hours: 600, last_service_hours: 500, last_service_date: status.addMonths(today, -2) }).level, 'ok');
+  // Inspections: explicit due date wins over last + interval.
+  assert.equal(status.plantLoler({ loler_required: 1, inspection_type: 'calibration', last_loler_date: '2020-01-01', inspection_due: status.addDays(today, 100) }).level, 'ok');
+  assert.equal(status.plantLoler({ loler_required: 1, inspection_type: 'none' }).level, 'none');
 });
 
 test('admin and driver flows', async () => {
@@ -70,9 +85,19 @@ test('admin and driver flows', async () => {
   const dave = get("SELECT id FROM users WHERE email = 'dave@test.local'").id;
   assert.match((await admin('POST', '/vehicles', { reg: 'yx21 kpl', make: 'Ford', model: 'Transit', fuel_type: 'diesel', driver_id: dave, mot_due: status.addDays(status.isoDate(), 5) })).location, /^\/vehicles\/\d+$/);
   const vehicle = get("SELECT * FROM vehicles WHERE reg = 'YX21 KPL'");
-  await admin('POST', '/plant', { plant_no: 'mc-ex01', description: '13t excavator', job_ref: 'J100', running_hours: 990, service_interval_hours: 250, last_service_hours: 750, loler_required: '1', loler_interval_months: 12 });
-  const plant = get("SELECT * FROM plant WHERE plant_no = 'MC-EX01'");
-  assert.ok(plant);
+  await admin('POST', '/plant', { plant_no: 'mcl-ex-0001', category: 'excavator', owner: 'MCL', make: 'JCB', model: '245', job_ref: 'J100', running_hours: 990,
+    service_schedule: '50, 200, 500', service_interval_hours: 500, last_service_hours: 750, tracks_hours: '1', weekly_checks: '1', inspection_type: 'loler', loler_interval_months: 12 });
+  const plant = get("SELECT * FROM plant WHERE plant_no = 'MCL-EX-0001'");
+  assert.equal(plant.description, 'JCB 245');
+  assert.equal(plant.service_schedule, '50, 200, 500');
+  await admin('POST', '/plant', { plant_no: 'MCL-C&S-0001', category: 'chains', owner: 'MCL', description: '2 leg chain sling', swl: '4.25T', inspection_type: 'thorough', loler_interval_months: 6, last_loler_date: '2026-01-01' });
+  const sling = get("SELECT * FROM plant WHERE plant_no = 'MCL-C&S-0001'");
+  assert.deepEqual([sling.tracks_hours, sling.weekly_checks, sling.inspection_type], [0, 0, 'thorough']);
+  assert.doesNotMatch((await admin('GET', '/checks/plant/new')).text, /2 leg chain sling/);
+
+  // Fuel card (no PIN, only last 4 digits kept).
+  await admin('POST', '/fuel-cards', { provider: 'Esso', card_ref: '12', last4: '7064056072235900127', holder: 'Dave Driver', status: 'active', expiry: '2027-06' });
+  assert.equal(get('SELECT last4 FROM fuel_cards').last4, '0127');
 
   const dash = await admin('GET', '/');
   assert.match(dash.text, /Needs attention/);
@@ -104,10 +129,12 @@ test('admin and driver flows', async () => {
   form.append('litres', '55.2');
   form.append('fill_date', status.isoDate());
   form.append('mileage', '48100');
+  form.append('fuel_card_id', String(get('SELECT id FROM fuel_cards').id));
   form.append('receipt', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xe0])], { type: 'image/jpeg' }), 'receipt.jpg');
   assert.equal((await driver('POST', '/fuel', form)).location, '/');
   const entry = get('SELECT * FROM fuel_entries');
   assert.equal(entry.litres, 55.2);
+  assert.ok(entry.fuel_card_id);
   assert.ok(fs.existsSync(path.join(process.env.DATA_DIR, 'uploads', entry.receipt_file)));
   assert.equal((await driver('GET', `/receipts/${entry.receipt_file}`)).status, 200);
 
@@ -129,6 +156,9 @@ test('admin and driver flows', async () => {
   // Recording a service resets the plant service due point.
   await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: status.isoDate(), reading: '1004.5' });
   assert.equal(get('SELECT last_service_hours FROM plant WHERE id = ?', plant.id).last_service_hours, 1004.5);
+  assert.match((await admin('GET', `/plant/${plant.id}`)).text, /1,500 hr service/);
+  await admin('POST', `/plant/${sling.id}/records`, { kind: 'loler', record_date: status.isoDate(), cert_no: 'C123' });
+  assert.equal(get('SELECT cert_no FROM plant WHERE id = ?', sling.id).cert_no, 'C123');
   await admin('POST', `/vehicles/${vehicle.id}/records`, { kind: 'mot', record_date: '2026-03-01' });
   assert.equal(get('SELECT mot_due FROM vehicles WHERE id = ?', vehicle.id).mot_due, '2027-02-28');
 
@@ -137,6 +167,6 @@ test('admin and driver flows', async () => {
   assert.equal(get('SELECT status FROM defects WHERE id = ?', defect.id).status, 'resolved');
 
   const csv = await admin('GET', '/export/fuel.csv');
-  assert.match(csv.text, /YX21 KPL,Dave Driver,diesel,55\.2/);
+  assert.match(csv.text, /YX21 KPL,Dave Driver,Esso #12 ••0127,diesel,55\.2/);
   run('DELETE FROM fuel_entries');
 });

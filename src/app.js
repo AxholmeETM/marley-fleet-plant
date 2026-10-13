@@ -72,6 +72,7 @@ function createApp() {
   app.use(require('./routes/home'));
   app.use(require('./routes/checks'));
   app.use(require('./routes/fuel'));
+  app.use(require('./routes/fuel-cards').router);
   app.use(require('./routes/defects'));
   app.use(require('./routes/plant'));
   app.use(require('./routes/vehicles'));

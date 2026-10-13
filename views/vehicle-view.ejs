@@ -1,7 +1,8 @@
 <%- include('partials/header') %>
 <div class="page-head">
   <div><h1><span class="reg" style="font-size:1.4rem"><%= item.reg %></span> <span style="font-weight:400"><%= [item.make, item.model].filter(Boolean).join(' ') %></span></h1>
-    <p class="muted" style="margin:0"><%= item.vehicle_type || 'Vehicle' %> · <%= FUEL_LABELS[item.fuel_type] %> · Driver: <%= item.driver_name || 'none assigned' %><%= item.active ? '' : ' · Sold / off road' %></p></div>
+    <p class="muted" style="margin:0"><%= [item.asset_no, VEHICLE_CATEGORIES[item.category], OWNERS[item.owner], item.colour, item.vehicle_type, FUEL_LABELS[item.fuel_type]].filter(Boolean).join(' · ') %> · User: <%= item.driver_display || 'none' %>
+      <% if (item.status !== 'active') { %> · <span class="pill none"><%= VEHICLE_STATUSES[item.status] %></span><% } %></p></div>
   <div class="actions">
     <a class="btn" href="/checks/vehicle/new?vehicle=<%= item.id %>">New walk-around</a>
     <a class="btn" href="/fuel/new?vehicle=<%= item.id %>">Log fuel</a>
@@ -19,6 +20,17 @@
 
 <div class="grid grid-2">
   <div>
+    <div class="card">
+      <h2>Details</h2>
+      <dl class="facts">
+        <dt>Tracked</dt><dd><%= TRACKED[item.tracked] || 'Not known' %></dd>
+        <dt>Driver app account</dt><dd><%= item.driver_name || 'None – walk-arounds not expected' %></dd>
+        <dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd>
+        <dt>Fuel cards</dt><dd><% if (!cards.length) { %>None linked · <a href="/fuel-cards/new?vehicle=<%= item.id %>">Add</a><% } else { for (const c of cards) { %>
+          <div><a href="/fuel-cards/<%= c.id %>/edit"><%= c.provider %><%= c.card_ref ? ' #' + c.card_ref : '' %><%= c.last4 ? ' ••' + c.last4 : '' %></a> <span class="pill <%= c.status === 'active' ? 'ok' : 'none' %>"><%= FUEL_CARD_STATUSES[c.status] %></span></div>
+        <% } } %></dd>
+      </dl>
+    </div>
     <div class="card flush">
       <h2>Walk-around checks</h2>
       <% if (!checks.length) { %><p class="empty">No walk-around checks yet.</p><% } else { %>
@@ -46,7 +58,7 @@
       <h2>Record a service, MOT or tax renewal</h2>
       <div class="form-grid">
         <div class="field"><label for="kind">Type</label>
-          <select id="kind" name="kind"><option value="service">Service</option><option value="mot">MOT pass</option><option value="tax">Tax renewed</option></select></div>
+          <select id="kind" name="kind"><option value="service">Service</option><option value="mot">MOT pass</option><option value="tax">Tax renewed</option><option value="repair">Repair</option></select></div>
         <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
         <div class="field" id="next-due-field"><label for="next_due">New expiry date <span class="hint" id="next-hint">(MOT: defaults to 1 year)</span></label><input id="next_due" name="next_due" type="date"></div>
         <div class="field"><label for="reading">Mileage</label><input id="reading" name="reading" type="number" min="0" step="1"></div>
@@ -61,7 +73,7 @@
       <div class="table-wrap"><table>
         <thead><tr><th>Date</th><th>Type</th><th>Expiry</th><th class="num">Mileage</th><th>Notes</th></tr></thead>
         <tbody><% for (const r of records) { %>
-          <tr><td><%= ukDate(r.record_date) %></td><td><%= { service: 'Service', mot: 'MOT', tax: 'Tax' }[r.kind] %></td><td><%= ukDate(r.next_due) %></td><td class="num"><%= num(r.reading) %></td><td><%= [r.done_by, r.notes].filter(Boolean).join(' · ') || '—' %></td></tr>
+          <tr><td><%= ukDate(r.record_date) %></td><td><%= { service: 'Service', mot: 'MOT', tax: 'Tax', repair: 'Repair' }[r.kind] %></td><td><%= ukDate(r.next_due) %></td><td class="num"><%= num(r.reading) %></td><td><%= [r.done_by, r.notes].filter(Boolean).join(' · ') || '—' %></td></tr>
         <% } %></tbody>
       </table></div><% } %>
     </div>
@@ -81,7 +93,7 @@
   (function () {
     const kind = document.getElementById('kind'), field = document.getElementById('next-due-field'), input = document.getElementById('next_due'), hint = document.getElementById('next-hint');
     function upd() {
-      field.style.display = kind.value === 'service' ? 'none' : '';
+      field.style.display = kind.value === 'mot' || kind.value === 'tax' ? '' : 'none';
       input.required = kind.value === 'tax';
       hint.textContent = kind.value === 'mot' ? '(defaults to 1 year)' : '(required)';
     }

@@ -21,6 +21,10 @@
       <div class="field"><label for="cost">Total price (£)</label><input id="cost" name="cost" type="number" step="0.01" min="0" inputmode="decimal" value="<%= entry.cost != null ? entry.cost.toFixed(2) : '' %>" autofocus placeholder="0.00"></div>
     </div>
     <p class="small" id="ppl-line"><% if (entry.cost != null) { %>£<%= (entry.cost / entry.litres).toFixed(3) %> per litre<% } %></p>
+    <div class="field"><label for="fuel_card_id">Fuel card</label>
+      <select id="fuel_card_id" name="fuel_card_id"><option value="">None / paid another way</option>
+        <% for (const c of cards) { %><option value="<%= c.id %>" <%= entry.fuel_card_id === c.id ? 'selected' : '' %>><%= c.provider %><%= c.card_ref ? ' #' + c.card_ref : '' %><%= c.last4 ? ' ••' + c.last4 : '' %><%= c.holder ? ' – ' + c.holder : '' %><%= c.status !== 'active' ? ' (' + c.status + ')' : '' %></option><% } %>
+      </select></div>
     <dl class="facts small" style="margin-bottom:14px">
       <dt>Mileage</dt><dd><%= num(entry.mileage) %></dd>
       <dt>Station</dt><dd><%= entry.station || '—' %></dd>

@@ -14,7 +14,7 @@
     <div class="label">Services due</div><div class="value"><%= stats.plantService %></div>
     <div class="sub"><%= stats.plantServiceOverdue %> overdue on running hours</div></a>
   <a class="kpi <%= stats.plantLoler ? 'bad' : 'good' %>" href="/plant?filter=attention">
-    <div class="label">LOLER due</div><div class="value"><%= stats.plantLoler %></div>
+    <div class="label">LOLER, tests &amp; calibration</div><div class="value"><%= stats.plantLoler %></div>
     <div class="sub">overdue or due in 30 days</div></a>
   <a class="kpi <%= stats.plantChecks ? 'bad' : 'good' %>" href="/checks?type=plant">
     <div class="label">Weekly checks overdue</div><div class="value"><%= stats.plantChecks %></div>

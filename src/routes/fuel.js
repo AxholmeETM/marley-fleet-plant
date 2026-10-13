@@ -35,7 +35,8 @@ router.get('/fuel/new', (req, res) => {
   const vehicles = listVehicles();
   const mine = vehicles.filter((v) => v.driver_id === req.user.id);
   const selected = vehicles.find((v) => v.id === Number(req.query.vehicle)) || mine[0] || null;
-  res.render('fuel-form', { title: 'Log fuel', vehicles, mineIds: mine.map((v) => v.id), selected });
+  const cards = all(`SELECT id, provider, card_ref, last4, holder, vehicle_id FROM fuel_cards WHERE status = 'active' ORDER BY provider, card_ref`);
+  res.render('fuel-form', { title: 'Log fuel', vehicles, mineIds: mine.map((v) => v.id), selected, cards });
 });
 
 router.post('/fuel', upload.single('receipt'), (req, res) => {
@@ -50,9 +51,10 @@ router.post('/fuel', upload.single('receipt'), (req, res) => {
     if (!litres) throw new UserError('Please enter how many litres you put in.');
     if (!req.file) throw new UserError('Please attach a photo of the receipt.');
     const mileage = numberField(req.body.mileage, 'Mileage', { integer: true });
-    run(`INSERT INTO fuel_entries (vehicle_id, user_id, fill_date, fuel_type, litres, mileage, station, notes, receipt_file, receipt_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      vehicle.id, req.user.id, date, req.body.fuel_type, litres, mileage, text(req.body.station), text(req.body.notes),
+    const card = Number(req.body.fuel_card_id) ? get('SELECT id FROM fuel_cards WHERE id = ?', Number(req.body.fuel_card_id)) : null;
+    run(`INSERT INTO fuel_entries (vehicle_id, user_id, fill_date, fuel_type, litres, mileage, station, notes, fuel_card_id, receipt_file, receipt_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      vehicle.id, req.user.id, date, req.body.fuel_type, litres, mileage, text(req.body.station), text(req.body.notes), card ? card.id : null,
       req.file.filename, req.file.originalname);
     if (mileage != null) run('UPDATE vehicles SET mileage = MAX(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, vehicle.id);
     req.flash('success', `Fuel logged: ${litres} L of ${req.body.fuel_type === 'adblue' ? 'AdBlue' : req.body.fuel_type} for ${vehicle.reg}.`);
@@ -142,8 +144,8 @@ router.get('/fuel', requireAdmin, (req, res) => {
   if (show === 'unverified') where.push('f.verified = 0');
   if (show === 'verified') where.push('f.verified = 1');
   const entries = all(`
-    SELECT f.*, v.reg, u.name AS driver_name FROM fuel_entries f
-    JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = f.user_id
+    SELECT f.*, v.reg, u.name AS driver_name, c.provider AS card_provider, c.card_ref, c.last4 AS card_last4 FROM fuel_entries f
+    JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = f.user_id LEFT JOIN fuel_cards c ON c.id = f.fuel_card_id
     WHERE ${where.join(' AND ')} ORDER BY f.fill_date DESC, f.id DESC`, ...params);
 
   const byType = Object.fromEntries(FUEL_TYPES.map((t) => [t, { litres: 0, cost: 0, pricedLitres: 0, fills: 0 }]));
@@ -180,7 +182,8 @@ router.get('/fuel/:id', requireAdmin, (req, res) => {
     WHERE f.id = ?`, Number(req.params.id));
   if (!entry) return res.status(404).render('error', { title: 'Not found', message: 'Fuel entry not found.' });
   const remaining = get('SELECT COUNT(*) AS n FROM fuel_entries WHERE verified = 0 AND id != ?', entry.id).n;
-  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, entry, remaining, FUEL_TYPES });
+  const cards = all('SELECT id, provider, card_ref, last4, holder, status FROM fuel_cards ORDER BY status, provider, card_ref');
+  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, entry, remaining, FUEL_TYPES, cards });
 });
 
 router.post('/fuel/:id', requireAdmin, (req, res) => {
@@ -192,10 +195,11 @@ router.post('/fuel/:id', requireAdmin, (req, res) => {
   const fuelType = FUEL_TYPES.includes(req.body.fuel_type) ? req.body.fuel_type : entry.fuel_type;
   const date = isValidDate(req.body.fill_date) ? req.body.fill_date : entry.fill_date;
   const verified = req.body.verified ? 1 : 0;
+  const cardId = req.body.fuel_card_id === undefined ? entry.fuel_card_id : (Number(req.body.fuel_card_id) || null);
   if (verified && cost == null) throw new UserError('Enter the price from the receipt before marking it as checked.');
-  run(`UPDATE fuel_entries SET cost = ?, litres = ?, fuel_type = ?, fill_date = ?, verified = ?, admin_notes = ?,
+  run(`UPDATE fuel_entries SET cost = ?, litres = ?, fuel_type = ?, fill_date = ?, verified = ?, fuel_card_id = ?, admin_notes = ?,
        priced_by = ?, priced_at = datetime('now') WHERE id = ?`,
-    cost, litres, fuelType, date, verified, req.body.admin_notes === undefined ? entry.admin_notes : text(req.body.admin_notes), req.user.id, entry.id);
+    cost, litres, fuelType, date, verified, cardId, req.body.admin_notes === undefined ? entry.admin_notes : text(req.body.admin_notes), req.user.id, entry.id);
 
   if (req.body.next) {
     const next = get('SELECT id FROM fuel_entries WHERE verified = 0 AND id != ? ORDER BY fill_date, id LIMIT 1', entry.id);

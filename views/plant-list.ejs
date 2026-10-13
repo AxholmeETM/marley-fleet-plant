@@ -1,32 +1,58 @@
 <%- include('partials/header') %>
+<%
+  const qs = (over) => new URLSearchParams(Object.fromEntries(Object.entries({ q, filter, owner, category, ...over }).filter(([, x]) => x))).toString();
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  const cat = category ? CATEGORY[category] : null;
+  const showHours = !cat || cat.hours;
+  const showChecks = !cat || cat.checks;
+%>
 <div class="page-head">
-  <div><h1>Plant register</h1><p class="muted" style="margin:0"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %></p></div>
-  <div class="actions"><a class="btn" href="/export/plant.csv">Export CSV</a><a class="btn primary" href="/plant/new">Add plant</a></div>
+  <div><h1>Plant &amp; equipment</h1><p class="muted" style="margin:0"><%= plant.length %> item<%= plant.length === 1 ? '' : 's' %><% if (hireTotal) { %> · £<%= num(hireTotal, 2) %> a week on hire rates<% } %></p></div>
+  <div class="actions"><a class="btn" href="/export/plant.csv">Export CSV</a><a class="btn primary" href="/plant/new<%= category ? '?category=' + category : '' %>">Add <%= cat ? cat.label.replace(/s$/, '').toLowerCase() : 'plant or equipment' %></a></div>
+</div>
+<div class="tabs">
+  <a href="?<%= qs({ category: '' }) %>" class="<%= !category ? 'active' : '' %>">All (<%= total %>)</a>
+  <% for (const c of CATEGORIES) { if (!counts[c.key] && category !== c.key) continue; %>
+    <a href="?<%= qs({ category: c.key }) %>" class="<%= category === c.key ? 'active' : '' %>"><%= c.label %> (<%= counts[c.key] || 0 %>)</a>
+  <% } %>
 </div>
 <form class="filters" method="get">
-  <div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Plant ID, job ref, make…"></div>
+  <input type="hidden" name="category" value="<%= category %>">
+  <div class="field"><label for="q">Search</label><input id="q" type="search" name="q" value="<%= q %>" placeholder="Asset no, serial, job ref, site…"></div>
+  <div class="field"><label for="owner">Owner</label>
+    <select id="owner" name="owner"><option value="">Both companies</option>
+      <% for (const [k, l] of Object.entries(OWNERS)) { %><option value="<%= k %>" <%= owner === k ? 'selected' : '' %>><%= l %></option><% } %>
+    </select></div>
   <div class="field"><label for="filter">Show</label>
     <select id="filter" name="filter">
-      <option value="">All active plant</option>
+      <option value="">All current items</option>
       <option value="attention" <%= filter === 'attention' ? 'selected' : '' %>>Needs attention</option>
-      <option value="inactive" <%= filter === 'inactive' ? 'selected' : '' %>>Off hire / disposed</option>
+      <option value="repair" <%= filter === 'repair' ? 'selected' : '' %>>At repair</option>
+      <option value="inactive" <%= filter === 'inactive' ? 'selected' : '' %>>Sold, stolen or disposed</option>
     </select></div>
   <button class="btn" type="submit">Apply</button>
 </form>
 <div class="card flush">
-  <% if (!plant.length) { %><p class="empty">No plant found. <a href="/plant/new">Add your first item.</a></p><% } else { %>
+  <% if (!plant.length) { %><p class="empty">Nothing here yet. <a href="/plant/new<%= category ? '?category=' + category : '' %>">Add an item.</a></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Plant ID</th><th>Description</th><th>Job ref</th><th class="num">Running hrs</th><th>Service</th><th>Weekly check</th><th>LOLER</th><th>Defects</th></tr></thead>
+    <thead><tr><th>Asset no</th><th>Item</th><% if (!category) { %><th>Category</th><% } else { %><th>Serial no</th><% } %><th>Location / job</th>
+      <% if (showHours) { %><th class="num">Hours</th><th>Service</th><% } else { %><th>Last service</th><% } %>
+      <% if (showChecks) { %><th>Weekly check</th><% } %><th>LOLER / test / calibration</th><th>Status</th></tr></thead>
     <tbody><% for (const p of plant) { %>
       <tr>
         <td class="nowrap"><a href="/plant/<%= p.id %>"><strong><%= p.plant_no %></strong></a></td>
-        <td><%= p.description %><div class="small muted"><%= [p.make, p.model].filter(Boolean).join(' ') %></div></td>
-        <td><%= p.job_ref || '—' %></td>
-        <td class="num"><%= fmtHours(p.running_hours) %></td>
-        <td><%- pill(p.service) %><div class="small muted">at <%= fmtHours(p.service.nextAt) %> hrs</div></td>
-        <td><%- pill(p.check) %></td>
-        <td><%- pill(p.loler) %></td>
-        <td><%- p.open_defects ? `<span class="pill overdue">${p.open_defects} open</span>` : '<span class="muted">—</span>' %></td>
+        <td><%= p.description %><div class="small muted"><%= [p.description !== [p.make, p.model].filter(Boolean).join(' ') ? [p.make, p.model].filter(Boolean).join(' ') : '', p.swl ? 'SWL ' + p.swl : ''].filter(Boolean).join(' · ') %></div></td>
+        <% if (!category) { %><td class="small"><%= CATEGORY[p.category] ? CATEGORY[p.category].label : p.category %></td><% } %>
+        <% if (category) { %><td class="small"><%= p.serial_no || '—' %></td><% } %>
+        <td><%= p.location || '—' %><% if (p.job_ref) { %><div class="small muted">Job <%= p.job_ref %></div><% } %></td>
+        <% if (showHours) { %>
+          <td class="num"><%= p.tracks_hours ? fmtHours(p.running_hours) : '—' %></td>
+          <td><%- pill(p.service) %><% if (p.service.nextAt) { %><div class="small muted">at <%= fmtHours(p.service.nextAt) %> hrs</div><% } %></td>
+        <% } else { %><td class="nowrap"><%= ukDate(p.last_service_date) %></td><% } %>
+        <% if (showChecks) { %><td><%- pill(p.check) %></td><% } %>
+        <td><%- pill(p.loler) %><% if (p.loler.level !== 'none') { %><div class="small muted"><%= INSPECTION_TYPES[p.inspection_type] %></div><% } %></td>
+        <td><span class="pill <%= p.status === 'in_use' ? 'ok' : ['stolen', 'repair'].includes(p.status) ? 'overdue' : 'none' %>"><%= PLANT_STATUSES[p.status] || p.status %></span>
+          <% if (p.open_defects) { %><div><span class="pill overdue"><%= p.open_defects %> defect<%= p.open_defects > 1 ? 's' : '' %></span></div><% } %></td>
       </tr>
     <% } %></tbody>
   </table></div><% } %>

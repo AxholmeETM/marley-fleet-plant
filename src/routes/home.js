@@ -1,7 +1,9 @@
 const express = require('express');
 const { all, get } = require('../db');
 const { listPlant, listVehicles, listDefects } = require('../queries');
-const { isoDate } = require('../status');
+const { isoDate, dueStatus } = require('../status');
+const { INSPECTION_TYPES } = require('../categories');
+const fuelCards = require('./fuel-cards');
 
 const router = express.Router();
 
@@ -15,17 +17,20 @@ function attentionList(plant, vehicles) {
     if (st.level === 'overdue' || st.level === 'soon') items.push({ asset, href, what, status: st });
   };
   for (const p of plant) {
-    const name = `${p.plant_no} ${p.description}`;
-    add(name, `/plant/${p.id}`, 'Service', p.service);
-    add(name, `/plant/${p.id}`, 'LOLER', p.loler);
+    const name = `${p.plant_no} ${p.description}${p.location ? ' (' + p.location + ')' : ''}`;
+    add(name, `/plant/${p.id}`, p.service.name || 'Service', p.service);
+    add(name, `/plant/${p.id}`, INSPECTION_TYPES[p.inspection_type] || 'LOLER', p.loler);
     add(name, `/plant/${p.id}`, 'Weekly check', p.check);
   }
   for (const v of vehicles) {
-    const name = `${v.reg}${v.driver_name ? ' (' + v.driver_name + ')' : ''}`;
+    const name = `${v.reg}${v.driver_display ? ' (' + v.driver_display + ')' : ''}`;
     add(name, `/vehicles/${v.id}`, 'MOT', v.mot);
     add(name, `/vehicles/${v.id}`, 'Tax', v.tax);
     add(name, `/vehicles/${v.id}`, 'Service', v.service);
     add(name, `/vehicles/${v.id}`, 'Walk-around', v.walkaround);
+  }
+  for (const c of all("SELECT * FROM fuel_cards WHERE status = 'active' AND expiry IS NOT NULL").map(fuelCards.decorate)) {
+    add(`${c.provider}${c.card_ref ? ' #' + c.card_ref : ''}${c.holder ? ' (' + c.holder + ')' : ''}`, `/fuel-cards/${c.id}/edit`, 'Fuel card expiry', c.expiryStatus);
   }
   return items.sort((a, b) => (a.status.level === b.status.level ? 0 : a.status.level === 'overdue' ? -1 : 1));
 }
@@ -64,7 +69,7 @@ router.get('/', (req, res) => {
       tax: count(vehicles, 'tax'),
       vehicleService: count(vehicles, 'service'),
       walkaroundsDone: vehicles.filter((v) => v.walkaround.level === 'ok').length,
-      walkaroundsExpected: vehicles.filter((v) => v.driver_id).length,
+      walkaroundsExpected: vehicles.filter((v) => v.driver_id && v.status === 'active').length,
       defectsOpen: defects.length,
       defectsUnsafe: defects.filter((d) => d.severity === 'unsafe').length,
     },

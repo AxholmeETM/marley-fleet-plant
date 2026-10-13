@@ -66,7 +66,7 @@ router.post('/checks/vehicle', (req, res) => {
 // ---- Plant weekly check sheet ----
 
 router.get('/checks/plant/new', (req, res) => {
-  const plant = listPlant();
+  const plant = listPlant().filter((p) => p.weekly_checks && p.status !== 'repair');
   const selectedId = Number(req.query.plant) || null;
   res.render('check-form', {
     title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS,
@@ -80,7 +80,7 @@ router.post('/checks/plant', (req, res) => {
   const results = readResults(req.body, PLANT_ITEMS);
   const date = checkDate(req.body.check_date);
   const hours = numberField(req.body.reading, 'Running hours');
-  if (hours == null) throw new UserError('Please enter the running hours from the hour meter.');
+  if (hours == null && plant.tracks_hours) throw new UserError('Please enter the running hours from the hour meter.');
   const jobRef = text(req.body.job_ref) || plant.job_ref;
   const defectItems = results.filter((r) => r.result === 'defect');
   const details = text(req.body.defect_details);
@@ -91,14 +91,14 @@ router.post('/checks/plant', (req, res) => {
     const { lastInsertRowid } = run(
       'INSERT INTO plant_checks (plant_id, user_id, check_date, hours, job_ref, results, defects_found, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       plant.id, req.user.id, date, hours, jobRef, JSON.stringify(results), defectItems.length, text(req.body.notes));
-    run('UPDATE plant SET running_hours = MAX(running_hours, ?), job_ref = COALESCE(?, job_ref) WHERE id = ?', hours, jobRef, plant.id);
+    run('UPDATE plant SET running_hours = MAX(running_hours, COALESCE(?, 0)), job_ref = COALESCE(?, job_ref) WHERE id = ?', hours, jobRef, plant.id);
     if (defectItems.length) {
       run('INSERT INTO defects (asset_type, asset_id, check_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?, ?)',
         'plant', plant.id, lastInsertRowid, `${defectItems.map((r) => r.item).join('; ')}: ${details}`, severity, req.user.id);
     }
     return lastInsertRowid;
   });
-  const warn = hours < plant.running_hours ? ` Note: the hours you entered are lower than the last reading (${plant.running_hours}).` : '';
+  const warn = hours != null && hours < plant.running_hours ? ` Note: the hours you entered are lower than the last reading (${plant.running_hours}).` : '';
   req.flash(defectItems.length || warn ? 'warning' : 'success',
     `Check sheet saved for ${plant.plant_no}.${defectItems.length ? ' Defects have been reported to the office.' : ''}${warn}`);
   res.redirect(req.user.role === 'admin' ? `/checks/plant/${id}` : '/');
@@ -119,7 +119,7 @@ router.get('/checks', requireAdmin, (req, res) => {
            WHERE c.check_date BETWEEN ? AND ? ORDER BY c.check_date DESC, c.id DESC`, from, to);
   const missing = type === 'vehicle'
     ? listVehicles().filter((v) => v.walkaround.level === 'overdue')
-    : listPlant().filter((p) => p.check.level !== 'ok');
+    : listPlant().filter((p) => p.check.level === 'overdue' || p.check.level === 'soon');
   res.render('checks', { title: 'Checks', type, from, to, rows, missing });
 });
 

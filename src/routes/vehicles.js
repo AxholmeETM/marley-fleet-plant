@@ -3,6 +3,16 @@ const { all, run, get, transaction } = require('../db');
 const { listVehicles, getVehicle, listDefects, listDrivers } = require('../queries');
 const { requireAdmin, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
+const { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, FUEL_CARD_STATUSES } = require('../categories');
+
+const LOOKUPS = { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, TRACKED, FUEL_CARD_STATUSES };
+
+function nextVanNumber(owner = 'MCL') {
+  const prefix = `${owner}-VAN-`;
+  const n = all('SELECT asset_no FROM vehicles WHERE asset_no LIKE ?', prefix + '%')
+    .reduce((m, r) => Math.max(m, parseInt(r.asset_no.slice(prefix.length), 10) || 0), 0);
+  return prefix + String(n + 1).padStart(4, '0');
+}
 
 const router = express.Router();
 router.use('/vehicles', requireAdmin);
@@ -18,8 +28,18 @@ function readVehicle(body) {
   if (!reg) throw new UserError('Registration is required.');
   const driverId = Number(body.driver_id) || null;
   if (driverId && !get('SELECT id FROM users WHERE id = ?', driverId)) throw new UserError('Unknown driver.');
+  const status = VEHICLE_STATUSES[body.status] ? body.status : 'active';
   return {
     reg: reg.toUpperCase().replace(/\s+/g, ' '),
+    asset_no: text(body.asset_no) && text(body.asset_no).toUpperCase(),
+    owner: OWNERS[body.owner] ? body.owner : 'MCL',
+    category: VEHICLE_CATEGORIES[body.category] ? body.category : 'van',
+    status,
+    colour: text(body.colour),
+    tracked: TRACKED[body.tracked] ? body.tracked : null,
+    user_name: text(body.user_name),
+    purchase_price: numberField(body.purchase_price, 'Purchase price'),
+    purchase_date: dateField(body.purchase_date, 'Purchase date'),
     make: text(body.make),
     model: text(body.model),
     vehicle_type: text(body.vehicle_type),
@@ -31,7 +51,7 @@ function readVehicle(body) {
     mot_due: dateField(body.mot_due, 'MOT due date'),
     tax_due: dateField(body.tax_due, 'Tax due date'),
     notes: text(body.notes),
-    active: body.active === undefined ? 1 : body.active === '1' ? 1 : 0,
+    active: VEHICLE_INACTIVE.includes(status) ? 0 : 1,
   };
 }
 
@@ -44,14 +64,19 @@ router.get('/vehicles', (req, res) => {
   const filter = req.query.filter || '';
   let vehicles = listVehicles({ includeInactive: filter === 'inactive' });
   if (filter === 'inactive') vehicles = vehicles.filter((v) => !v.active);
+  if (filter === 'sorn') vehicles = vehicles.filter((v) => v.status === 'sorn' || v.status === 'off_road');
+  const category = VEHICLE_CATEGORIES[req.query.category] ? req.query.category : '';
+  const counts = {};
+  for (const v of vehicles) counts[v.category] = (counts[v.category] || 0) + 1;
+  if (category) vehicles = vehicles.filter((v) => v.category === category);
   if (filter === 'attention') vehicles = vehicles.filter((v) => [v.mot, v.tax, v.service, v.walkaround].some((s) => s.level === 'overdue' || s.level === 'soon') || v.open_defects);
   const q = String(req.query.q || '').trim().toLowerCase();
-  if (q) vehicles = vehicles.filter((v) => [v.reg, v.make, v.model, v.driver_name, v.vehicle_type].some((f) => f && f.toLowerCase().includes(q)));
-  res.render('vehicle-list', { title: 'Fleet register', vehicles, filter, q: req.query.q || '' });
+  if (q) vehicles = vehicles.filter((v) => [v.reg, v.asset_no, v.make, v.model, v.driver_display, v.vehicle_type].some((f) => f && f.toLowerCase().includes(q)));
+  res.render('vehicle-list', { title: 'Fleet register', vehicles, filter, category, counts, q: req.query.q || '', ...LOOKUPS });
 });
 
 router.get('/vehicles/new', (req, res) => {
-  res.render('vehicle-form', { title: 'Add vehicle', item: { fuel_type: 'diesel', service_interval_months: 12, active: 1 }, drivers: listDrivers() });
+  res.render('vehicle-form', { title: 'Add vehicle', item: { fuel_type: 'diesel', service_interval_months: 12, active: 1, owner: 'MCL', category: 'van', status: 'active', asset_no: nextVanNumber() }, drivers: listDrivers(), ...LOOKUPS });
 });
 
 router.post('/vehicles', (req, res) => {
@@ -74,13 +99,14 @@ router.get('/vehicles/:id', (req, res) => {
   const fuel = all(`SELECT f.*, u.name AS driver_name FROM fuel_entries f JOIN users u ON u.id = f.user_id
     WHERE f.vehicle_id = ? ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
   const defects = listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
-  res.render('vehicle-view', { title: item.reg, item, checks, records, fuel, defects, addMonths, addDays });
+  const cards = all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
+  res.render('vehicle-view', { title: item.reg, item, checks, records, fuel, defects, cards, addMonths, addDays, ...LOOKUPS });
 });
 
 router.get('/vehicles/:id/edit', (req, res) => {
   const item = get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
-  res.render('vehicle-form', { title: `Edit ${item.reg}`, item, drivers: listDrivers() });
+  res.render('vehicle-form', { title: `Edit ${item.reg}`, item, drivers: listDrivers(), ...LOOKUPS });
 });
 
 router.post('/vehicles/:id', (req, res) => {
@@ -97,7 +123,7 @@ router.post('/vehicles/:id', (req, res) => {
 router.post('/vehicles/:id/records', (req, res) => {
   const item = get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Vehicle not found.', 404);
-  const kind = ['service', 'mot', 'tax'].includes(req.body.kind) ? req.body.kind : 'service';
+  const kind = ['service', 'mot', 'tax', 'repair'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
   if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
   let nextDue = dateField(req.body.next_due, 'Next due date');
@@ -112,7 +138,7 @@ router.post('/vehicles/:id/records', (req, res) => {
     if (kind === 'tax') run('UPDATE vehicles SET tax_due = ? WHERE id = ?', nextDue, item.id);
     if (mileage != null) run('UPDATE vehicles SET mileage = MAX(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, item.id);
   });
-  req.flash('success', { service: 'Service recorded.', mot: 'MOT recorded.', tax: 'Tax renewal recorded.' }[kind]);
+  req.flash('success', { service: 'Service recorded.', mot: 'MOT recorded.', tax: 'Tax renewal recorded.', repair: 'Repair recorded.' }[kind]);
   res.redirect(`/vehicles/${item.id}`);
 });
 

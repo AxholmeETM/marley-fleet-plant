@@ -1,23 +1,60 @@
 <%- include('partials/header') %>
+<% const cls = (s) => ({ overdue: 'bad', soon: 'warn', ok: 'good' }[s.level] || ''); const insp = INSPECTION_TYPES[item.inspection_type] || 'LOLER'; const cat = CATEGORY[item.category]; %>
 <div class="page-head">
   <div><h1><%= item.plant_no %> <span class="muted" style="font-weight:400">– <%= item.description %></span></h1>
-    <p class="muted" style="margin:0"><%= [item.make, item.model].filter(Boolean).join(' ') || '' %><%= item.serial_no ? ' · S/N ' + item.serial_no : '' %><%= item.active ? '' : ' · Off hire / disposed' %></p></div>
+    <p class="muted" style="margin:0"><%= cat ? cat.label.replace(/s$/, '') : item.category %> · <%= OWNERS[item.owner] || item.owner %><%= item.serial_no ? ' · S/N ' + item.serial_no : '' %>
+      · <span class="pill <%= item.status === 'in_use' ? 'ok' : ['stolen', 'repair'].includes(item.status) ? 'overdue' : 'none' %>"><%= PLANT_STATUSES[item.status] || item.status %></span></p></div>
   <div class="actions">
-    <a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a>
+    <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a>
     <a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a>
   </div>
 </div>
 <div class="kpis">
-  <div class="kpi"><div class="label">Job reference</div><div class="value" style="font-size:1.3rem"><%= item.job_ref || '—' %></div><div class="sub"><%= item.location || '&nbsp;' %></div></div>
-  <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub">service every <%= fmtHours(item.service_interval_hours) %> hrs</div></div>
-  <div class="kpi <%= { overdue: 'bad', soon: 'warn', ok: 'good' }[item.service.level] || '' %>"><div class="label">Next service</div><div class="value"><%= fmtHours(item.service.nextAt) %> hrs</div><div class="sub"><%- pill(item.service) %></div></div>
-  <div class="kpi <%= { overdue: 'bad', soon: 'warn', ok: 'good' }[item.check.level] || '' %>"><div class="label">Weekly check</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_check) %></div><div class="sub"><%- pill(item.check) %></div></div>
-  <div class="kpi <%= { overdue: 'bad', soon: 'warn', ok: 'good' }[item.loler.level] || '' %>"><div class="label">LOLER</div><div class="value" style="font-size:1.3rem"><%= item.loler_required ? ukDate(item.loler.due) : 'N/A' %></div><div class="sub"><%- pill(item.loler) %></div></div>
+  <div class="kpi"><div class="label">Location / job</div><div class="value" style="font-size:1.2rem"><%= item.location || '—' %></div><div class="sub"><%= item.job_ref ? 'Job ' + item.job_ref : '&nbsp;' %></div></div>
+  <% if (item.tracks_hours) { %>
+  <div class="kpi"><div class="label">Running hours</div><div class="value"><%= fmtHours(item.running_hours) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : '&nbsp;' %></div></div>
+  <div class="kpi <%= cls(item.service) %>"><div class="label">Next service</div><div class="value" style="font-size:1.3rem"><%= item.service.name %></div><div class="sub"><%- pill(item.service) %></div></div>
+  <% } else { %>
+  <div class="kpi"><div class="label">Last service</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_service_date) %></div><div class="sub"><%= item.service_plan ? 'Service plan included' : 'No hour meter' %></div></div>
+  <% } %>
+  <% if (item.weekly_checks) { %><div class="kpi <%= cls(item.check) %>"><div class="label">Weekly check</div><div class="value" style="font-size:1.3rem"><%= ukDate(item.last_check) %></div><div class="sub"><%- pill(item.check) %></div></div><% } %>
+  <div class="kpi <%= cls(item.loler) %>"><div class="label"><%= item.loler.level === 'none' ? 'LOLER / test' : insp %></div><div class="value" style="font-size:1.3rem"><%= item.loler.due ? ukDate(item.loler.due) : item.loler.level === 'none' ? 'N/A' : '—' %></div><div class="sub"><%- pill(item.loler) %></div></div>
 </div>
 
 <div class="grid grid-2">
   <div>
+    <% if (plan.length) { %>
+    <div class="card flush">
+      <h2>Service plan</h2>
+      <p class="small muted" style="margin:-6px 16px 10px">First services at <%= item.service_schedule || '—' %> hrs, then every <%= fmtHours(item.service_interval_hours) %> hrs<%= item.service_months ? ` or ${item.service_months} months, whichever comes first` : '' %>. Typical work shown as a guide; follow the machine's manual.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Service</th><th>Status</th><th>Done</th></tr></thead>
+        <tbody><% for (const r of plan) { %>
+          <tr>
+            <td><strong class="nowrap"><%= fmtHours(r.hours) %> hr</strong><div class="small muted"><%= serviceWork(r.hours, r.hours === firstMark, item.service_interval_hours) %></div></td>
+            <td><% if (r.state === 'done') { %><span class="pill ok">Done</span><% } else if (r.state === 'next') { %><%- pill(item.service) %><% } else if (r.state === 'missed') { %><span class="pill none">No record</span><% } else { %><span class="muted small">In <%= fmtHours(r.hours - item.running_hours) %> hrs</span><% } %></td>
+            <td class="small"><%= r.record ? `${ukDate(r.record.record_date)} at ${fmtHours(r.record.reading)} hrs${r.record.done_by ? ' · ' + r.record.done_by : ''}` : '' %></td>
+          </tr>
+        <% } %></tbody>
+      </table></div>
+    </div>
+    <% } %>
+    <div class="card">
+      <h2>Details</h2>
+      <dl class="facts">
+        <dt>Manufacturer / model</dt><dd><%= [item.make, item.model].filter(Boolean).join(' ') || '—' %></dd>
+        <dt>Serial / chassis no</dt><dd><%= item.serial_no || '—' %></dd>
+        <dt>Registered</dt><dd><%= item.registered || '—' %></dd>
+        <% if (item.swl) { %><dt>SWL</dt><dd><%= item.swl %></dd><% } %>
+        <% if (item.loler.level !== 'none') { %><dt><%= insp %></dt><dd>Every <%= item.loler_interval_months %> months · last <%= ukDate(item.last_loler_date) %><%= item.cert_no ? ' · cert ' + item.cert_no : '' %></dd><% } %>
+        <dt>Owner</dt><dd><%= OWNERS[item.owner] || item.owner %></dd>
+        <dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd>
+        <% if (item.owner === 'MPL') { %><dt>Agreed price from MCL</dt><dd><%= money(item.transfer_price) %></dd><% } %>
+        <dt>Weekly hire rate</dt><dd><%= money(item.weekly_hire_rate) %></dd>
+      </dl>
+      <% if (item.notes) { %><p style="white-space:pre-wrap;margin:12px 0 0"><%= item.notes %></p><% } %>
+    </div>
     <div class="card flush">
       <h2>Defects</h2>
       <% if (!defects.length) { %><p class="empty">No defects reported.</p><% } else { %>
@@ -27,6 +64,7 @@
       <% } %></tbody></table></div>
       <p class="empty" style="padding-top:8px"><a href="/defects?asset=plant">Manage defects →</a></p><% } %>
     </div>
+    <% if (item.weekly_checks || checks.length) { %>
     <div class="card flush">
       <h2>Check sheets</h2>
       <% if (!checks.length) { %><p class="empty">No check sheets yet.</p><% } else { %>
@@ -38,30 +76,42 @@
         <% } %></tbody>
       </table></div><% } %>
     </div>
+    <% } %>
   </div>
   <div>
     <form class="card" method="post" action="/plant/<%= item.id %>/records">
-      <h2>Record a service or LOLER inspection</h2>
+      <h2>Record a service, <%= item.loler.level === 'none' ? 'test' : insp === 'LOLER' ? insp : insp.toLowerCase() %> or repair</h2>
       <div class="form-grid">
-        <div class="field"><label for="kind">Type</label><select id="kind" name="kind"><option value="service">Service</option><option value="loler">LOLER thorough examination</option></select></div>
+        <div class="field"><label for="kind">Type</label><select id="kind" name="kind">
+          <option value="service"><%= item.tracks_hours && item.service.name ? item.service.name : 'Service' %></option>
+          <option value="loler"><%= item.loler.level === 'none' ? 'LOLER / test / calibration' : insp %></option>
+          <option value="repair">Repair</option></select></div>
         <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
-        <div class="field"><label for="reading">Running hours <span class="hint">(at the time)</span></label><input id="reading" name="reading" type="number" step="0.1" min="0" value="<%= item.running_hours %>"></div>
-        <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Fitter / inspection company"></div>
+        <% if (item.tracks_hours) { %><div class="field"><label for="reading">Running hours <span class="hint">(at the time)</span></label><input id="reading" name="reading" type="number" step="0.1" min="0" value="<%= item.running_hours %>"></div><% } %>
+        <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Fitter / dealer / test company"></div>
+        <div class="field insp-field"><label for="next_due">Next due <span class="hint">(blank = <%= item.loler_interval_months %> months)</span></label><input id="next_due" name="next_due" type="date"></div>
+        <div class="field insp-field"><label for="cert_no">Certificate no</label><input id="cert_no" name="cert_no" type="text"></div>
       </div>
-      <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text" placeholder="Certificate no., parts, etc."></div>
+      <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text" placeholder="Work done, parts, invoice no."></div>
       <button class="btn dark" type="submit">Save record</button>
     </form>
     <div class="card flush">
-      <h2>Service and LOLER history</h2>
+      <h2>History</h2>
       <% if (!records.length) { %><p class="empty">No records yet.</p><% } else { %>
       <div class="table-wrap"><table>
         <thead><tr><th>Date</th><th>Type</th><th class="num">Hours</th><th>Done by / notes</th></tr></thead>
         <tbody><% for (const r of records) { %>
-          <tr><td><%= ukDate(r.record_date) %></td><td><%= r.kind === 'loler' ? 'LOLER' : 'Service' %></td><td class="num"><%= r.reading != null ? fmtHours(r.reading) : '—' %></td><td><%= [r.done_by, r.notes].filter(Boolean).join(' · ') || '—' %></td></tr>
+          <tr><td class="nowrap"><%= ukDate(r.record_date) %></td><td><%= r.kind === 'loler' ? insp : r.kind === 'repair' ? 'Repair' : 'Service' %></td><td class="num"><%= r.reading != null ? fmtHours(r.reading) : '—' %></td><td><%= [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · ') || '—' %></td></tr>
         <% } %></tbody>
       </table></div><% } %>
     </div>
-    <% if (item.notes) { %><div class="card"><h2>Notes</h2><p style="white-space:pre-wrap;margin:0"><%= item.notes %></p></div><% } %>
   </div>
 </div>
+<script>
+  (function () {
+    const kind = document.getElementById('kind');
+    function upd() { document.querySelectorAll('.insp-field').forEach((el) => { el.style.display = kind.value === 'loler' ? '' : 'none'; }); }
+    kind.addEventListener('change', upd); upd();
+  })();
+</script>
 <%- include('partials/footer') %>

@@ -8,6 +8,7 @@
 <div class="page-head">
   <div><h1>Fuel dashboard</h1><p class="muted" style="margin:0"><%= ukDate(period.from) %> to <%= ukDate(period.to) %></p></div>
   <div class="actions">
+    <a class="btn" href="/fuel-cards">Fuel cards</a>
     <a class="btn" href="/export/fuel.csv?from=<%= period.from %>&to=<%= period.to %>">Export CSV</a>
     <a class="btn dark" href="/fuel/next">Check receipts one by one</a>
     <a class="btn primary" href="/fuel/new">Log fuel</a>
@@ -82,7 +83,7 @@
   <h2>Fuel log and receipts</h2>
   <% if (!entries.length) { %><p class="empty">No entries match.</p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Receipt</th><th>Date</th><th>Vehicle</th><th>Driver</th><th>Fuel</th><th class="num">Litres</th><th class="num">Mileage</th><th>Price (£, total)</th><th></th></tr></thead>
+    <thead><tr><th>Receipt</th><th>Date</th><th>Vehicle</th><th>Driver</th><th>Card</th><th>Fuel</th><th class="num">Litres</th><th class="num">Mileage</th><th>Price (£, total)</th><th></th></tr></thead>
     <tbody><% for (const e of entries) { %>
       <tr>
         <td><% if (e.receipt_file) { %><a href="/fuel/<%= e.id %>" title="Open receipt">
@@ -91,6 +92,7 @@
         <td class="nowrap"><%= ukDate(e.fill_date) %></td>
         <td><span class="reg"><%= e.reg %></span></td>
         <td><%= e.driver_name %></td>
+        <td class="small"><%= e.card_provider ? e.card_provider.split(' ')[0] + (e.card_ref ? ' #' + e.card_ref : '') : '—' %></td>
         <td><%= FUEL_LABELS[e.fuel_type] %></td>
         <td class="num"><%= num(e.litres, 2) %></td>
         <td class="num"><%= num(e.mileage) %></td>

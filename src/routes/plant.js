@@ -3,11 +3,12 @@ const { all, run, get, transaction } = require('../db');
 const { listPlant, getPlant, listDefects } = require('../queries');
 const { requireAdmin, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
+const { serviceWork, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE, INSPECTION_TYPES } = require('../categories');
 
 const router = express.Router();
 router.use('/plant', requireAdmin);
 
-const DEFAULT_SERVICE_HOURS = Number(process.env.DEFAULT_SERVICE_HOURS || 250);
+const { DEFAULT_SERVICE_INTERVAL, parseSchedule, servicePlan } = require('../status');
 
 function dateField(v, label) {
   if (!v) return null;
@@ -17,46 +18,99 @@ function dateField(v, label) {
 
 function readPlant(body) {
   const plantNo = text(body.plant_no);
-  const description = text(body.description);
-  if (!plantNo) throw new UserError('Plant ID is required.');
-  if (!description) throw new UserError('Description is required.');
+  if (!plantNo) throw new UserError('Asset number is required.');
+  const category = CATEGORY[body.category] ? body.category : 'misc';
+  const owner = OWNERS[body.owner] ? body.owner : 'MCL';
+  const status = PLANT_STATUSES[body.status] ? body.status : 'in_use';
+  const make = text(body.make);
+  const model = text(body.model);
+  const inspectionType = INSPECTION_TYPES[body.inspection_type] ? body.inspection_type : 'none';
   return {
     plant_no: plantNo.toUpperCase(),
-    description,
-    make: text(body.make),
-    model: text(body.model),
+    category,
+    owner,
+    status,
+    description: text(body.description) || [make, model].filter(Boolean).join(' ') || CATEGORY[category].label.replace(/s$/, ''),
+    make,
+    model,
     serial_no: text(body.serial_no),
+    registered: text(body.registered),
+    swl: text(body.swl),
     job_ref: text(body.job_ref),
     location: text(body.location),
+    purchase_price: numberField(body.purchase_price, 'Purchase price'),
+    purchase_date: dateField(body.purchase_date, 'Purchase date'),
+    transfer_price: owner === 'MPL' ? numberField(body.transfer_price, 'Agreed price from MCL') : null,
+    weekly_hire_rate: numberField(body.weekly_hire_rate, 'Weekly hire rate'),
+    service_plan: body.service_plan ? 1 : 0,
+    tracks_hours: body.tracks_hours ? 1 : 0,
+    weekly_checks: body.weekly_checks ? 1 : 0,
     running_hours: numberField(body.running_hours, 'Running hours') ?? 0,
-    service_interval_hours: numberField(body.service_interval_hours, 'Service interval', { min: 1 }) ?? DEFAULT_SERVICE_HOURS,
+    service_schedule: parseSchedule(body.service_schedule).join(', ') || null,
+    service_interval_hours: numberField(body.service_interval_hours, 'Service interval', { min: 1 }) ?? DEFAULT_SERVICE_INTERVAL,
+    service_months: numberField(body.service_months, 'Service months', { integer: true, min: 1 }),
     last_service_hours: numberField(body.last_service_hours, 'Hours at last service'),
     last_service_date: dateField(body.last_service_date, 'Last service date'),
-    loler_required: body.loler_required ? 1 : 0,
-    loler_interval_months: Number(body.loler_interval_months) === 6 ? 6 : 12,
-    last_loler_date: dateField(body.last_loler_date, 'Last LOLER date'),
+    loler_required: inspectionType === 'none' ? 0 : 1,
+    inspection_type: inspectionType,
+    loler_interval_months: numberField(body.loler_interval_months, 'Inspection interval', { integer: true, min: 1 }) ?? 12,
+    last_loler_date: dateField(body.last_loler_date, 'Last inspection date'),
+    inspection_due: dateField(body.inspection_due, 'Inspection due date'),
+    cert_no: text(body.cert_no),
     notes: text(body.notes),
-    active: body.active === undefined ? 1 : body.active === '1' ? 1 : 0,
+    active: PLANT_INACTIVE.includes(status) ? 0 : 1,
   };
 }
 
+// Next free asset number for an owner and category, e.g. MCL-EX-0015.
+function nextAssetNumbers() {
+  const used = new Set(all('SELECT plant_no FROM plant').map((r) => r.plant_no.toUpperCase()));
+  const out = {};
+  for (const owner of Object.keys(OWNERS)) {
+    for (const c of CATEGORIES) {
+      let n = 1;
+      const prefix = `${owner}-${c.code}-`;
+      for (const no of used) if (no.startsWith(prefix)) n = Math.max(n, (parseInt(no.slice(prefix.length), 10) || 0) + 1);
+      out[`${owner}:${c.key}`] = prefix + String(n).padStart(4, '0');
+    }
+  }
+  return out;
+}
+
+function formLocals(item) {
+  return { item, CATEGORIES, OWNERS, PLANT_STATUSES, INSPECTION_TYPES, nextNumbers: nextAssetNumbers() };
+}
+
 function saveError(err) {
-  if (String(err.message).includes('UNIQUE')) throw new UserError('Another item of plant already has that Plant ID.');
+  if (String(err.message).includes('UNIQUE')) throw new UserError('Another asset already has that asset number.');
   throw err;
 }
 
 router.get('/plant', (req, res) => {
   const filter = req.query.filter || '';
+  const category = CATEGORY[req.query.category] ? req.query.category : '';
+  const owner = OWNERS[req.query.owner] ? req.query.owner : '';
   let plant = listPlant({ includeInactive: filter === 'inactive' });
   if (filter === 'inactive') plant = plant.filter((p) => !p.active);
   if (filter === 'attention') plant = plant.filter((p) => [p.service, p.loler, p.check].some((s) => s.level === 'overdue' || s.level === 'soon') || p.open_defects);
+  if (filter === 'repair') plant = plant.filter((p) => p.status === 'repair');
+  if (owner) plant = plant.filter((p) => p.owner === owner);
+  const counts = {};
+  for (const p of plant) counts[p.category] = (counts[p.category] || 0) + 1;
+  if (category) plant = plant.filter((p) => p.category === category);
   const q = String(req.query.q || '').trim().toLowerCase();
-  if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.location].some((f) => f && f.toLowerCase().includes(q)));
-  res.render('plant-list', { title: 'Plant register', plant, filter, q: req.query.q || '' });
+  if (q) plant = plant.filter((p) => [p.plant_no, p.description, p.job_ref, p.make, p.model, p.location, p.serial_no].some((f) => f && String(f).toLowerCase().includes(q)));
+  const hireTotal = plant.filter((p) => p.active && p.weekly_hire_rate).reduce((t, p) => t + p.weekly_hire_rate, 0);
+  res.render('plant-list', { title: 'Plant & equipment register', plant, filter, category, owner, counts, hireTotal, q: req.query.q || '', CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
 router.get('/plant/new', (req, res) => {
-  res.render('plant-form', { title: 'Add plant', item: { service_interval_hours: DEFAULT_SERVICE_HOURS, loler_required: 1, loler_interval_months: 12, active: 1 } });
+  const c = CATEGORY[req.query.category] || CATEGORIES[0];
+  res.render('plant-form', {
+    title: 'Add plant or equipment',
+    ...formLocals({ category: c.key, owner: 'MCL', status: 'in_use', service_schedule: c.schedule, service_interval_hours: c.every, service_months: c.serviceMonths, tracks_hours: c.hours ? 1 : 0,
+      weekly_checks: c.checks ? 1 : 0, inspection_type: c.inspection, loler_interval_months: c.months, active: 1 }),
+  });
 });
 
 router.post('/plant', (req, res) => {
@@ -77,13 +131,13 @@ router.get('/plant/:id', (req, res) => {
     WHERE c.plant_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 20`, item.id);
   const records = all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
   const defects = listDefects({ status: 'all', assetType: 'plant', assetId: item.id, limit: 50 });
-  res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, item, checks, records, defects });
+  res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, item, checks, records, defects, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
 router.get('/plant/:id/edit', (req, res) => {
   const item = get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Plant not found.' });
-  res.render('plant-form', { title: `Edit ${item.plant_no}`, item });
+  res.render('plant-form', { title: `Edit ${item.plant_no}`, ...formLocals(item) });
 });
 
 router.post('/plant/:id', (req, res) => {
@@ -99,20 +153,25 @@ router.post('/plant/:id', (req, res) => {
 router.post('/plant/:id/records', (req, res) => {
   const item = get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Plant not found.', 404);
-  const kind = req.body.kind === 'loler' ? 'loler' : 'service';
+  const kind = ['service', 'loler', 'repair'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
   if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
-  const hours = numberField(req.body.reading, 'Hours') ?? (kind === 'service' ? item.running_hours : null);
+  const hours = numberField(req.body.reading, 'Hours') ?? (kind === 'service' && item.tracks_hours ? item.running_hours : null);
+  const nextDue = kind === 'loler' ? dateField(req.body.next_due, 'Next due date') : null;
+  const certNo = text(req.body.cert_no);
   transaction(() => {
-    run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?)`,
-      item.id, kind, date, hours, text(req.body.done_by), text(req.body.notes), req.user.id);
+    run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      item.id, kind, date, hours, nextDue, text(req.body.done_by), [certNo && `Cert ${certNo}`, text(req.body.notes)].filter(Boolean).join(' · ') || null, req.user.id);
     if (kind === 'service') {
-      run('UPDATE plant SET last_service_date = ?, last_service_hours = ?, running_hours = MAX(running_hours, ?) WHERE id = ?', date, hours, hours, item.id);
-    } else {
-      run('UPDATE plant SET last_loler_date = ? WHERE id = ?', date, item.id);
+      run('UPDATE plant SET last_service_date = ?, last_service_hours = ?, running_hours = MAX(running_hours, COALESCE(?, 0)) WHERE id = ?', date, hours, hours, item.id);
+    } else if (kind === 'loler') {
+      run('UPDATE plant SET last_loler_date = ?, inspection_due = ?, cert_no = COALESCE(?, cert_no) WHERE id = ?', date, nextDue, certNo, item.id);
+    } else if (hours != null) {
+      run('UPDATE plant SET running_hours = MAX(running_hours, ?) WHERE id = ?', hours, item.id);
     }
   });
-  req.flash('success', kind === 'service' ? 'Service recorded.' : 'LOLER inspection recorded.');
+  const label = INSPECTION_TYPES[item.inspection_type] || 'Inspection';
+  req.flash('success', { service: 'Service recorded.', loler: `${label} recorded.`, repair: 'Repair recorded.' }[kind]);
   res.redirect(`/plant/${item.id}`);
 });
 

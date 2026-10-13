@@ -4,19 +4,28 @@
   <fieldset class="card"><legend>Vehicle</legend>
     <div class="form-grid">
       <div class="field"><label for="reg">Registration</label><input id="reg" name="reg" type="text" value="<%= item.reg || '' %>" style="text-transform:uppercase" required></div>
+      <div class="field"><label for="asset_no">Asset number</label><input id="asset_no" name="asset_no" type="text" value="<%= item.asset_no || '' %>" placeholder="e.g. MCL-VAN-0023"></div>
+      <div class="field"><label for="category">Type of vehicle</label>
+        <select id="category" name="category"><% for (const [k, l] of Object.entries(VEHICLE_CATEGORIES)) { %><option value="<%= k %>" <%= item.category === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
+      <div class="field"><label for="owner">Owned by</label>
+        <select id="owner" name="owner"><% for (const [k, l] of Object.entries(OWNERS)) { %><option value="<%= k %>" <%= item.owner === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
       <div class="field"><label for="make">Make</label><input id="make" name="make" type="text" value="<%= item.make || '' %>"></div>
       <div class="field"><label for="model">Model</label><input id="model" name="model" type="text" value="<%= item.model || '' %>"></div>
-      <div class="field"><label for="vehicle_type">Type</label><input id="vehicle_type" name="vehicle_type" type="text" value="<%= item.vehicle_type || '' %>" placeholder="Van, pickup, tipper…" list="vtypes">
+      <div class="field"><label for="colour">Colour</label><input id="colour" name="colour" type="text" value="<%= item.colour || '' %>"></div>
+      <div class="field"><label for="vehicle_type">Body type</label><input id="vehicle_type" name="vehicle_type" type="text" value="<%= item.vehicle_type || '' %>" placeholder="Van, pickup, tipper…" list="vtypes">
         <datalist id="vtypes"><option>Van</option><option>Pickup</option><option>Tipper</option><option>Crew cab</option><option>Car</option><option>HGV</option></datalist></div>
       <div class="field"><label for="fuel_type">Fuel</label>
         <select id="fuel_type" name="fuel_type"><option value="diesel">Diesel</option><option value="unleaded" <%= item.fuel_type === 'unleaded' ? 'selected' : '' %>>Unleaded</option></select></div>
-      <div class="field"><label for="driver_id">Assigned driver</label>
-        <select id="driver_id" name="driver_id"><option value="">No driver</option>
+      <div class="field"><label for="driver_id">Driver's app account <span class="hint">(they do the walk-around)</span></label>
+        <select id="driver_id" name="driver_id"><option value="">No app account</option>
           <% for (const d of drivers) { %><option value="<%= d.id %>" <%= item.driver_id === d.id ? 'selected' : '' %>><%= d.name %></option><% } %>
         </select></div>
+      <div class="field"><label for="user_name">User / driver name</label><input id="user_name" name="user_name" type="text" value="<%= item.user_name || '' %>" placeholder="If they don't have an account yet"></div>
+      <div class="field"><label for="tracked">Tracked</label>
+        <select id="tracked" name="tracked"><option value="">Not known</option><% for (const [k, l] of Object.entries(TRACKED)) { %><option value="<%= k %>" <%= item.tracked === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
       <div class="field"><label for="mileage">Mileage</label><input id="mileage" name="mileage" type="number" min="0" step="1" value="<%= item.mileage ?? '' %>"></div>
-      <div class="field"><label for="active">Status</label>
-        <select id="active" name="active"><option value="1">Active</option><option value="0" <%= item.active === 0 ? 'selected' : '' %>>Sold / off road</option></select></div>
+      <div class="field"><label for="status">Status</label>
+        <select id="status" name="status"><% for (const [k, l] of Object.entries(VEHICLE_STATUSES)) { %><option value="<%= k %>" <%= item.status === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
     </div>
   </fieldset>
   <fieldset class="card"><legend>Service, MOT and tax</legend>
@@ -27,7 +36,13 @@
       <div class="field"><label for="tax_due">Tax expiry</label><input id="tax_due" name="tax_due" type="date" value="<%= item.tax_due || '' %>"></div>
     </div>
   </fieldset>
-  <div class="card"><div class="field" style="margin:0"><label for="notes">Notes</label><textarea id="notes" name="notes"><%= item.notes || '' %></textarea></div></div>
+  <fieldset class="card"><legend>Purchase</legend>
+    <div class="form-grid">
+      <div class="field"><label for="purchase_price">Purchase price (£)</label><input id="purchase_price" name="purchase_price" type="number" step="0.01" min="0" value="<%= item.purchase_price ?? '' %>"></div>
+      <div class="field"><label for="purchase_date">Purchase date</label><input id="purchase_date" name="purchase_date" type="date" value="<%= item.purchase_date || '' %>"></div>
+    </div>
+  </fieldset>
+  <div class="card"><div class="field" style="margin:0"><label for="notes">Notes <span class="hint">(e.g. SORN reference, warranty, service pack)</span></label><textarea id="notes" name="notes"><%= item.notes || '' %></textarea></div></div>
   <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="<%= item.id ? '/vehicles/' + item.id : '/vehicles' %>">Cancel</a></div>
 </form>
 <%- include('partials/footer') %>

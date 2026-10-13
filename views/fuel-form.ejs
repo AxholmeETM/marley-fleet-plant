@@ -28,6 +28,13 @@
     <div class="field"><label for="mileage">Mileage <span class="hint">(odometer)</span></label><input id="mileage" name="mileage" type="number" inputmode="numeric" min="0" step="1"></div>
     <div class="field"><label for="station">Fuel station <span class="hint">(optional)</span></label><input id="station" name="station" type="text"></div>
   </div>
+  <% if (cards.length) { %>
+  <div class="field"><label for="fuel_card_id">Fuel card used</label>
+    <select id="fuel_card_id" name="fuel_card_id">
+      <option value="">Not a fuel card / paid another way</option>
+      <% for (const c of cards) { %><option value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>"><%= c.provider %><%= c.card_ref ? ' #' + c.card_ref : '' %><%= c.last4 ? ' ••' + c.last4 : '' %><%= c.holder ? ' – ' + c.holder : '' %></option><% } %>
+    </select></div>
+  <% } %>
   <div class="field">
     <label for="receipt">Receipt <span class="hint">(photo or PDF, up to 15 MB)</span></label>
     <input id="receipt" name="receipt" type="file" accept="image/*,application/pdf" required>
@@ -36,7 +43,16 @@
   <button class="btn primary big" type="submit">Save fuel entry</button>
 </form>
 <script>
+  function pickCard() {
+    const card = document.getElementById('fuel_card_id');
+    if (!card) return;
+    const vid = document.getElementById('vehicle_id').value;
+    const match = [...card.options].find((o) => o.dataset.vehicle && o.dataset.vehicle === vid);
+    if (match) card.value = match.value;
+  }
+  pickCard();
   document.getElementById('vehicle_id').addEventListener('change', function () {
+    pickCard();
     const opt = this.selectedOptions[0];
     const fuel = opt && opt.dataset.fuel;
     const adblue = document.getElementById('ft-adblue');

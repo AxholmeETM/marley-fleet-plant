@@ -16,7 +16,7 @@
             <option value="<%= a.id %>" <%= asset && asset.id === a.id ? 'selected' : '' %>><%= a.reg %> – <%= [a.make, a.model].filter(Boolean).join(' ') %></option>
           <% } %></optgroup><optgroup label="Other vehicles"><% } %>
           <% for (const a of assets.filter((x) => !mineIds.includes(x.id))) { %>
-            <option value="<%= a.id %>" <%= asset && asset.id === a.id ? 'selected' : '' %>><%= isVehicle ? `${a.reg} – ${[a.make, a.model].filter(Boolean).join(' ')}` : `${a.plant_no} – ${a.description}` %></option>
+            <option value="<%= a.id %>" <%= asset && asset.id === a.id ? 'selected' : '' %>><%= isVehicle ? `${a.reg} – ${[a.make, a.model].filter(Boolean).join(' ')}` : `${a.plant_no} – ${a.description}${a.location ? ' (' + a.location + ')' : ''}` %></option>
           <% } %>
           <% if (isVehicle && mineIds.length) { %></optgroup><% } %>
         </select>
@@ -27,7 +27,7 @@
           <input id="reading" name="reading" type="number" inputmode="numeric" min="0" step="1" placeholder="<%= asset && asset.mileage ? 'Last: ' + asset.mileage : '' %>"></div>
       <% } else { %>
         <div class="field"><label for="reading">Running hours <span class="hint">(hour meter)</span></label>
-          <input id="reading" name="reading" type="number" inputmode="decimal" min="0" step="0.1" required placeholder="<%= asset ? 'Last: ' + fmtHours(asset.running_hours) : '' %>"></div>
+          <input id="reading" name="reading" type="number" inputmode="decimal" min="0" step="0.1" <%= !asset || asset.tracks_hours ? 'required' : '' %> placeholder="<%= asset ? 'Last: ' + fmtHours(asset.running_hours) : '' %>"></div>
         <div class="field"><label for="job_ref">Job reference</label><input id="job_ref" name="job_ref" type="text" value="<%= asset && asset.job_ref || '' %>"></div>
       <% } %>
     </div>
