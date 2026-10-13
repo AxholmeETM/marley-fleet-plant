@@ -1,43 +1,34 @@
-/* Marley Fleet & Plant – Apple-style interface: system font, quiet greys, white rounded panels, blue accent. */
+/* Marley Fleet & Plant – Apple-style interface: system font, white page and panels, navy bar and accents. */
 :root {
-  --ink: #1d1d1f;
-  --ink-2: #424245;
-  --muted: #6e6e73;
-  --line: #e5e5ea;
-  --line-strong: #d2d2d7;
-  --bg: #f5f5f7;
+  --navy: #0b1f3f;
+  --ink: #0f1c33;
+  --ink-2: #33415a;
+  --muted: #64708a;
+  --line: #e3e8ef;
+  --line-strong: #cfd7e3;
+  --bg: #ffffff;
   --card: #ffffff;
   --field: #ffffff;
-  --hover: #f5f5f7;
-  --brand: #1d1d1f;
-  --accent: #0071e3;
-  --accent-hover: #0077ed;
-  --accent-soft: #e8f2fd;
+  --hover: #f3f6fa;
+  --brand: #0b1f3f;
+  --accent: #13366b;
+  --accent-hover: #1b4585;
+  --accent-soft: #e7edf6;
   --accent-ink: #ffffff;
-  --blue: #0066cc;
+  --blue: #1d4e8f;
   --red: #d70015;
   --red-bg: #ffeceb;
   --amber: #a05a00;
   --amber-bg: #fff4e0;
   --green: #1a7f37;
   --green-bg: #e7f6ea;
-  --grey-bg: #f0f0f2;
-  --bar: rgba(255, 255, 255, .78);
-  --shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 4px 16px rgba(0, 0, 0, .04);
-  --shadow-lift: 0 2px 6px rgba(0, 0, 0, .06), 0 12px 32px rgba(0, 0, 0, .08);
+  --grey-bg: #eef2f7;
+  --bar: #0b1f3f;
+  --shadow: 0 0 0 1px #e3e8ef, 0 1px 3px rgba(11, 31, 63, .05);
+  --shadow-lift: 0 0 0 1px #cfd7e3, 0 10px 28px rgba(11, 31, 63, .10);
   --radius: 18px;
   --radius-sm: 12px;
   color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --ink: #f5f5f7; --ink-2: #d2d2d7; --muted: #98989d; --line: #2c2c2e; --line-strong: #3a3a3c;
-    --bg: #000000; --card: #1c1c1e; --field: #2c2c2e; --hover: #2c2c2e; --brand: #f5f5f7;
-    --accent: #0a84ff; --accent-hover: #409cff; --accent-soft: #0a2a4a; --blue: #2997ff;
-    --red: #ff453a; --red-bg: #3a1513; --amber: #ffb340; --amber-bg: #3a2a10; --green: #30d158; --green-bg: #0f2e18; --grey-bg: #2c2c2e;
-    --bar: rgba(22, 22, 23, .8); --shadow: 0 0 0 1px #2c2c2e; --shadow-lift: 0 0 0 1px #3a3a3c, 0 12px 32px rgba(0, 0, 0, .5);
-    color-scheme: dark;
-  }
 }
 
 * { box-sizing: border-box; }
@@ -58,20 +49,20 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .nowrap { white-space: nowrap; }
 
 /* Top bar: translucent, like apple.com */
-.topbar { position: sticky; top: 0; z-index: 50; background: var(--bar); color: var(--ink);
-  -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid var(--line); }
+.topbar { position: sticky; top: 0; z-index: 50; background: var(--bar); color: #fff; }
 .topbar-inner { max-width: 1280px; margin: 0 auto; padding: 0 22px; display: flex; align-items: center; gap: 18px; min-height: 52px; }
-.brand { display: flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 600; white-space: nowrap; font-size: .95rem; }
+.brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 600; white-space: nowrap; font-size: .95rem; }
 .brand:hover { text-decoration: none; }
 .brand-mark { background: var(--brand); color: var(--bg); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: .95rem; }
-.brand small { display: block; font-weight: 400; color: var(--muted); font-size: .72rem; letter-spacing: 0; }
+.topbar .brand-mark { background: #fff; color: var(--navy); }
+.brand small { display: block; font-weight: 400; color: rgba(255, 255, 255, .65); font-size: .72rem; letter-spacing: 0; }
 .nav { display: flex; gap: 2px; overflow-x: auto; flex: 1; scrollbar-width: none; justify-content: center; }
 .nav::-webkit-scrollbar { display: none; }
-.nav a { color: var(--ink-2); padding: 6px 13px; border-radius: 999px; white-space: nowrap; font-size: .88rem; font-weight: 400; transition: background .15s, color .15s; }
-.nav a:hover { background: var(--hover); text-decoration: none; color: var(--ink); }
-.nav a.active { background: var(--ink); color: var(--bg); font-weight: 500; }
-.userbox { display: flex; align-items: center; gap: 12px; white-space: nowrap; color: var(--muted); font-size: .85rem; }
-.userbox a { color: var(--ink); }
+.nav a { color: rgba(255, 255, 255, .82); padding: 6px 13px; border-radius: 999px; white-space: nowrap; font-size: .88rem; font-weight: 400; transition: background .15s, color .15s; }
+.nav a:hover { background: rgba(255, 255, 255, .12); text-decoration: none; color: #fff; }
+.nav a.active { background: #fff; color: var(--navy); font-weight: 600; }
+.userbox { display: flex; align-items: center; gap: 12px; white-space: nowrap; color: rgba(255, 255, 255, .7); font-size: .85rem; }
+.userbox a, .userbox .linkbtn { color: #fff; }
 .userbox form { margin: 0; }
 .linkbtn { background: none; border: 0; color: var(--blue); cursor: pointer; font: inherit; padding: 0; }
 
@@ -173,7 +164,7 @@ textarea { min-height: 80px; resize: vertical; }
 .form-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
 .check-row { display: flex; align-items: center; gap: 8px; font-weight: 400; color: var(--ink); }
 .check-row input { width: 18px; height: 18px; accent-color: var(--accent); }
-fieldset { border: 0; border-radius: var(--radius-sm); padding: 14px 16px; margin: 0 0 18px; background: var(--bg); }
+fieldset { border: 0; border-radius: var(--radius-sm); padding: 14px 16px; margin: 0 0 18px; background: var(--hover); }
 fieldset[hidden] { display: none; }
 legend { font-weight: 600; padding: 0; float: left; width: 100%; margin-bottom: 10px; font-size: .9rem; }
 legend + * { clear: both; }
@@ -182,7 +173,7 @@ legend + * { clear: both; }
 .filters input, .filters select { width: auto; min-width: 150px; }
 .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
 .tabs a { padding: 6px 14px; border-radius: 999px; background: var(--card); color: var(--ink); font-weight: 400; font-size: .86rem; box-shadow: inset 0 0 0 1px var(--line-strong); }
-.tabs a.active { background: var(--ink); color: var(--bg); box-shadow: none; font-weight: 500; }
+.tabs a.active { background: var(--accent); color: #fff; box-shadow: none; font-weight: 500; }
 .tabs a:hover { text-decoration: none; }
 
 /* Segmented controls (check sheets, fuel type, account type) */
