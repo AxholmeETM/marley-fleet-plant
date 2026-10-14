@@ -1,92 +1,85 @@
 <%- include('partials/header') %>
-<div class="page-head"><div><h1>Log fuel</h1><p class="muted" style="margin:0">Enter what you put in and take a photo of the receipt. The office adds the price.</p></div></div>
+<div class="page-head"><div><h1>Log fuel</h1><p class="muted" style="margin:0">Fill in what you put in and snap the receipt. The office adds the price.</p></div></div>
 <%- include('partials/pane-end') %>
-<form class="card" method="post" action="/fuel" enctype="multipart/form-data" style="max-width:640px">
+<% const vOpt = (v) => `${v.reg} – ${[v.make, v.model].filter(Boolean).join(' ')}`; %>
+<form class="card lf" method="post" action="/fuel" enctype="multipart/form-data">
+  <div class="lf-row lf-top">
+    <div class="field">
+      <label for="vehicle_id">Vehicle</label>
+      <select id="vehicle_id" name="vehicle_id" required>
+        <option value="">Choose…</option>
+        <% if (mineIds.length) { %><optgroup label="My vehicles"><% for (const v of vehicles.filter((x) => mineIds.includes(x.id))) { %>
+          <option value="<%= v.id %>" data-fuel="<%= v.fuel_type %>" <%= selected && selected.id === v.id ? 'selected' : '' %>><%= vOpt(v) %></option>
+        <% } %></optgroup><optgroup label="Other vehicles"><% } %>
+        <% for (const v of vehicles.filter((x) => !mineIds.includes(x.id))) { %>
+          <option value="<%= v.id %>" data-fuel="<%= v.fuel_type %>" <%= selected && selected.id === v.id ? 'selected' : '' %>><%= vOpt(v) %></option>
+        <% } %>
+        <% if (mineIds.length) { %></optgroup><% } %>
+      </select>
+    </div>
+    <div class="field">
+      <label>Fuel</label>
+      <span class="seg lf-seg" id="fuel-seg">
+        <% for (const t of ['diesel', 'unleaded', 'adblue']) { %>
+          <input type="radio" id="ft-<%= t %>" name="fuel_type" value="<%= t %>" required <%= (selected ? selected.fuel_type : 'diesel') === t ? 'checked' : '' %>><label class="<%= t === 'adblue' ? 'na' : 'ok' %>" for="ft-<%= t %>"><%= FUEL_LABELS[t] %></label>
+        <% } %>
+      </span>
+    </div>
+  </div>
+  <div class="lf-row lf-nums">
+    <div class="field"><label for="litres">Litres</label><input id="litres" name="litres" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="0.00" required></div>
+    <div class="field"><label for="mileage">Mileage</label><input id="mileage" name="mileage" type="number" inputmode="numeric" min="0" step="1" placeholder="Odometer"></div>
+    <div class="field"><label for="fill_date">Date</label><input id="fill_date" name="fill_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+  </div>
+  <% if (myCards.length || otherCards.length) { const cOpt = (c) => [c.provider, c.card_ref ? '#' + c.card_ref : '', c.last4 ? '••' + c.last4 : '', c.reg ? '(' + c.reg + ')' : ''].filter(Boolean).join(' '); %>
   <div class="field">
-    <label for="vehicle_id">Vehicle</label>
-    <select id="vehicle_id" name="vehicle_id" required>
-      <option value="">Choose…</option>
-      <% if (mineIds.length) { %><optgroup label="My vehicles"><% for (const v of vehicles.filter((x) => mineIds.includes(x.id))) { %>
-        <option value="<%= v.id %>" data-fuel="<%= v.fuel_type %>" <%= selected && selected.id === v.id ? 'selected' : '' %>><%= v.reg %> – <%= [v.make, v.model].filter(Boolean).join(' ') %></option>
-      <% } %></optgroup><optgroup label="Other vehicles"><% } %>
-      <% for (const v of vehicles.filter((x) => !mineIds.includes(x.id))) { %>
-        <option value="<%= v.id %>" data-fuel="<%= v.fuel_type %>" <%= selected && selected.id === v.id ? 'selected' : '' %>><%= v.reg %> – <%= [v.make, v.model].filter(Boolean).join(' ') %></option>
-      <% } %>
-      <% if (mineIds.length) { %></optgroup><% } %>
+    <label for="fuel_card_id">Paid with</label>
+    <select id="fuel_card_id" name="fuel_card_id">
+      <% if (myCards.length) { %><optgroup label="My fuel cards"><% for (const c of myCards) { %>
+        <option value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>" <%= myCards.length === 1 ? 'selected' : '' %>><%= cOpt(c) %></option>
+      <% } %></optgroup><% } %>
+      <% if (otherCards.length) { %><optgroup label="<%= myCards.length ? 'Other fuel cards' : 'Fuel cards' %>"><% for (const c of otherCards) { %>
+        <option value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>"><%= cOpt(c) %><%= c.holder_display ? ' – ' + c.holder_display : '' %></option>
+      <% } %></optgroup><% } %>
+      <option value="" <%= myCards.length === 1 ? '' : 'selected' %>>Not a fuel card / paid another way</option>
     </select>
   </div>
-  <fieldset>
-    <legend>Fuel type</legend>
-    <span class="seg" id="fuel-seg">
-      <% for (const t of ['diesel', 'unleaded', 'adblue']) { %>
-        <input type="radio" id="ft-<%= t %>" name="fuel_type" value="<%= t %>" required <%= (selected ? selected.fuel_type : 'diesel') === t ? 'checked' : '' %>><label class="<%= t === 'adblue' ? 'na' : 'ok' %>" for="ft-<%= t %>"><%= FUEL_LABELS[t] %></label>
-      <% } %>
-    </span>
-  </fieldset>
-  <div class="form-grid">
-    <div class="field"><label for="litres">Litres</label><input id="litres" name="litres" type="number" inputmode="decimal" step="0.01" min="0.01" required></div>
-    <div class="field"><label for="fill_date">Date</label><input id="fill_date" name="fill_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
-    <div class="field"><label for="mileage">Mileage <span class="hint">(odometer)</span></label><input id="mileage" name="mileage" type="number" inputmode="numeric" min="0" step="1"></div>
-    <div class="field"><label for="station">Fuel station <span class="hint">(optional)</span></label><input id="station" name="station" type="text"></div>
-  </div>
-  <% if (myCards.length || otherCards.length) { const opt = (c) => `${c.label}${c.holder_display ? ' – ' + c.holder_display : ''}`; %>
-  <fieldset>
-    <legend>Fuel card used</legend>
-    <div class="card-pick">
-      <% for (const c of myCards) { %>
-      <label><input type="radio" name="card_choice" value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>" <%= myCards.length === 1 ? 'checked' : '' %>>
-        <span><strong><%= c.provider %></strong> <%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.last4 ? '••' + c.last4 : '' %></span>
-          <% if (c.reg || c.card_type) { %><span class="small muted" style="display:block"><%= [c.reg, c.card_type].filter(Boolean).join(' · ') %></span><% } %></span></label>
-      <% } %>
-      <% if (otherCards.length) { %>
-      <label><input type="radio" name="card_choice" value="other"> <span><%= myCards.length ? 'A different fuel card' : 'A fuel card' %></span></label>
-      <select id="other_card" aria-label="Which fuel card" hidden>
-        <option value="">Choose the card…</option>
-        <% for (const c of otherCards) { %><option value="<%= c.id %>" data-vehicle="<%= c.vehicle_id || '' %>"><%= opt(c) %></option><% } %>
-      </select>
-      <% } %>
-      <label><input type="radio" name="card_choice" value="" <%= myCards.length === 1 ? '' : 'checked' %>> <span>Not a fuel card / paid another way</span></label>
-    </div>
-    <input type="hidden" id="fuel_card_id" name="fuel_card_id">
-  </fieldset>
   <% } %>
-  <div class="field">
-    <label for="receipt">Receipt <span class="hint">(photo or PDF, up to 15 MB)</span></label>
+  <label class="lf-receipt" for="receipt">
     <input id="receipt" name="receipt" type="file" accept="image/*,application/pdf" required>
-  </div>
-  <div class="field"><label for="notes">Notes <span class="hint">(optional)</span></label><textarea id="notes" name="notes" style="min-height:60px"></textarea></div>
+    <img id="receipt-thumb" alt="" hidden>
+    <span class="lf-receipt-text"><strong id="receipt-name">Add receipt photo</strong><span class="hint" id="receipt-hint">Take a photo or choose a file (PDF ok, up to 15 MB)</span></span>
+  </label>
+  <details class="lf-more">
+    <summary>Fuel station and notes <span class="hint">(optional)</span></summary>
+    <div class="field"><label for="station">Fuel station</label><input id="station" name="station" type="text"></div>
+    <div class="field"><label for="notes">Notes</label><textarea id="notes" name="notes" style="min-height:60px"></textarea></div>
+  </details>
   <button class="btn primary big" type="submit">Save fuel entry</button>
 </form>
 <script>
-  const choices = [...document.querySelectorAll('input[name="card_choice"]')];
-  const other = document.getElementById('other_card');
-  function syncCard() {
-    const picked = choices.find((r) => r.checked);
-    if (other) other.hidden = !picked || picked.value !== 'other';
-    const hidden = document.getElementById('fuel_card_id');
-    if (hidden) hidden.value = picked && picked.value === 'other' ? other.value : (picked ? picked.value : '');
-  }
-  // If the person holds several cards, preselect the one linked to the chosen vehicle.
+  const vehicle = document.getElementById('vehicle_id');
+  const card = document.getElementById('fuel_card_id');
+  // Preselect the fuel card linked to the chosen vehicle, if there is one.
   function pickCard() {
-    const vid = document.getElementById('vehicle_id').value;
-    const mine = choices.find((r) => r.dataset.vehicle && r.dataset.vehicle === vid);
-    if (mine) mine.checked = true;
-    syncCard();
+    if (!card) return;
+    const linked = [...card.options].find((o) => o.dataset.vehicle && o.dataset.vehicle === vehicle.value);
+    if (linked) linked.selected = true;
   }
-  choices.forEach((r) => r.addEventListener('change', syncCard));
-  if (other) other.addEventListener('change', syncCard);
   pickCard();
-  document.querySelector('form.card').addEventListener('submit', (e) => {
-    syncCard();
-    const picked = choices.find((r) => r.checked);
-    if (picked && picked.value === 'other' && !other.value) { e.preventDefault(); other.focus(); alert('Please choose which fuel card you used.'); }
-  });
-  document.getElementById('vehicle_id').addEventListener('change', function () {
+  vehicle.addEventListener('change', function () {
     pickCard();
     const opt = this.selectedOptions[0];
     const fuel = opt && opt.dataset.fuel;
-    const adblue = document.getElementById('ft-adblue');
-    if (fuel && !adblue.checked) document.getElementById('ft-' + fuel).checked = true;
+    if (fuel && !document.getElementById('ft-adblue').checked) document.getElementById('ft-' + fuel).checked = true;
+  });
+  document.getElementById('receipt').addEventListener('change', function () {
+    const f = this.files[0];
+    const thumb = document.getElementById('receipt-thumb');
+    this.closest('.lf-receipt').classList.toggle('done', !!f);
+    document.getElementById('receipt-name').textContent = f ? f.name : 'Add receipt photo';
+    document.getElementById('receipt-hint').textContent = f ? 'Tap to change' : 'Take a photo or choose a file (PDF ok, up to 15 MB)';
+    if (f && f.type.startsWith('image/')) { thumb.src = URL.createObjectURL(f); thumb.hidden = false; } else thumb.hidden = true;
   });
 </script>
 <%- include('partials/footer') %>

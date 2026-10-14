@@ -125,10 +125,11 @@ test('admin and driver flows', async () => {
   assert.equal((await driver('GET', '/plant')).status, 403);
   assert.equal((await driver('GET', '/fuel')).status, 403);
   assert.equal((await driver('GET', '/fuel-cards')).status, 403);
-  // Dave's own two cards are offered as choices; the spare card is only in the "different card" list.
+  // Dave's own two cards are listed under "My fuel cards"; the spare card is under "Other fuel cards".
   const fuelForm = (await driver('GET', '/fuel/new')).text;
   assert.doesNotMatch(fuelForm, /7064056072235900127|7064 0560/);
-  assert.equal((fuelForm.match(/name="card_choice" value="\d+"/g) || []).length, 2);
+  const mine = fuelForm.split('label="My fuel cards"')[1].split('</optgroup>')[0];
+  assert.equal((mine.match(/<option value="\d+"/g) || []).length, 2);
   assert.match(fuelForm, /<option value="\d+"[^>]*>FastFuels #Spare/);
 
   const missing = await driver('POST', '/checks/vehicle', { asset_id: vehicle.id, check_date: status.isoDate() });
