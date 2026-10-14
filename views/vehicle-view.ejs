@@ -4,10 +4,15 @@
   <div class="actions">
     <a class="btn" href="/checks/vehicle/new?vehicle=<%= item.id %>">New walk-around</a>
     <a class="btn" href="/fuel/new?vehicle=<%= item.id %>">Log fuel</a>
-    <% if (isAdmin) { %><a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit</a><% } else { %><a class="btn" href="/defects/new?asset=vehicle:<%= item.id %>">Report defect</a><% } %>
+    <% if (isAdmin) { %><button class="btn" type="button" data-open="record-dlg">Record service</button><a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit</a><% } else { %><a class="btn" href="/defects/new?asset=vehicle:<%= item.id %>">Report defect</a><% } %>
   </div>
 </div>
 <%- include('partials/pane-end') %>
+<% const openDefects = defects.filter((d) => d.status === 'open'); if (openDefects.length) { %>
+<div class="alert-strip"><strong><%= openDefects.length %> open defect<%= openDefects.length > 1 ? 's' : '' %></strong>
+  <span><%= openDefects.map((d) => d.description).join(' · ') %></span>
+  <a href="#history" data-filter="defect">View</a></div>
+<% } %>
 <% const cls = (s) => ({ overdue: 'bad', soon: 'warn', ok: 'good' }[s.level] || ''); %>
 <div class="kpis">
   <div class="kpi <%= cls(item.walkaround) %>"><div class="label">Today's walk-around</div><div class="value" style="font-size:1.3rem"><%= item.walkaround.level === 'ok' ? 'Done' : 'Not done' %></div><div class="sub"><%- pill(item.walkaround) %></div></div>
@@ -37,17 +42,7 @@
           <div><% if (isAdmin) { %><a href="/fuel-cards/<%= c.id %>/edit"><%= label %></a><% } else { %><%= label %><% } %> <span class="pill <%= c.status === 'active' ? 'ok' : 'none' %>"><%= FUEL_CARD_STATUSES[c.status] %></span></div>
         <% } } %></dd>
       </dl>
-    </div>
-    <div class="card flush">
-      <h2>Walk-around checks</h2>
-      <% if (!checks.length) { %><p class="empty">No walk-around checks yet.</p><% } else { %>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Driver</th><th class="num">Mileage</th><th>Result</th></tr></thead>
-        <tbody><% for (const c of checks) { %>
-          <tr><td><a href="/checks/vehicle/<%= c.id %>"><%= ukDate(c.check_date) %></a></td><td><%= c.user_name %></td><td class="num"><%= num(c.mileage) %></td>
-            <td><%- c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' %></td></tr>
-        <% } %></tbody>
-      </table></div><% } %>
+      <% if (item.notes) { %><p style="white-space:pre-wrap;margin:12px 0 0"><%= item.notes %></p><% } %>
     </div>
     <div class="card flush">
       <h2>Fuel</h2>
@@ -61,53 +56,85 @@
     </div>
   </div>
   <div>
-    <% if (isAdmin) { %>
-    <form class="card" method="post" action="/vehicles/<%= item.id %>/records">
-      <h2>Record a service, MOT or tax renewal</h2>
-      <div class="form-grid">
-        <div class="field"><label for="kind">Type</label>
-          <select id="kind" name="kind"><option value="service">Service</option><option value="mot">MOT pass</option><option value="tax">Tax renewed</option><option value="repair">Repair</option></select></div>
-        <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
-        <div class="field" id="next-due-field"><label for="next_due">New expiry date <span class="hint" id="next-hint">(MOT: defaults to 1 year)</span></label><input id="next_due" name="next_due" type="date"></div>
-        <div class="field"><label for="reading">Mileage</label><input id="reading" name="reading" type="number" min="0" step="1"></div>
-        <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Garage"></div>
-      </div>
-      <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text"></div>
-      <button class="btn dark" type="submit">Save record</button>
-    </form>
-    <% } %>
-    <div class="card flush">
-      <h2>History</h2>
-      <% if (!records.length) { %><p class="empty">No service, MOT or tax records yet.</p><% } else { %>
-      <div class="table-wrap"><table>
-        <thead><tr><th>Date</th><th>Type</th><th>Expiry</th><th class="num">Mileage</th><th>Notes</th></tr></thead>
-        <tbody><% for (const r of records) { %>
-          <tr><td><%= ukDate(r.record_date) %></td><td><%= { service: 'Service', mot: 'MOT', tax: 'Tax', repair: 'Repair' }[r.kind] %></td><td><%= ukDate(r.next_due) %></td><td class="num"><%= num(r.reading) %></td><td><%= [r.done_by, r.notes].filter(Boolean).join(' · ') || '—' %></td></tr>
+<%
+  const kindName = { service: 'Service', mot: 'MOT', tax: 'Tax', repair: 'Repair' };
+  const events = [
+    ...records.map((r) => ({ type: 'service', date: r.record_date, label: kindName[r.kind] || r.kind, reading: r.reading, text: [r.done_by, r.notes, r.next_due ? 'expires ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · ') })),
+    ...checks.map((c) => ({ type: 'check', date: c.check_date, label: 'Walk-around', reading: c.mileage, href: '/checks/vehicle/' + c.id, text: c.user_name, result: c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' })),
+    ...defects.map((d) => ({ type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>' })),
+  ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+%>
+    <div class="card flush" id="history">
+      <div class="card-head"><h2>History</h2>
+        <div class="subnav tl-filter"><a href="#history" class="active" data-filter="all">All</a><a href="#history" data-filter="service">Services</a><a href="#history" data-filter="check">Walk-arounds</a><a href="#history" data-filter="defect">Defects</a></div></div>
+      <% if (!events.length) { %><p class="empty">Nothing recorded yet.</p><% } else { %>
+      <div class="table-wrap tl-scroll"><table>
+        <thead><tr><th>Date</th><th>Type</th><th class="num">Mileage</th><th>Details</th></tr></thead>
+        <tbody><% for (const e of events) { %>
+          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.reading != null ? num(e.reading) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %></td></tr>
         <% } %></tbody>
-      </table></div><% } %>
+      </table>
+      <p class="empty tl-none" hidden>Nothing of this type yet.</p></div><% } %>
     </div>
-    <div class="card flush">
-      <h2>Defects</h2>
-      <% if (!defects.length) { %><p class="empty">No defects reported.</p><% } else { %>
-      <div class="table-wrap"><table><tbody><% for (const d of defects) { %>
-        <tr><td class="nowrap"><%= ukDate(d.reported_at) %></td><td><%= d.description %><div class="small muted"><%= d.reported_by_name %><%= d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : '' %></div></td>
-          <td><% if (d.status === 'open') { %><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span><% } else { %><span class="pill ok">Resolved</span><% } %></td></tr>
-      <% } %></tbody></table></div>
-      <% if (isAdmin) { %><p class="empty" style="padding-top:8px"><a href="/defects?asset=vehicle">Manage defects →</a></p><% } %><% } %>
-    </div>
-    <% if (item.notes) { %><div class="card"><h2>Notes</h2><p style="white-space:pre-wrap;margin:0"><%= item.notes %></p></div><% } %>
   </div>
 </div>
+<% if (isAdmin) { %>
+<dialog id="record-dlg" class="dlg">
+  <form class="card" method="post" action="/vehicles/<%= item.id %>/records">
+    <div class="dlg-head"><h2>Record a service, MOT or tax renewal</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <div class="form-grid">
+      <div class="field"><label for="kind">Type</label>
+        <select id="kind" name="kind"><option value="service">Service</option><option value="mot">MOT pass</option><option value="tax">Tax renewed</option><option value="repair">Repair</option></select></div>
+      <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+      <div class="field" id="next-due-field"><label for="next_due">New expiry date <span class="hint" id="next-hint">(MOT: defaults to 1 year)</span></label><input id="next_due" name="next_due" type="date"></div>
+      <div class="field"><label for="reading">Mileage</label><input id="reading" name="reading" type="number" min="0" step="1"></div>
+      <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Garage"></div>
+    </div>
+    <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text"></div>
+    <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Save record</button></div>
+  </form>
+</dialog>
+<% } %>
 <script>
   (function () {
-    if (!document.getElementById('kind')) return;
-    const kind = document.getElementById('kind'), field = document.getElementById('next-due-field'), input = document.getElementById('next_due'), hint = document.getElementById('next-hint');
-    function upd() {
-      field.style.display = kind.value === 'mot' || kind.value === 'tax' ? '' : 'none';
-      input.required = kind.value === 'tax';
-      hint.textContent = kind.value === 'mot' ? '(defaults to 1 year)' : '(required)';
+    const kind = document.getElementById('kind');
+    if (kind) {
+      const field = document.getElementById('next-due-field'), input = document.getElementById('next_due'), hint = document.getElementById('next-hint');
+      function upd() {
+        field.style.display = kind.value === 'mot' || kind.value === 'tax' ? '' : 'none';
+        input.required = kind.value === 'tax';
+        hint.textContent = kind.value === 'mot' ? '(defaults to 1 year)' : '(required)';
+      }
+      kind.addEventListener('change', upd); upd();
+      const dlg = document.getElementById('record-dlg');
+      document.querySelectorAll('[data-open="record-dlg"]').forEach((b) => b.addEventListener('click', () => dlg.showModal()));
+      dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
+      dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
     }
-    kind.addEventListener('change', upd); upd();
+    const rows = document.querySelectorAll('#history tr[data-type]'), none = document.querySelector('.tl-none');
+    let current = 'all';
+    function filter(t) {
+      current = t;
+      let shown = 0;
+      rows.forEach((r) => { const on = t === 'all' || r.dataset.type === t; r.hidden = !on; if (on) shown++; });
+      document.querySelectorAll('.tl-filter a').forEach((a) => a.classList.toggle('active', a.dataset.filter === t));
+      if (none) none.hidden = shown > 0;
+    }
+    document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', (e) => {
+      if (a.closest('.tl-filter')) e.preventDefault(); // filter in place, don't jump the page
+      filter(a.dataset.filter);
+    }));
+    // Size the box to the first six rows of the full list and keep it that size whichever filter is picked.
+    // On a computer screen, shrink it further if needed so the page itself doesn't scroll.
+    const box = document.querySelector('.tl-scroll');
+    function fit() {
+      if (!box || current !== 'all') return;
+      box.style.height = rows.length > 6 ? rows[6].offsetTop + 'px' : '';
+      if (innerWidth <= 900 || rows.length <= 6) return;
+      const over = document.documentElement.scrollHeight - innerHeight;
+      if (over > 0) box.style.height = Math.max(200, box.offsetHeight - over) + 'px';
+    }
+    fit(); addEventListener('resize', fit);
   })();
 </script>
 <%- include('partials/footer') %>

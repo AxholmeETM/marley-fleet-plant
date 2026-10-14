@@ -16,7 +16,7 @@
       <%
         // [href, label, other paths that belong to the same section]
         const nav = isAdmin
-          ? [['/', 'Dashboard'], ['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/fuel-cards', 'Fuel cards', ['/fuel']], ['/equipment', 'Equipment'], ['/admin', 'Admin', ['/users', '/projects']]]
+          ? [['/', 'Dashboard'], ['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/fuel-cards', 'Fuel cards'], ['/fuel', 'Fuel Logs'], ['/equipment', 'Equipment'], ['/admin', 'Admin', ['/users', '/projects']]]
           : user.employee_type === 'site_manager'
             ? [['/', 'Home'], ['/plant', 'Plant'], ['/equipment', 'Equipment'], ['/checks/plant/new', 'Plant check'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']]
             : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']];
@@ -42,7 +42,6 @@
 <%
   // Second-level tabs for the sections that hold more than one page.
   const SUBNAV = {
-    '/fuel-cards': [['/fuel', 'Fuel log & receipts', (p) => p === '/fuel' || /^\/fuel\/(\d+|next)$/.test(p)], ['/fuel-cards', 'Cards', (p) => p === '/fuel-cards' || /^\/fuel-cards\/(new|\d+)/.test(p)]],
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
     '/admin': [['/admin', 'Overview', (p) => p === '/admin'], ['/users', 'Users', (p) => p.startsWith('/users')], ['/projects', 'Projects', (p) => p.startsWith('/projects')]],
   };

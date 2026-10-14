@@ -173,7 +173,7 @@ router.get('/fuel', requireAdmin, async (req, res) => {
   vehicles.forEach((v) => Object.assign(v, mpg[v.id] || {}));
 
   res.render('fuel-dashboard', {
-    title: 'Fuel dashboard', period: p, type, show, entries, byType, counts,
+    title: 'Fuel Logs', period: p, type, show, entries, byType, counts,
     board: req.query.board === 'vehicles' ? 'vehicles' : 'drivers', drivers, vehicles,
     query: req.query,
   });
@@ -193,7 +193,7 @@ router.get('/fuel/:id', requireAdmin, async (req, res) => {
   if (!entry) return res.status(404).render('error', { title: 'Not found', message: 'Fuel entry not found.' });
   const remaining = (await get('SELECT COUNT(*) AS n FROM fuel_entries WHERE verified = 0 AND id != ?', entry.id)).n;
   const cards = await all('SELECT id, provider, card_ref, last4, holder, status FROM fuel_cards ORDER BY status, provider, card_ref');
-  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, crumbs: [['Fuel log & receipts', '/fuel'], [`${entry.reg} · ${ukDate(entry.fill_date)}`]], entry, remaining, FUEL_TYPES, cards });
+  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, crumbs: [['Fuel Logs', '/fuel'], [`${entry.reg} · ${ukDate(entry.fill_date)}`]], entry, remaining, FUEL_TYPES, cards });
 });
 
 router.post('/fuel/:id', requireAdmin, async (req, res) => {

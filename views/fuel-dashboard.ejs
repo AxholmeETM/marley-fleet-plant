@@ -6,7 +6,7 @@
   const top = Math.max(1, ...board_rows.map((r) => r.fuel || r.adblue));
 %>
 <div class="page-head">
-  <div><h1>Fuel dashboard</h1><p class="muted" style="margin:0"><%= ukDate(period.from) %> to <%= ukDate(period.to) %></p></div>
+  <div><h1>Fuel Logs</h1><p class="muted" style="margin:0"><%= ukDate(period.from) %> to <%= ukDate(period.to) %></p></div>
   <div class="actions">
     <a class="btn dark" href="/fuel/next">Check receipts one by one</a>
     <a class="btn primary" href="/fuel/new">Log fuel</a>
