@@ -1,8 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1><span class="reg"><%= item.reg %></span> <span style="font-weight:400"><%= [item.make, item.model].filter(Boolean).join(' ') %></span></h1>
-    <p class="muted" style="margin:0"><%= [item.asset_no, VEHICLE_CATEGORIES[item.category], OWNERS[item.owner], item.colour, item.vehicle_type, FUEL_LABELS[item.fuel_type]].filter(Boolean).join(' · ') %> · User: <%= item.driver_display || 'none' %>
-      <% if (item.status !== 'active') { %> · <span class="pill none"><%= VEHICLE_STATUSES[item.status] %></span><% } %></p></div>
+  <div><h1><span class="reg"><%= item.reg %></span> <span style="font-weight:400"><%= [item.make, item.model].filter(Boolean).join(' ') %></span></h1></div>
   <div class="actions">
     <a class="btn" href="/checks/vehicle/new?vehicle=<%= item.id %>">New walk-around</a>
     <a class="btn" href="/fuel/new?vehicle=<%= item.id %>">Log fuel</a>
@@ -24,6 +22,14 @@
     <div class="card">
       <h2>Details</h2>
       <dl class="facts">
+        <dt>Status</dt><dd><span class="pill <%= item.status === 'active' ? 'ok' : 'none' %>"><%= VEHICLE_STATUSES[item.status] || item.status %></span></dd>
+        <dt>Fleet no</dt><dd><%= item.asset_no || '—' %></dd>
+        <dt>Category</dt><dd><%= VEHICLE_CATEGORIES[item.category] || '—' %></dd>
+        <dt>Owner</dt><dd><%= OWNERS[item.owner] || item.owner || '—' %></dd>
+        <dt>Colour</dt><dd><%= item.colour || '—' %></dd>
+        <% if (item.vehicle_type) { %><dt>Vehicle type</dt><dd><%= item.vehicle_type %></dd><% } %>
+        <dt>Fuel</dt><dd><%= FUEL_LABELS[item.fuel_type] || '—' %></dd>
+        <dt>Assigned driver</dt><dd><%= item.driver_display || 'None' %></dd>
         <dt>Tracked</dt><dd><%= TRACKED[item.tracked] || 'Not known' %></dd>
         <dt>Driver app account</dt><dd><%= item.driver_name || 'None – walk-arounds not expected' %></dd>
         <% if (isAdmin) { %><dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd><% } %>
