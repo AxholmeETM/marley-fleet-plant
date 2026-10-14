@@ -42,7 +42,7 @@
 <%
   // Second-level tabs for the sections that hold more than one page.
   const SUBNAV = {
-    '/fuel-cards': [['/fuel', 'Fuel log & receipts', (p) => p === '/fuel' || /^\/fuel\/(\d+|next)$/.test(p)], ['/fuel-cards', 'Cards', (p) => p === '/fuel-cards' || /^\/fuel-cards\/(new|\d+)/.test(p)], ['/fuel-cards/assign', 'Assign cards to people', (p) => p === '/fuel-cards/assign']],
+    '/fuel-cards': [['/fuel', 'Fuel log & receipts', (p) => p === '/fuel' || /^\/fuel\/(\d+|next)$/.test(p)], ['/fuel-cards', 'Cards', (p) => p === '/fuel-cards' || /^\/fuel-cards\/(new|\d+)/.test(p)]],
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
     '/admin': [['/admin', 'Overview', (p) => p === '/admin'], ['/users', 'Users', (p) => p.startsWith('/users')], ['/projects', 'Projects', (p) => p.startsWith('/projects')]],
   };

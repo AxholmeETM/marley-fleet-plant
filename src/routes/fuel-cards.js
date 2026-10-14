@@ -6,6 +6,7 @@ const { isValidDate, dueStatus } = require('../status');
 const { FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES } = require('../categories');
 
 const router = express.Router();
+// Fuel card pages: every admin can see and manage them; nobody else can.
 router.use('/fuel-cards', requireAdmin);
 
 const CARD_SQL = `SELECT c.*, v.reg, v.id AS vehicle_id, u.name AS user_name,
@@ -67,28 +68,6 @@ router.get('/fuel-cards', async (req, res) => {
 async function form(res, title, item) {
   res.render('fuel-card-form', { title, crumbs: [['Fuel cards', '/fuel-cards'], [item.id ? cardLabel(item) : 'Add card']], item, vehicles: await listVehicles(), users: await activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
 }
-
-// Drag-and-drop board: one column per user, plus the cards nobody has.
-router.get('/fuel-cards/assign', async (req, res) => {
-  const users = await activeUsers();
-  const ids = new Set(users.map((u) => u.id));
-  const cards = (await all(`${CARD_SQL} WHERE c.status = 'active' ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorate);
-  const lanes = [{ id: '', name: 'Not assigned', cards: cards.filter((c) => !ids.has(c.user_id)) },
-    ...users.map((u) => ({ ...u, cards: cards.filter((c) => c.user_id === u.id) }))];
-  res.render('fuel-card-assign', { title: 'Assign fuel cards', lanes, users });
-});
-
-router.post('/fuel-cards/:id/assign', async (req, res) => {
-  const card = await get('SELECT * FROM fuel_cards WHERE id = ?', Number(req.params.id));
-  if (!card) throw new UserError('Fuel card not found.', 404);
-  const userId = await checkUser(req.body.user_id);
-  await run('UPDATE fuel_cards SET user_id = ? WHERE id = ?', userId, card.id);
-  const who = userId ? (await get('SELECT name FROM users WHERE id = ?', userId)).name : null;
-  const message = who ? `${cardLabel(card)} assigned to ${who}.` : `${cardLabel(card)} unassigned.`;
-  if (req.get('x-requested-with') === 'fetch') return res.json({ ok: true, message });
-  req.flash('success', message);
-  res.redirect('/fuel-cards/assign');
-});
 
 router.get('/fuel-cards/new', async (req, res) => await form(res, 'Add fuel card', { status: 'active', vehicle_id: Number(req.query.vehicle) || null }));
 

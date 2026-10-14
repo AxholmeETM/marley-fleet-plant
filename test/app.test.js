@@ -106,17 +106,12 @@ test('admin and driver flows', async () => {
   await admin('POST', '/fuel-cards', { provider: 'Key Fuels', card_ref: 'K7', card_number: '5555', status: 'active' });
   await admin('POST', '/fuel-cards', { provider: 'FastFuels', card_ref: 'Spare', card_number: '9999', status: 'active' });
   const [esso, key] = [(await get("SELECT id FROM fuel_cards WHERE card_ref = '12'")).id, (await get("SELECT id FROM fuel_cards WHERE card_ref = 'K7'")).id];
-  // Assign two cards to Dave: one from the board by drag (fetch), one through the plain form.
-  const moved = await admin('POST', `/fuel-cards/${esso}/assign`, { user_id: dave });
-  assert.equal(moved.status, 302);
-  assert.equal((await admin('POST', `/fuel-cards/${key}/assign`, { user_id: dave })).status, 302);
-  assert.equal((await admin('POST', `/fuel-cards/${key}/assign`, { user_id: '99999' })).status, 400);
+  // Give two cards to Dave from the card form; the assign board has gone.
+  await admin('POST', `/fuel-cards/${esso}`, { provider: 'Esso', card_ref: '12', card_number: '7064 0560 7223 5900 127', holder: 'Dave Driver', status: 'active', expiry: '2027-06', user_id: dave });
+  await admin('POST', `/fuel-cards/${key}`, { provider: 'Key Fuels', card_ref: 'K7', card_number: '5555', status: 'active', user_id: dave });
+  assert.equal((await admin('POST', `/fuel-cards/${key}`, { provider: 'Key Fuels', card_ref: 'K7', status: 'active', user_id: '99999' })).status, 400);
   assert.equal((await get('SELECT COUNT(*) AS n FROM fuel_cards WHERE user_id = ?', dave)).n, 2);
-  const json = await fetch(`${base}/fuel-cards/${key}/assign`, { method: 'POST', redirect: 'manual' });
-  assert.notEqual(json.status, 200); // not signed in
-  const board = await admin('GET', '/fuel-cards/assign');
-  assert.match(board.text, /Dave Driver/);
-  assert.match(board.text, /Not assigned/);
+  assert.equal((await admin('GET', '/fuel-cards/assign')).status, 404);
 
   assert.match((await admin('GET', '/admin')).text, /Fleet drivers/);
   const dash = await admin('GET', '/');
@@ -129,7 +124,7 @@ test('admin and driver flows', async () => {
   assert.match((await driver('GET', '/')).text, /Do today&#39;s walk-around check|Do today's walk-around check/);
   assert.equal((await driver('GET', '/plant')).status, 403);
   assert.equal((await driver('GET', '/fuel')).status, 403);
-  assert.equal((await driver('GET', '/fuel-cards/assign')).status, 403);
+  assert.equal((await driver('GET', '/fuel-cards')).status, 403);
   // Dave's own two cards are offered as choices; the spare card is only in the "different card" list.
   const fuelForm = (await driver('GET', '/fuel/new')).text;
   assert.doesNotMatch(fuelForm, /7064056072235900127|7064 0560/);
