@@ -1,6 +1,7 @@
 const express = require('express');
 const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listProjects, listPlant, getPlant, listDefects } = require('../queries');
+const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
 const { requireAdmin, requirePlantAccess, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
 const { serviceWork, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE, INSPECTION_TYPES } = require('../categories');
@@ -141,8 +142,9 @@ router.get('/plant/:id', async (req, res) => {
     WHERE c.plant_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 20`, item.id);
   const records = await all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
   const defects = await listDefects({ status: 'all', assetType: 'plant', assetId: item.id, limit: 50 });
+  const documents = await listDocs('plant', item.id);
   res.locals.navActive = SECTIONS[(CATEGORY[item.category] || CATEGORY.misc).section].href;
-  res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, crumbs: plantCrumbs(item), item, checks, records, defects, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
+  res.render('plant-view', { title: `${item.plant_no} – ${item.description}`, crumbs: plantCrumbs(item), item, checks, records, defects, documents, DOC_KINDS, plan: servicePlan(item, records), serviceWork, firstMark: parseSchedule(item.service_schedule)[0], CATEGORY, OWNERS, PLANT_STATUSES, INSPECTION_TYPES });
 });
 
 router.get('/plant/:id/edit', requireAdmin, async (req, res) => {
@@ -162,28 +164,42 @@ router.post('/plant/:id', requireAdmin, async (req, res) => {
   res.redirect(`/plant/${id}`);
 });
 
-router.post('/plant/:id/records', async (req, res) => {
+router.post('/plant/:id/records', docUpload, async (req, res) => {
   const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Plant not found.', 404);
-  const kind = ['service', 'loler', 'repair'].includes(req.body.kind) ? req.body.kind : 'service';
+  const kind = ['service', 'loler', 'thorough', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
   if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
+  const docs = { assetType: 'plant', assetId: item.id, kind, userId: req.user.id };
+  if (kind === 'defect') {
+    const description = text(req.body.notes);
+    if (!description) throw new UserError('Please describe the defect.');
+    const severity = ['minor', 'major', 'unsafe'].includes(req.body.severity) ? req.body.severity : 'minor';
+    await transaction(async () => {
+      const defectId = (await run('INSERT INTO defects (asset_type, asset_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?)',
+        'plant', item.id, description, severity, req.user.id)).lastInsertRowid;
+      await saveDocs(req.files, { ...docs, defectId });
+    });
+    req.flash('success', 'Defect reported.');
+    return res.redirect(`/plant/${item.id}`);
+  }
+  const inspection = kind === 'loler' || kind === 'thorough';
   const hours = numberField(req.body.reading, 'Hours') ?? (kind === 'service' && item.tracks_hours ? item.running_hours : null);
-  const nextDue = kind === 'loler' ? dateField(req.body.next_due, 'Next due date') : null;
+  const nextDue = inspection ? dateField(req.body.next_due, 'Next due date') : null;
   const certNo = text(req.body.cert_no);
   await transaction(async () => {
-    await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?)`,
-      item.id, kind, date, hours, nextDue, text(req.body.done_by), [certNo && `Cert ${certNo}`, text(req.body.notes)].filter(Boolean).join(' · ') || null, req.user.id);
+    const recordId = (await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      item.id, kind, date, hours, nextDue, text(req.body.done_by), [certNo && `Cert ${certNo}`, text(req.body.notes)].filter(Boolean).join(' · ') || null, req.user.id)).lastInsertRowid;
     if (kind === 'service') {
       await run('UPDATE plant SET last_service_date = ?, last_service_hours = ?, running_hours = GREATEST(running_hours, COALESCE(?::double precision, 0)) WHERE id = ?', date, hours, hours, item.id);
-    } else if (kind === 'loler') {
+    } else if (inspection) {
       await run('UPDATE plant SET last_loler_date = ?, inspection_due = ?, cert_no = COALESCE(?, cert_no) WHERE id = ?', date, nextDue, certNo, item.id);
     } else if (hours != null) {
       await run('UPDATE plant SET running_hours = GREATEST(running_hours, ?) WHERE id = ?', hours, item.id);
     }
+    await saveDocs(req.files, { ...docs, recordId });
   });
-  const label = INSPECTION_TYPES[item.inspection_type] || 'Inspection';
-  req.flash('success', { service: 'Service recorded.', loler: `${label} recorded.`, repair: 'Repair recorded.' }[kind]);
+  req.flash('success', `${DOC_KINDS.plant[kind]} recorded.`);
   res.redirect(`/plant/${item.id}`);
 });
 

@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <div class="page-head"><div><h1>Report a defect</h1><p class="muted" style="margin:0">For anything wrong with <%= plant.length ? 'a vehicle or piece of plant' : 'your vehicle' %> outside of a check.</p></div></div>
 <%- include('partials/pane-end') %>
-<form class="card" method="post" action="/defects" style="max-width:640px">
+<form class="card" method="post" action="/defects" enctype="multipart/form-data" style="max-width:640px">
   <div class="field"><label for="asset">Plant or vehicle</label>
     <select id="asset" name="asset" required>
       <option value="">Choose…</option>
@@ -15,6 +15,7 @@
       <option value="major">Major – needs fixing quickly</option>
       <option value="unsafe">Unsafe – do not use</option>
     </select></div>
+  <div class="field"><label for="docs">Photos or documents <span class="hint">(optional, photos or PDFs)</span></label><input id="docs" name="docs" type="file" accept="image/*,application/pdf" multiple></div>
   <button class="btn primary big" type="submit">Report defect</button>
 </form>
 <%- include('partials/footer') %>

@@ -1,0 +1,16 @@
+<% const docType = item.plant_no ? 'plant' : 'vehicle'; const docKinds = DOC_KINDS[docType]; const canAddDocs = docType === 'plant' || isAdmin; %>
+<details class="card docs" id="documents">
+  <summary><h2>Documents</h2><span class="count"><%= documents.length %></span></summary>
+  <% if (!documents.length) { %><p class="empty">No documents yet. Attach them when you add a record, or upload one below.</p><% } else { %>
+  <ul class="doc-list"><% for (const d of documents) { %>
+    <li><a href="/documents/<%= d.id %>" target="_blank" rel="noopener"><%= d.name %></a>
+      <span class="small muted"><%= docKinds[d.kind] || d.kind %> · <%= ukDate(d.created_at) %><%= d.user_name ? ' · ' + d.user_name : '' %></span></li>
+  <% } %></ul><% } %>
+  <% if (canAddDocs) { %>
+  <form class="doc-add" method="post" action="/documents" enctype="multipart/form-data">
+    <input type="hidden" name="asset" value="<%= docType %>:<%= item.id %>">
+    <select name="kind" aria-label="Document type"><% for (const [k, label] of Object.entries(docKinds)) { %><option value="<%= k %>" <%= k === 'other' ? 'selected' : '' %>><%= label %></option><% } %></select>
+    <input name="docs" type="file" accept="image/*,application/pdf" multiple required aria-label="Files">
+    <button class="btn" type="submit">Upload</button>
+  </form><% } %>
+</details>

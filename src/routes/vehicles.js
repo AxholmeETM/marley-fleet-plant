@@ -1,6 +1,7 @@
 const express = require('express');
 const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listVehicles, getVehicle, listDefects, listDrivers } = require('../queries');
+const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
 const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
 const { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, FUEL_CARD_STATUSES } = require('../categories');
@@ -104,8 +105,9 @@ router.get('/vehicles/:id', async (req, res) => {
     WHERE f.vehicle_id = ? ${isAdmin(req.user) ? '' : 'AND f.user_id = ' + Number(req.user.id)} ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
   const defects = await listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
   const cards = await all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
+  const documents = await listDocs('vehicle', item.id);
   const crumbs = isAdmin(req.user) ? [['Fleet', '/vehicles'], [VEHICLE_CATEGORIES[item.category] || 'Vehicles', `/vehicles?category=${item.category}`], [item.reg]] : [['Home', '/'], [item.reg]];
-  res.render('vehicle-view', { title: item.reg, crumbs, item, checks, records, fuel, defects, cards, addMonths, addDays, ...LOOKUPS });
+  res.render('vehicle-view', { title: item.reg, crumbs, item, checks, records, fuel, defects, cards, documents, DOC_KINDS, addMonths, addDays, ...LOOKUPS });
 });
 
 router.get('/vehicles/:id/edit', async (req, res) => {
@@ -124,20 +126,34 @@ router.post('/vehicles/:id', async (req, res) => {
   res.redirect(`/vehicles/${id}`);
 });
 
-// Record a service, MOT pass or tax renewal; updates the vehicle's due dates.
-router.post('/vehicles/:id/records', async (req, res) => {
+// Record a service, MOT pass, tax renewal, repair or defect, with any documents; updates the vehicle's due dates.
+router.post('/vehicles/:id/records', docUpload, async (req, res) => {
   const item = await get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Vehicle not found.', 404);
-  const kind = ['service', 'mot', 'tax', 'repair'].includes(req.body.kind) ? req.body.kind : 'service';
+  const kind = ['service', 'mot', 'tax', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
   if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
+  const docs = { assetType: 'vehicle', assetId: item.id, kind, userId: req.user.id };
+  if (kind === 'defect') {
+    const description = text(req.body.notes);
+    if (!description) throw new UserError('Please describe the defect.');
+    const severity = ['minor', 'major', 'unsafe'].includes(req.body.severity) ? req.body.severity : 'minor';
+    await transaction(async () => {
+      const defectId = (await run('INSERT INTO defects (asset_type, asset_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?)',
+        'vehicle', item.id, description, severity, req.user.id)).lastInsertRowid;
+      await saveDocs(req.files, { ...docs, defectId });
+    });
+    req.flash('success', 'Defect reported.');
+    return res.redirect(`/vehicles/${item.id}`);
+  }
   let nextDue = dateField(req.body.next_due, 'Next due date');
   if (kind === 'mot' && !nextDue) nextDue = addDays(addMonths(date, 12), -1);
   if (kind === 'tax' && !nextDue) throw new UserError('Please enter the date the new tax runs until.');
   const mileage = numberField(req.body.reading, 'Mileage', { integer: true });
   await transaction(async () => {
-    await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('vehicle', ?, ?, ?, ?, ?, ?, ?, ?)`,
-      item.id, kind, date, mileage, nextDue, text(req.body.done_by), text(req.body.notes), req.user.id);
+    const recordId = (await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('vehicle', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      item.id, kind, date, mileage, nextDue, text(req.body.done_by), text(req.body.notes), req.user.id)).lastInsertRowid;
+    await saveDocs(req.files, { ...docs, recordId });
     if (kind === 'service') await run('UPDATE vehicles SET last_service_date = ? WHERE id = ?', date, item.id);
     if (kind === 'mot') await run('UPDATE vehicles SET mot_due = ? WHERE id = ?', nextDue, item.id);
     if (kind === 'tax') await run('UPDATE vehicles SET tax_due = ? WHERE id = ?', nextDue, item.id);

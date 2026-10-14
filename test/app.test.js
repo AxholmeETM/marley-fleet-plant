@@ -207,6 +207,36 @@ test('admin and driver flows', async () => {
   await admin('POST', `/vehicles/${vehicle.id}/records`, { kind: 'mot', record_date: '2026-03-01' });
   assert.equal((await get('SELECT mot_due FROM vehicles WHERE id = ?', vehicle.id)).mot_due, '2027-02-28');
 
+  // Records and defects can carry documents; they show on the asset page and only to people who can see the asset.
+  const pdf = () => new Blob([Buffer.from('%PDF-1.4')], { type: 'application/pdf' });
+  const exam = new FormData();
+  exam.append('kind', 'thorough');
+  exam.append('record_date', status.isoDate());
+  exam.append('cert_no', 'TE9');
+  exam.append('docs', pdf(), 'Thorough exam.pdf');
+  assert.equal((await admin('POST', `/plant/${sling.id}/records`, exam)).status, 302);
+  const examDoc = await get("SELECT * FROM documents WHERE kind = 'thorough'");
+  assert.ok(examDoc.record_id);
+  assert.equal((await admin('GET', `/documents/${examDoc.id}`)).status, 200);
+  assert.equal((await manager('GET', `/documents/${examDoc.id}`)).status, 200);
+  assert.equal((await driver('GET', `/documents/${examDoc.id}`)).status, 404);
+  assert.match((await admin('GET', `/plant/${sling.id}`)).text, /Thorough exam\.pdf/);
+  const vDefect = new FormData();
+  vDefect.append('kind', 'defect');
+  vDefect.append('notes', 'Cracked windscreen');
+  vDefect.append('severity', 'major');
+  vDefect.append('docs', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xe0])], { type: 'image/jpeg' }), 'screen.jpg');
+  assert.equal((await admin('POST', `/vehicles/${vehicle.id}/records`, vDefect)).status, 302);
+  const screen = await get("SELECT d.* FROM documents d JOIN defects f ON f.id = d.defect_id WHERE f.description = 'Cracked windscreen'");
+  assert.equal(screen.asset_type, 'vehicle');
+  assert.equal((await driver('GET', `/documents/${screen.id}`)).status, 200);
+  assert.equal((await manager('GET', `/documents/${screen.id}`)).status, 404);
+  const svg = new FormData();
+  svg.append('asset', `plant:${sling.id}`);
+  svg.append('docs', new Blob(['<svg/>'], { type: 'image/svg+xml' }), 'x.svg');
+  assert.equal((await admin('POST', '/documents', svg)).status, 400);
+  await run("DELETE FROM defects WHERE description = 'Cracked windscreen'");
+
   const defect = await get("SELECT id FROM defects WHERE asset_type = 'vehicle'");
   await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'Tyre replaced' });
   assert.equal((await get('SELECT status FROM defects WHERE id = ?', defect.id)).status, 'resolved');

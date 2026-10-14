@@ -1,5 +1,6 @@
 const express = require('express');
-const { run, get } = require('../db');
+const { run, get, transaction } = require('../db');
+const { upload: docUpload, saveDocs } = require('../documents');
 const { listDefects, listPlant, listVehicles } = require('../queries');
 const { CATEGORIES } = require('../categories');
 const { requireAdmin, isAdmin, canUsePlant, canUseVehicle, UserError, text } = require('../auth');
@@ -24,7 +25,7 @@ router.get('/defects/new', async (req, res) => {
   });
 });
 
-router.post('/defects', async (req, res) => {
+router.post('/defects', docUpload, async (req, res) => {
   const [assetType, idStr] = String(req.body.asset || '').split(':');
   const table = assetType === 'plant' ? 'plant' : assetType === 'vehicle' ? 'vehicles' : null;
   const asset = table && await get(`SELECT * FROM ${table} WHERE id = ?`, Number(idStr));
@@ -33,8 +34,11 @@ router.post('/defects', async (req, res) => {
   const description = text(req.body.description);
   if (!description) throw new UserError('Please describe the defect.');
   const severity = ['minor', 'major', 'unsafe'].includes(req.body.severity) ? req.body.severity : 'minor';
-  await run('INSERT INTO defects (asset_type, asset_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?)',
-    assetType, Number(idStr), description, severity, req.user.id);
+  await transaction(async () => {
+    const defectId = (await run('INSERT INTO defects (asset_type, asset_id, description, severity, reported_by) VALUES (?, ?, ?, ?, ?)',
+      assetType, Number(idStr), description, severity, req.user.id)).lastInsertRowid;
+    await saveDocs(req.files, { assetType, assetId: Number(idStr), kind: 'defect', defectId, userId: req.user.id });
+  });
   req.flash('success', 'Defect reported. The office has been notified on the dashboard.');
   res.redirect(req.user.role === 'admin' ? '/defects' : '/');
 });

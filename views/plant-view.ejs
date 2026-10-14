@@ -5,7 +5,7 @@
   <div class="actions">
     <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a>
-    <button class="btn" type="button" data-open="record-dlg">Record service</button>
+    <button class="btn" type="button" data-open="record-dlg">Add record</button>
     <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a><% } %>
   </div>
 </div>
@@ -48,14 +48,16 @@
       </dl>
       <% if (item.notes) { %><p style="white-space:pre-wrap;margin:12px 0 0"><%= item.notes %></p><% } %>
     </div>
+    <%- include('partials/documents') %>
   </div>
   <div>
 <%
-  const kindName = (r) => r.kind === 'loler' ? insp : r.kind === 'repair' ? 'Repair' : 'Service';
+  const kindName = (r) => r.kind === 'loler' ? (item.inspection_type === 'loler' || item.inspection_type === 'thorough' ? 'LOLER' : insp) : DOC_KINDS.plant[r.kind] || 'Service';
+  const docsFor = (key, id) => documents.filter((d) => d[key] === id);
   const events = [
-    ...records.map((r) => ({ type: 'service', date: r.record_date, label: kindName(r), hours: r.reading, text: [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · ') })),
+    ...records.map((r) => ({ type: 'service', date: r.record_date, label: kindName(r), hours: r.reading, text: [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · '), docs: docsFor('record_id', r.id) })),
     ...checks.map((c) => ({ type: 'check', date: c.check_date, label: 'Check sheet', hours: c.hours, href: '/checks/plant/' + c.id, text: [c.user_name, c.job_ref].filter(Boolean).join(' · '), result: c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' })),
-    ...defects.map((d) => ({ type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>' })),
+    ...defects.map((d) => ({ type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>', docs: docsFor('defect_id', d.id) })),
   ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 %>
     <div class="card flush" id="history">
@@ -65,7 +67,7 @@
       <div class="table-wrap tl-scroll"><table>
         <thead><tr><th>Date</th><th>Type</th><th class="num">Hours</th><th>Details</th></tr></thead>
         <tbody><% for (const e of events) { %>
-          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %></td></tr>
+          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %><% if (e.docs && e.docs.length) { %><span class="doc-links"><% for (const d of e.docs) { %><a href="/documents/<%= d.id %>" target="_blank" rel="noopener" title="<%= d.name %>">📎 <%= e.docs.length > 1 ? d.name.slice(0, 18) : 'Document' %></a><% } %></span><% } %></td></tr>
         <% } %></tbody>
       </table>
       <p class="empty tl-none" hidden>Nothing of this type yet.</p></div><% } %>
@@ -73,27 +75,41 @@
   </div>
 </div>
 <dialog id="record-dlg" class="dlg">
-  <form class="card" method="post" action="/plant/<%= item.id %>/records">
-    <div class="dlg-head"><h2>Record a service, <%= item.loler.level === 'none' ? 'test' : insp === 'LOLER' ? insp : insp.toLowerCase() %> or repair</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+  <form class="card" method="post" action="/plant/<%= item.id %>/records" enctype="multipart/form-data">
+    <div class="dlg-head"><h2>Add a record</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
     <div class="form-grid">
       <div class="field"><label for="kind">Type</label><select id="kind" name="kind">
         <option value="service"><%= item.tracks_hours && item.service.name ? item.service.name : 'Service' %></option>
-        <option value="loler"><%= item.loler.level === 'none' ? 'LOLER / test / calibration' : insp %></option>
-        <option value="repair">Repair</option></select></div>
-      <div class="field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
-      <% if (item.tracks_hours) { %><div class="field"><label for="reading">Running hours <span class="hint">(at the time)</span></label><input id="reading" name="reading" type="number" step="0.1" min="0" value="<%= item.running_hours %>"></div><% } %>
-      <div class="field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Fitter / dealer / test company"></div>
+        <option value="loler"><%= ['loler', 'thorough', 'none'].includes(item.inspection_type) ? 'LOLER' : insp %></option>
+        <option value="thorough">Thorough examination</option>
+        <option value="repair">Repair</option>
+        <option value="defect">Defect</option></select></div>
+      <div class="field rec-field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+      <div class="field defect-field"><label for="severity">How serious?</label><select id="severity" name="severity">
+        <option value="minor">Minor – safe to use, fix soon</option><option value="major">Major – needs fixing quickly</option><option value="unsafe">Unsafe – do not use</option></select></div>
+      <% if (item.tracks_hours) { %><div class="field rec-field"><label for="reading">Running hours <span class="hint">(at the time)</span></label><input id="reading" name="reading" type="number" step="0.1" min="0" value="<%= item.running_hours %>"></div><% } %>
+      <div class="field rec-field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Fitter / dealer / test company"></div>
       <div class="field insp-field"><label for="next_due">Next due <span class="hint">(blank = <%= item.loler_interval_months %> months)</span></label><input id="next_due" name="next_due" type="date"></div>
       <div class="field insp-field"><label for="cert_no">Certificate no</label><input id="cert_no" name="cert_no" type="text"></div>
     </div>
-    <div class="field"><label for="rnotes">Notes</label><input id="rnotes" name="notes" type="text" placeholder="Work done, parts, invoice no."></div>
+    <div class="field"><label for="rnotes" id="rnotes-label">Notes</label><input id="rnotes" name="notes" type="text" placeholder="Work done, parts, invoice no."></div>
+    <div class="field"><label for="rdocs">Documents <span class="hint">(optional: certificates, invoices, photos or PDFs)</span></label><input id="rdocs" name="docs" type="file" accept="image/*,application/pdf" multiple></div>
     <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Save record</button></div>
   </form>
 </dialog>
 <script>
   (function () {
     const kind = document.getElementById('kind');
-    function upd() { document.querySelectorAll('.insp-field').forEach((el) => { el.style.display = kind.value === 'loler' ? '' : 'none'; }); }
+    const show = (sel, on) => document.querySelectorAll(sel).forEach((el) => { el.style.display = on ? '' : 'none'; });
+    function upd() {
+      const defect = kind.value === 'defect';
+      show('.insp-field', kind.value === 'loler' || kind.value === 'thorough');
+      show('.rec-field', !defect); show('.defect-field', defect);
+      const notes = document.getElementById('rnotes');
+      notes.required = defect;
+      notes.placeholder = defect ? 'Describe the defect' : 'Work done, parts, invoice no.';
+      document.getElementById('rnotes-label').textContent = defect ? 'What is wrong?' : 'Notes';
+    }
     kind.addEventListener('change', upd); upd();
     const dlg = document.getElementById('record-dlg');
     document.querySelectorAll('[data-open="record-dlg"]').forEach((b) => b.addEventListener('click', () => dlg.showModal()));
