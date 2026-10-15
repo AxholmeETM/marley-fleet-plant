@@ -190,6 +190,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users (lower(email));
 -- Employees don't all need to sign in: those without an email have no login.
 ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_no TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS users_employee_no ON users (lower(employee_no));
 -- The driver a fill counts against: the vehicle's driver at the time (not whoever typed it in).
 ALTER TABLE fuel_entries ADD COLUMN IF NOT EXISTS driver_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
 UPDATE fuel_entries f SET driver_id = COALESCE((SELECT driver_id FROM vehicles WHERE id = f.vehicle_id), (SELECT user_id FROM fuel_cards WHERE id = f.fuel_card_id), f.user_id) WHERE driver_id IS NULL;

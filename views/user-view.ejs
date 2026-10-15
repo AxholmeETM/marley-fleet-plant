@@ -10,6 +10,7 @@
     <h2>Details</h2>
     <dl class="facts">
       <dt>Status</dt><dd><%- item.active ? '<span class="pill ok">Active</span>' : '<span class="pill none">Disabled</span>' %></dd>
+      <dt>Employee ID</dt><dd><%= item.employee_no || '—' %></dd>
       <dt>Type</dt><dd><%= userLabel(item) %></dd>
       <dt>Job role</dt><dd><%= item.job_title || '—' %></dd>
       <dt>Phone</dt><dd><%= item.phone || '—' %></dd>

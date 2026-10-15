@@ -21,6 +21,7 @@
   </fieldset>
   <div class="form-grid">
     <div class="field"><label for="name">Name</label><input id="name" name="name" type="text" value="<%= item.name || '' %>" required></div>
+    <div class="field"><label for="employee_no">Employee ID</label><input id="employee_no" name="employee_no" type="text" value="<%= item.employee_no || '' %>" placeholder="e.g. 1042"></div>
     <div class="field"><label for="job_title">Role within the company</label>
       <input id="job_title" name="job_title" type="text" list="job-titles" value="<%= item.job_title || '' %>" placeholder="e.g. Groundworker, Site Manager, Plant Fitter">
       <datalist id="job-titles">

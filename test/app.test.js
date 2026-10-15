@@ -106,6 +106,12 @@ test('admin and driver flows', async () => {
   await run('DELETE FROM fuel_cards WHERE id = ?', lcard);
   await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', dave, vehicle.id);
   assert.match((await admin('GET', '/users')).text, /No login/);
+  // Employee ID: optional, shown on the list, and no two employees can share one.
+  await admin('POST', '/users', { name: 'Id One', employee_no: 'E100', role: 'driver', employee_type: 'driver', active: '1' });
+  assert.match((await admin('GET', '/users')).text, /E100/);
+  await admin('POST', '/users', { name: 'Id Two', employee_no: 'e100', role: 'driver', employee_type: 'driver', active: '1' });
+  assert.equal(await get("SELECT id FROM users WHERE name = 'Id Two'"), undefined);
+  await run("DELETE FROM users WHERE name = 'Id One'");
   // Employees are created from the names on the fuel cards (run once on the live database).
   await run("INSERT INTO fuel_cards (provider, card_ref, holder, user_id, status) VALUES ('Esso', 'T1', 'Pat Jones(2)', (SELECT id FROM users WHERE role = 'admin' LIMIT 1), 'active'), ('Esso', 'T2', 'pat jones', NULL, 'active'), ('Esso', 'T3', 'Jim and Keith', NULL, 'active'), ('Esso', 'T4', 'Laura', NULL, 'active')");
   const { employeesFromCards } = require('../src/routes/users');

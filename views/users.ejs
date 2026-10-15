@@ -16,10 +16,11 @@
 <div class="card flush">
   <% if (!users.length) { %><p class="empty">Nobody here yet.</p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Name</th><th>Type</th><th>Job role</th><th>Email / phone</th><th>Vehicles</th><th class="num">Fuel cards</th><th>Status</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Employee ID</th><th>Type</th><th>Job role</th><th>Email / phone</th><th>Vehicles</th><th class="num">Fuel cards</th><th>Status</th><th></th></tr></thead>
     <tbody><% for (const u of users) { %>
       <tr>
         <td><a href="/users/<%= u.id %>"><strong><%= u.name %></strong></a></td>
+        <td><%= u.employee_no || '—' %></td>
         <td><span class="pill <%= u.role === 'admin' ? 'soon' : 'none' %>"><%= userLabel(u) %></span></td>
         <td><%= u.job_title || '—' %></td>
         <td><%= u.email || 'No login' %><% if (u.phone) { %><div class="small muted"><%= u.phone %></div><% } %></td>

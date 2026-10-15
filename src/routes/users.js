@@ -43,11 +43,11 @@ function readUser(body, existing) {
   // Admins can also be a fleet driver or site manager (or neither); employees must be one of them.
   const employeeType = EMPLOYEE_TYPES[body.employee_type] ? body.employee_type : null;
   if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose fleet driver or site manager.');
-  return { name, email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
+  return { name, employee_no: text(body.employee_no), email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
 }
 
 const saveError = (err) => {
-  if (isUniqueViolation(err)) throw new UserError('Someone already uses that email.');
+  if (isUniqueViolation(err)) throw new UserError(/employee_no/.test(`${err.constraint || ''} ${err.message || ''}`) ? 'Another employee already has that employee ID.' : 'Someone already uses that email.');
   throw err;
 };
 
@@ -55,8 +55,8 @@ router.post('/users', async (req, res) => {
   const u = readUser(req.body, null);
   let id;
   try {
-    id = (await run('INSERT INTO users (name, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email ? bcrypt.hashSync(u.password, 10) : null)).lastInsertRowid;
+    id = (await run('INSERT INTO users (name, employee_no, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email ? bcrypt.hashSync(u.password, 10) : null)).lastInsertRowid;
   } catch (err) { saveError(err); }
   req.flash('success', u.email ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
   res.redirect(`/users/${id}`);
@@ -172,8 +172,8 @@ router.post('/users/:id', async (req, res) => {
   // A new password, or no email (no login), changes the stored password; otherwise it stays.
   const hash = !u.email ? null : u.password ? bcrypt.hashSync(u.password, 10) : existing.password_hash;
   try {
-    await run('UPDATE users SET name = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ?, password_hash = ? WHERE id = ?',
-      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, hash, id);
+    await run('UPDATE users SET name = ?, employee_no = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ?, password_hash = ? WHERE id = ?',
+      u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, hash, id);
   } catch (err) { saveError(err); }
   req.flash('success', `${u.name} updated.`);
   res.redirect(`/users/${id}`);
