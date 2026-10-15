@@ -51,7 +51,7 @@
   const events = [
     ...records.map((r) => ({ dlg: 'rec-' + r.id, type: 'service', date: r.record_date, label: kindName[r.kind] || r.kind, reading: r.reading, text: [r.done_by, r.notes, r.next_due ? 'expires ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · '), docs: docsFor('record_id', r.id) })),
     ...checks.map((c) => ({ type: 'check', date: c.check_date, label: 'Walk-around', reading: c.mileage, href: '/checks/vehicle/' + c.id, text: c.user_name, result: c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' })),
-    ...defects.map((d) => ({ dlg: 'def-' + d.id, type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>', docs: docsFor('defect_id', d.id) })),
+    ...defects.map((d) => ({ dlg: 'def-' + d.id, type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed ' + ukDate(d.resolved_at) + ': ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>', docs: docsFor('defect_id', d.id) })),
   ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 %>
     <div class="card flush" id="history">

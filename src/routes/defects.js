@@ -3,6 +3,7 @@ const { all, run, get, transaction } = require('../db');
 const { upload: docUpload, saveDocs } = require('../documents');
 const { listDefects, listPlant, listVehicles } = require('../queries');
 const { CATEGORIES } = require('../categories');
+const { isoDate, isValidDate } = require('../status');
 const { requireAdmin, isAdmin, canUsePlant, canUseVehicle, UserError, text } = require('../auth');
 
 const router = express.Router();
@@ -51,9 +52,14 @@ router.post('/defects/:id/resolve', requireAdmin, docUpload, async (req, res) =>
   if (!defect) throw new UserError('Defect not found.', 404);
   const resolution = text(req.body.resolution);
   if (!resolution) throw new UserError('Please say what was done to fix the defect.');
+  // Date resolved: today unless another date is given (not in the future, not before it was reported).
+  const date = req.body.resolved_date || isoDate();
+  if (!isValidDate(date) || date > isoDate()) throw new UserError('Date resolved must be today or earlier.');
+  if (date < String(defect.reported_at).slice(0, 10)) throw new UserError('Date resolved can’t be before the defect was reported.');
   await transaction(async () => {
-    await run(`UPDATE defects SET status = 'resolved', resolution = ?, resolved_by = ?, resolved_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') WHERE id = ?`,
-      resolution, req.user.id, defect.id);
+    await run(`UPDATE defects SET status = 'resolved', resolution = ?, resolved_by = ?,
+        resolved_at = CASE WHEN ?::text = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD') THEN to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') ELSE ?::text || ' 12:00:00' END WHERE id = ?`,
+      resolution, req.user.id, date, date, defect.id);
     await saveDocs(req.files, { assetType: defect.asset_type, assetId: defect.asset_id, kind: 'defect', defectId: defect.id, userId: req.user.id });
   });
   req.flash('success', 'Defect marked as resolved.');

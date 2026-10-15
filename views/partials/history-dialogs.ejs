@@ -18,7 +18,10 @@
     <% if (isAdmin && d.status === 'open') { %>
     <form method="post" action="/defects/<%= d.id %>/resolve" enctype="multipart/form-data">
       <input type="hidden" name="back" value="<%= back %>">
-      <div class="field"><label for="res-<%= d.id %>">What was done to fix it?</label><input id="res-<%= d.id %>" name="resolution" type="text" required placeholder="e.g. New battery fitted"></div>
+      <div class="form-grid">
+        <div class="field"><label for="res-<%= d.id %>">What was done to fix it?</label><input id="res-<%= d.id %>" name="resolution" type="text" required placeholder="e.g. New battery fitted"></div>
+        <div class="field"><label for="resdate-<%= d.id %>">Date resolved</label><input id="resdate-<%= d.id %>" name="resolved_date" type="date" value="<%= today %>" min="<%= String(d.reported_at).slice(0, 10) %>" max="<%= today %>" required></div>
+      </div>
       <div class="field"><label for="resdocs-<%= d.id %>">Documents <span class="hint">(optional: invoice, photos or PDFs)</span></label><input id="resdocs-<%= d.id %>" name="docs" type="file" accept="image/*,application/pdf" multiple></div>
       <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Mark as resolved</button></div>
     </form>

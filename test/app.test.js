@@ -304,6 +304,15 @@ test('admin and driver flows', async () => {
   const defect = await get("SELECT id FROM defects WHERE asset_type = 'vehicle'");
   await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'Tyre replaced' });
   assert.equal((await get('SELECT status FROM defects WHERE id = ?', defect.id)).status, 'resolved');
+  // A resolved date can be given; it can't be in the future.
+  await admin('POST', `/defects/${defect.id}/reopen`, {});
+  const day = (await get('SELECT reported_at FROM defects WHERE id = ?', defect.id)).reported_at.slice(0, 10);
+  await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'Tyre replaced', resolved_date: day });
+  assert.equal((await get('SELECT resolved_at FROM defects WHERE id = ?', defect.id)).resolved_at.slice(0, 10), day);
+  await admin('POST', `/defects/${defect.id}/reopen`, {});
+  await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'x', resolved_date: '2999-01-01' });
+  assert.equal((await get('SELECT status FROM defects WHERE id = ?', defect.id)).status, 'open');
+  await admin('POST', `/defects/${defect.id}/resolve`, { resolution: 'Tyre replaced' });
 
   assert.equal((await admin('GET', '/export/fuel.csv')).status, 404);
   await run('DELETE FROM fuel_entries');
