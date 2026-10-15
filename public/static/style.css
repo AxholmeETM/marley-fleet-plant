@@ -384,3 +384,6 @@ div.pills .pill { white-space: normal; }
 .assign-list form { margin-left: auto; }
 .assign-add { display: flex; gap: 8px; padding: 14px 22px 18px; border-top: 1px solid var(--line); }
 .assign-add select { flex: 1; min-width: 0; }
+/* A list card that opens and closes from its title bar (e.g. Fuel log and receipts). */
+.card.flush.fold > summary { padding: 18px 22px; }
+.card.flush.fold[open] > summary { margin-bottom: 0; border-bottom: 1px solid var(--line); }

@@ -77,8 +77,8 @@
   </table></div><% } %>
 </div>
 
-<div class="card flush">
-  <h2>Fuel log and receipts</h2>
+<details class="card flush docs fold" id="fuel-log">
+  <summary><h2>Fuel log and receipts</h2><span class="count"><%= entries.length %></span></summary>
   <% if (!entries.length) { %><p class="empty">No entries match.</p><% } else { %>
   <div class="table-wrap"><table>
     <thead><tr><th>Receipt</th><th>Date</th><th>Vehicle</th><th>Driver</th><th>Card</th><th>Fuel</th><th class="num">Litres</th><th class="num">Mileage</th><th>Price (£, total)</th><th></th></tr></thead>
@@ -107,5 +107,13 @@
       </tr>
     <% } %></tbody>
   </table></div><% } %>
-</div>
+</details>
+<script>
+  // Remember whether the fuel log was left open, so pricing receipts doesn't keep closing it.
+  (function () {
+    const log = document.getElementById('fuel-log');
+    try { if (localStorage.getItem('fuelLogOpen') === '1') log.open = true; } catch (e) {}
+    log.addEventListener('toggle', () => { try { localStorage.setItem('fuelLogOpen', log.open ? '1' : '0'); } catch (e) {} });
+  })();
+</script>
 <%- include('partials/footer') %>
