@@ -101,4 +101,13 @@ router.post('/fuel-cards/:id', async (req, res) => {
   res.redirect('/fuel-cards');
 });
 
+// Remove a card for good. Fuel already logged on it is kept, just no longer linked to a card.
+router.post('/fuel-cards/:id/delete', async (req, res) => {
+  const card = await get('SELECT * FROM fuel_cards WHERE id = ?', Number(req.params.id));
+  if (!card) throw new UserError('Fuel card not found.', 404);
+  await run('DELETE FROM fuel_cards WHERE id = ?', card.id);
+  req.flash('success', `${cardLabel(card)} removed.`);
+  res.redirect('/fuel-cards');
+});
+
 module.exports = { router, CARD_SQL, decorate, cardLabel };

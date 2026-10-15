@@ -21,6 +21,8 @@
   </div>
   <div class="field"><label for="notes">Notes</label><input id="notes" name="notes" type="text" value="<%= item.notes || '' %>"></div>
   <p class="hint">Never record card PINs here. Keep PINs with the card company or in a password manager.</p>
-  <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="/fuel-cards">Cancel</a></div>
+  <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="/fuel-cards">Cancel</a>
+    <% if (item.id) { %><button class="btn danger" type="submit" form="delete-card" style="margin-left:auto">Remove fuel card</button><% } %></div>
 </form>
+<% if (item.id) { %><form id="delete-card" method="post" action="/fuel-cards/<%= item.id %>/delete" onsubmit="return confirm('Remove this fuel card? Fuel already logged on it is kept.')"></form><% } %>
 <%- include('partials/footer') %>

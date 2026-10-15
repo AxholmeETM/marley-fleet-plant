@@ -118,6 +118,9 @@ test('admin and driver flows', async () => {
   await employeesFromCards();
   assert.equal((await get("SELECT COUNT(*) AS n FROM users WHERE lower(name) = 'pat jones'")).n, 1);
   await run("DELETE FROM fuel_cards WHERE card_ref IN ('T1', 'T2', 'T3', 'T4')");
+  const gone = (await run("INSERT INTO fuel_cards (provider, card_ref, status) VALUES ('Esso', 'X9', 'active')")).lastInsertRowid;
+  assert.equal((await admin('POST', `/fuel-cards/${gone}/delete`)).location, '/fuel-cards');
+  assert.equal(await get('SELECT id FROM fuel_cards WHERE id = ?', gone), undefined);
   await admin('POST', '/plant', { plant_no: 'mcl-ex-0001', category: 'excavator', owner: 'MCL', make: 'JCB', model: '245', job_ref: 'J100', running_hours: 990,
     service_schedule: '50, 200, 500', service_interval_hours: 500, last_service_hours: 750, tracks_hours: '1', weekly_checks: '1', inspection_type: 'loler', loler_interval_months: 12 });
   const plant = await get("SELECT * FROM plant WHERE plant_no = 'MCL-EX-0001'");
