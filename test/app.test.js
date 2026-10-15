@@ -174,7 +174,7 @@ test('admin and driver flows', async () => {
   // Reports: the office can run each one; drivers can't.
   assert.match((await admin('GET', '/reports')).text, /Save as PDF/);
   for (const k of ['plant', 'fleet', 'fuel-cards', 'equipment', 'employees', 'projects']) assert.equal((await admin('GET', `/reports/${k}`)).status, 200, k);
-  assert.doesNotMatch((await admin('GET', '/reports/fuel-cards')).text, /7064056072235900127|7064 0560 7223 5900 127/);
+  assert.match((await admin('GET', '/reports/fuel-cards')).text, /7064 0560 7223 5900 127/);
   assert.match((await admin('GET', '/users/new')).text, /Who can see what/);
   const dash = await admin('GET', '/');
   assert.match(dash.text, /Needs attention/);

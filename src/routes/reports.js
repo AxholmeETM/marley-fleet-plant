@@ -59,18 +59,18 @@ const REPORTS = {
     },
   },
   'fuel-cards': {
-    label: 'Fuel cards', blurb: 'All fuel cards by company, with the employee, vehicle, expiry and status. Card numbers show the last 4 digits only.',
+    label: 'Fuel cards', blurb: 'All fuel cards by company, with the employee, vehicle, expiry and status. Shows the full card numbers, never PINs.',
     async build() {
       const cards = (await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
         ORDER BY c.provider, c.status <> 'active', CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorateCard);
       const groups = [...new Set(cards.map((c) => c.provider))].map((p) => ({ label: p, rows: cards.filter((c) => c.provider === p).map((c) => {
         const exp = c.expiry ? c.expiryStatus : null;
-        return [c.card_ref ? '#' + c.card_ref : '—', c.last4 ? '•••• ' + c.last4 : '—', c.user_name || c.holder || '—', c.reg ? { reg: c.reg } : '—', c.card_type || '—',
+        return [c.card_ref ? '#' + c.card_ref : '—', c.card_number ? c.card_number.replace(/(.{4})(?=.)/g, '$1 ') : c.last4 ? '•••• ' + c.last4 : '—', c.user_name || c.holder || '—', c.reg ? { reg: c.reg } : '—', c.card_type || '—',
           c.expiry ? `${c.expiry.slice(5, 7)}/${c.expiry.slice(0, 4)}` : '—',
           c.status !== 'active' ? pill('none', FUEL_CARD_STATUSES[c.status] || c.status) : exp && exp.level === 'overdue' ? pill('overdue', 'Expired') : exp && exp.level === 'soon' ? pill('soon', 'Expiring') : pill('ok', 'Active')];
       }) }));
       return { title: 'Fuel cards report', count: `${cards.length} card${cards.length === 1 ? '' : 's'}`,
-        columns: ['Card', 'Card number', 'Name on card', 'Vehicle', 'Card type', 'Expiry', 'Status'], widths: [9, 13, 22, 13, 17, 10, 10], groups };
+        columns: ['Card', 'Card number', 'Name on card', 'Vehicle', 'Card type', 'Expiry', 'Status'], widths: [8, 19, 20, 12, 16, 9, 9], groups };
     },
   },
   equipment: { label: 'Equipment', blurb: 'All equipment, grouped by category, with the same columns as the plant report.', build: () => plantReport('equipment') },
