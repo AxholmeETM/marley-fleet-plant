@@ -61,8 +61,8 @@
   <div class="table-wrap"><table>
     <thead><tr><th>#</th><th><%= board === 'vehicles' ? 'Vehicle' : 'Driver' %></th><th class="bar-cell hide-sm">Fuel used</th><th class="num">Diesel L</th><th class="num">Unleaded L</th><th class="num">Fuel total L</th><th class="num">AdBlue L</th><th class="num">Cost</th><th class="num">Fills</th>
       <% if (board === 'vehicles') { %><th class="num" title="Worked out from odometer readings logged with fuel. Needs at least two fills with mileage.">Approx MPG</th><% } %></tr></thead>
-    <tbody><% board_rows.forEach((r, i) => { %>
-      <tr>
+    <tbody id="board-rows"><% board_rows.forEach((r, i) => { %>
+      <tr<%- i >= 5 ? ' class="more-row" hidden' : '' %>>
         <td><span class="rank r<%= i + 1 %>"><%= i + 1 %></span></td>
         <td><%= r.name %></td>
         <td class="bar-cell hide-sm"><div class="bar"><span style="width:<%= Math.round(100 * (r.fuel || 0) / top) %>%"></span></div></td>
@@ -75,7 +75,15 @@
         <% if (board === 'vehicles') { %><td class="num"><%= r.mpg ? num(r.mpg, 1) : '—' %><% if (r.miles) { %><div class="ppl"><%= num(r.miles) %> miles</div><% } %></td><% } %>
       </tr>
     <% }) %></tbody>
-  </table></div><% } %>
+  </table></div>
+  <% if (board_rows.length > 5) { %><div class="board-more"><button class="btn small" type="button" id="board-toggle" data-more="Show all <%= board_rows.length %>" data-less="Show top 5">Show all <%= board_rows.length %></button></div>
+  <script>
+    document.getElementById('board-toggle').addEventListener('click', function () {
+      const rows = document.querySelectorAll('#board-rows .more-row'), open = rows[0].hidden;
+      rows.forEach((r) => { r.hidden = !open; });
+      this.textContent = open ? this.dataset.less : this.dataset.more;
+    });
+  </script><% } %><% } %>
 </div>
 
 <% } else { %>
