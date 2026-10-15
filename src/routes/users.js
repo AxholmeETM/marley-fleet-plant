@@ -60,7 +60,7 @@ router.post('/users', async (req, res) => {
   res.redirect(`/users/${id}`);
 });
 
-// One click: add an employee (fleet driver, no login) for each full name on a fuel card, then link each card to its person.
+// Add an employee (fleet driver, no login) for each full name on a fuel card, then link each card to its person.
 // Shared cards ("Jim and Keith", "A / B", "A - B") are skipped; a first name alone links only if exactly one employee has it.
 // Cards already linked to an employee are left alone; cards linked to an admin user move to the named employee.
 const CARD_NAME = `trim(regexp_replace(c.holder, '\\s*\\(.*\\)\\s*$', ''))`;
@@ -84,11 +84,14 @@ async function employeesFromCards() {
   });
 }
 
-router.post('/users/from-fuel-cards', async (req, res) => {
-  const { added, linked } = await employeesFromCards();
-  req.flash('success', `${added} employee${added === 1 ? '' : 's'} added and ${linked} fuel card${linked === 1 ? '' : 's'} linked from the names on the cards.`);
-  res.redirect('/users');
-});
+// Runs once per database (the first request after this was deployed): adds the people named on the fuel cards.
+let fromCardsDone = false;
+async function employeesFromCardsOnce() {
+  if (fromCardsDone) return;
+  const claimed = (await run("INSERT INTO settings (key, value) VALUES ('employees_from_fuel_cards', 'done') ON CONFLICT (key) DO NOTHING")).changes;
+  fromCardsDone = true;
+  if (claimed) await employeesFromCards();
+}
 
 // Employee page: their details, plus the vehicles and fuel cards assigned to them.
 router.get('/users/:id', async (req, res) => {
@@ -159,3 +162,5 @@ router.post('/users/:id', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.employeesFromCards = employeesFromCards;
+module.exports.employeesFromCardsOnce = employeesFromCardsOnce;

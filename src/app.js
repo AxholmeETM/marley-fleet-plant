@@ -79,6 +79,11 @@ async function createApp() {
     next();
   });
 
+  // One-off data job: create employees from the names on the fuel cards (see routes/users.js).
+  app.use(async (req, res, next) => {
+    try { await require('./routes/users').employeesFromCardsOnce(); } catch (err) { console.error('Employees from fuel cards:', err); }
+    next();
+  });
   app.use(require('./routes/auth'));
   app.use((req, res, next) => (req.user ? next() : res.redirect('/login')));
 
