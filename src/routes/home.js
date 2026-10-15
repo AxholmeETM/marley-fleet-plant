@@ -62,15 +62,14 @@ async function todoList(plant, vehicles, defects, receipts) {
   for (const c of (await all(`${fuelCards.CARD_SQL} WHERE c.status = 'active' AND c.expiry IS NOT NULL`)).map(fuelCards.decorate)) {
     due(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card`, `Expiry: ${c.expiryStatus.text}${c.holder_display ? ' · ' + c.holder_display : ''}`, `/fuel-cards/${c.id}/edit`, 'Update card');
   }
-  if (noInspection.length) push('now', 'bad', 2.5, { title: `${noInspection.length} item${noInspection.length === 1 ? '' : 's'} with no inspection recorded`, detail: listNames(noInspection), href: '/plant?filter=attention', action: 'View' });
-  if (checksOver.length) push('now', 'warn', 4, { title: `${checksOver.length} plant check sheet${checksOver.length === 1 ? '' : 's'} overdue`, detail: listNames(checksOver), href: '/checks?type=plant', action: 'View' });
-  if (walkMissing.length) push('soon', 'warn', 5, { title: `${walkMissing.length} walk-around${walkMissing.length === 1 ? '' : 's'} not done today`, detail: listNames(walkMissing), href: '/checks?type=vehicle', action: 'View' });
-  if (checksSoon.length) push('soon', 'warn', 6, { title: `${checksSoon.length} plant check sheet${checksSoon.length === 1 ? '' : 's'} due this week`, detail: listNames(checksSoon), href: '/checks?type=plant', action: 'View' });
-  if (receipts.n) push('soon', 'grey', 7, { title: `${receipts.n} fuel receipt${receipts.n === 1 ? '' : 's'} to check`, detail: `Oldest from ${ukDate(receipts.oldest)}${receipts.unpriced ? ` · ${receipts.unpriced} with no price` : ''}`, href: '/fuel/log?show=unverified&period=year', action: 'Check receipts' });
+  if (noInspection.length) push('now', 'bad', 2.5, { count: noInspection.length, title: `${noInspection.length} item${noInspection.length === 1 ? '' : 's'} with no inspection recorded`, detail: listNames(noInspection), href: '/plant?filter=attention', action: 'View' });
+  if (checksOver.length) push('now', 'warn', 4, { count: checksOver.length, title: `${checksOver.length} plant check sheet${checksOver.length === 1 ? '' : 's'} overdue`, detail: listNames(checksOver), href: '/checks?type=plant', action: 'View' });
+  if (walkMissing.length) push('now', 'warn', 5, { count: walkMissing.length, title: `${walkMissing.length} walk-around${walkMissing.length === 1 ? '' : 's'} not done today`, detail: listNames(walkMissing), href: '/checks?type=vehicle', action: 'View' });
+  if (checksSoon.length) push('soon', 'warn', 6, { count: checksSoon.length, title: `${checksSoon.length} plant check sheet${checksSoon.length === 1 ? '' : 's'} due this week`, detail: listNames(checksSoon), href: '/checks?type=plant', action: 'View' });
+  // Tabs: Defects, Overdue and Coming up. A rolled-up line counts every item it stands for, so tiles and tabs agree.
+  for (const t of items) { t.tab = t.action === 'Resolve' ? 'defects' : t.when === 'now' ? 'overdue' : 'soon'; t.count = t.count || 1; }
   return items.sort((a, b) => (a.when !== b.when ? (a.when === 'now' ? -1 : 1) : a.rank - b.rank || String(a.sort || '').localeCompare(String(b.sort || ''))));
 }
-
-const noInspectionCount = (plant) => plant.filter((p) => p.loler.level === 'overdue' && !p.loler.due).length;
 
 router.get('/', async (req, res) => {
   if (req.user.role !== 'admin') return await driverHome(req, res);
@@ -99,8 +98,8 @@ router.get('/', async (req, res) => {
       plantTotal: plant.length,
       vehicleTotal: vehicles.length,
       unsafe: defects.filter((d) => d.severity === 'unsafe').length,
-      overdue: todo.filter((t) => t.rank === 2).length + noInspectionCount(plant),
-      dueSoon: todo.filter((t) => t.when === 'soon' && t.rank === 3).length,
+      overdue: todo.filter((t) => t.tab === 'overdue').reduce((n, t) => n + t.count, 0),
+      dueSoon: todo.filter((t) => t.tab === 'soon').reduce((n, t) => n + t.count, 0),
       receipts: receipts.n, receiptsCost: receipts.cost,
       walkaroundsDone: vehicles.filter((v) => v.walkaround.level === 'ok').length,
       walkaroundsExpected: vehicles.filter((v) => v.driver_id && v.status === 'active').length,

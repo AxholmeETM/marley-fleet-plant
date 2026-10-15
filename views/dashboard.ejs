@@ -6,10 +6,10 @@
 <div class="kpis kpis-4">
   <a class="kpi <%= stats.unsafe ? 'bad' : 'good' %>" href="/defects"><div class="label">Unsafe defects</div><div class="value"><%= stats.unsafe %></div>
     <div class="sub"><%= stats.unsafe ? 'do not use until fixed' : 'none reported' %></div></a>
-  <a class="kpi <%= stats.overdue ? 'bad' : 'good' %>" href="#todo"><div class="label">Overdue</div><div class="value"><%= stats.overdue %></div>
-    <div class="sub">services, LOLER, MOT, tax</div></a>
-  <a class="kpi <%= stats.dueSoon ? 'warn' : 'good' %>" href="#todo"><div class="label">Due in 30 days</div><div class="value"><%= stats.dueSoon %></div>
-    <div class="sub">plan these in</div></a>
+  <a class="kpi <%= stats.overdue ? 'bad' : 'good' %>" href="#todo" data-goto="overdue"><div class="label">Overdue</div><div class="value"><%= stats.overdue %></div>
+    <div class="sub">services, inspections, MOT, tax, checks</div></a>
+  <a class="kpi <%= stats.dueSoon ? 'warn' : 'good' %>" href="#todo" data-goto="soon"><div class="label">Coming up</div><div class="value"><%= stats.dueSoon %></div>
+    <div class="sub">due in the next 30 days</div></a>
   <a class="kpi <%= stats.receipts ? 'warn' : 'good' %>" href="/fuel/log?show=unverified&period=year"><div class="label">Receipts to check</div><div class="value"><%= stats.receipts %></div>
     <div class="sub"><%= stats.receiptsCost ? money(stats.receiptsCost) + ' waiting for the office' : 'waiting for the office' %></div></a>
 </div>
@@ -18,13 +18,13 @@
   <div class="card flush todo" id="todo">
     <%
       // Tabs: open defects, anything overdue, and what falls due in the next 30 days. Each list scrolls inside the card.
-      const tabOf = (t) => (t.action === 'Resolve' ? 'defects' : t.when === 'now' ? 'overdue' : 'soon');
+      const tabOf = (t) => t.tab;
       const TABS = [['defects', 'Defects', 'No open defects.'], ['overdue', 'Overdue', 'Nothing overdue.'], ['soon', 'Coming up', 'Nothing due in the next 30 days.']];
       const firstTab = (TABS.find(([k]) => todo.some((t) => tabOf(t) === k)) || TABS[0])[0];
     %>
     <div class="card-head todo-head"><h2>To do</h2>
       <div class="seg-tabs" role="tablist">
-        <% for (const [k, label] of TABS) { const n = todo.filter((t) => tabOf(t) === k).length; %>
+        <% for (const [k, label] of TABS) { const n = todo.filter((t) => tabOf(t) === k).reduce((sum, t) => sum + t.count, 0); %>
         <button type="button" role="tab" data-tab="<%= k %>" aria-selected="<%= k === firstTab %>"><%= label %> <span class="n"><%= n %></span></button>
         <% } %>
       </div>
@@ -55,6 +55,8 @@
         document.querySelectorAll('#todo [data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== k; });
       };
       tabs.forEach((b) => b.addEventListener('click', () => { show(b.dataset.tab); fit(); }));
+      // The Overdue and Coming up tiles open their tab.
+      document.querySelectorAll('[data-goto]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); show(a.dataset.goto); fit(); }));
       // On a computer screen the page fits the window: the To do list takes the space left and scrolls inside itself.
       function fit() {
         const panels = document.querySelectorAll('#todo [data-panel]');
