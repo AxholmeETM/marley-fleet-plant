@@ -17,8 +17,8 @@
         // [href, label, other paths that belong to the same section]; admins get headings that open to show their pages.
         const menu = isAdmin
           ? [['/', 'Dashboard'],
-            { label: 'Plant and Fleet Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
-            { label: 'Fuel', items: [['/fuel-cards', 'Fuel Cards'], ['/fuel', 'Fuel Logs']] },
+            { label: 'Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
+            { label: 'Fuel', items: [['/fuel', 'Fuel Logs'], ['/fuel-cards', 'Fuel Cards']] },
             ['/users', 'Employees'],
             { label: 'Admin', items: [['/projects', 'Projects'], ['/reports', 'Reports']] }]
           : user.employee_type === 'site_manager'
