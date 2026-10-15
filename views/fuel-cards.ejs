@@ -5,7 +5,7 @@
 </div>
 <form class="filters" method="get">
   <div class="field"><label for="show">Status</label>
-    <select id="show" name="show"><option value="active" <%= show === 'active' ? 'selected' : '' %>>Active</option><option value="all" <%= show === 'all' ? 'selected' : '' %>>All, incl. expired and stopped</option></select></div>
+    <select id="show" name="show"><% for (const [k, l] of [['all', 'All'], ...Object.entries(FUEL_CARD_STATUSES)]) { %><option value="<%= k %>" <%= show === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
   <div class="field"><label for="company">Fuel company</label>
     <select id="company" name="company"><option value="">All</option><% for (const c of companies) { %><option <%= company === c ? 'selected' : '' %>><%= c %></option><% } %></select></div>
   <div class="field"><label for="name">Name on card</label>

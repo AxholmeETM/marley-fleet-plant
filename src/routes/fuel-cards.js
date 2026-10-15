@@ -61,8 +61,9 @@ async function readCard(body) {
 }
 
 router.get('/fuel-cards', async (req, res) => {
-  const show = req.query.show === 'all' ? 'all' : 'active';
-  const all_ = (await all(`${CARD_SQL} ${show === 'active' ? "WHERE c.status = 'active'" : ''} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorate);
+  // Status filter: All, or one status (Active by default).
+  const show = req.query.show === 'all' || FUEL_CARD_STATUSES[req.query.show] ? req.query.show : 'active';
+  const all_ = (await all(`${CARD_SQL} ${show === 'all' ? '' : 'WHERE c.status = ?'} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`, ...(show === 'all' ? [] : [show]))).map(decorate);
   // Filters: fuel company and the name on the card (or the person it's linked to).
   const nameOf = (c) => c.holder || c.user_name || '';
   const sorted = (xs) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b));
