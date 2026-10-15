@@ -500,3 +500,12 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 .seg-tabs button[aria-selected="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
 .seg-tabs .n { display: inline-block; min-width: 1.5em; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: rgba(1, 2, 76, .08); font-size: .75rem; text-align: center; font-variant-numeric: tabular-nums; }
 .todo-scroll[hidden] { display: none; }
+/* Dashboard fits one screen on a computer: tighter bottom space, smaller side cards */
+@media (min-width: 1101px) {
+  main:has(.dash-grid) { padding-bottom: 20px; }
+  .dash-grid .card { margin-bottom: 0; }
+  .dash-side { gap: 14px; }
+  .today-list a { padding-block: 9px; }
+  .kpis-4 { margin-bottom: 18px; }
+  .kpis-4 .kpi { padding-block: 14px; }
+}

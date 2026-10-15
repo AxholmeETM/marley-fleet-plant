@@ -54,7 +54,20 @@
         tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === k)));
         document.querySelectorAll('#todo [data-panel]').forEach((p) => { p.hidden = p.dataset.panel !== k; });
       };
-      tabs.forEach((b) => b.addEventListener('click', () => show(b.dataset.tab)));
+      tabs.forEach((b) => b.addEventListener('click', () => { show(b.dataset.tab); fit(); }));
+      // On a computer screen the page fits the window: the To do list takes the space left and scrolls inside itself.
+      function fit() {
+        const panels = document.querySelectorAll('#todo [data-panel]');
+        panels.forEach((p) => { p.style.maxHeight = ''; });
+        if (window.innerWidth <= 1100) return;
+        const open = [...panels].find((p) => !p.hidden);
+        if (!open) return;
+        const spare = document.documentElement.scrollHeight - window.innerHeight;
+        const h = open.getBoundingClientRect().height - spare;
+        panels.forEach((p) => { p.style.maxHeight = Math.max(220, h) + 'px'; });
+      }
+      window.addEventListener('resize', fit);
+      fit();
     })();
   </script>
 
@@ -63,7 +76,7 @@
       <div class="card-head"><h2>Fuel</h2><a class="small" href="/fuel">Fuel Logs →</a></div>
       <% const cMax = Math.max(1000, ...months.map((m) => m.litres)) * 1.18;
          const cW = 300;
-         const cH = 150;
+         const cH = 112;
          const cTop = 6;
          const cBot = 22;
          const cBw = 30;
