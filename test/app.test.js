@@ -132,6 +132,12 @@ test('admin and driver flows', async () => {
   await admin('POST', '/users', { name: 'Kim Later', role: 'driver', employee_type: 'driver', active: '1' });
   assert.ok((await get("SELECT driver_id FROM vehicles WHERE reg = 'SH04 EET'")).driver_id);
   await run("DELETE FROM vehicles WHERE reg LIKE 'SH0_ EET'");
+  // Fuel cards take their name from Employees.
+  const named = (await run("INSERT INTO fuel_cards (provider, card_ref, holder, status) VALUES ('Esso', 'N1', 'Printed Name', 'active')")).lastInsertRowid;
+  assert.match((await admin('GET', `/fuel-cards/${named}/edit`)).text, /Printed on card: Printed Name/);
+  await admin('POST', `/fuel-cards/${named}`, { provider: 'Esso', card_ref: 'N1', status: 'active', user_id: sam.id });
+  assert.match((await admin('GET', '/fuel-cards')).text, /Sam Sheet/);
+  await run('DELETE FROM fuel_cards WHERE id = ?', named);
   const gone = (await run("INSERT INTO fuel_cards (provider, card_ref, status) VALUES ('Esso', 'X9', 'active')")).lastInsertRowid;
   assert.equal((await admin('POST', `/fuel-cards/${gone}/delete`)).location, '/fuel-cards');
   assert.equal(await get('SELECT id FROM fuel_cards WHERE id = ?', gone), undefined);

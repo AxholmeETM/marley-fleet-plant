@@ -1,6 +1,6 @@
 const express = require('express');
 const { all, get, run } = require('../db');
-const { listVehicles } = require('../queries');
+const { listVehicles, syncCardVehicles } = require('../queries');
 const { requireAdmin, UserError, text } = require('../auth');
 const { isValidDate, dueStatus } = require('../status');
 const { FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES } = require('../categories');
@@ -49,8 +49,8 @@ async function readCard(body) {
     card_ref: text(body.card_ref),
     last4,
     card_number: cardNumber || null,
-    holder: text(body.holder),
-    // No longer on the form (fuel cards are admin-only); keep any existing link unless one is sent.
+    // The name comes from Employees; the old typed name is only kept for cards not linked to anyone.
+    ...(body.holder !== undefined ? { holder: text(body.holder) } : {}),
     ...(body.user_id !== undefined ? { user_id: await checkUser(body.user_id) } : {}),
     vehicle_id: vehicleId,
     card_type: text(body.card_type),
@@ -65,7 +65,7 @@ router.get('/fuel-cards', async (req, res) => {
   const show = req.query.show === 'all' || FUEL_CARD_STATUSES[req.query.show] ? req.query.show : 'active';
   const all_ = (await all(`${CARD_SQL} ${show === 'all' ? '' : 'WHERE c.status = ?'} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`, ...(show === 'all' ? [] : [show]))).map(decorate);
   // Filters: fuel company and the name on the card (or the person it's linked to).
-  const nameOf = (c) => c.holder || c.user_name || '';
+  const nameOf = (c) => c.user_name || c.holder || '';
   const sorted = (xs) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const companies = sorted(all_.map((c) => c.provider));
   const names = sorted(all_.map(nameOf));
@@ -84,6 +84,7 @@ router.get('/fuel-cards/new', async (req, res) => await form(res, 'Add fuel card
 router.post('/fuel-cards', async (req, res) => {
   const c = await readCard(req.body);
   await run(`INSERT INTO fuel_cards (${Object.keys(c).join(', ')}) VALUES (${Object.keys(c).map(() => '?').join(', ')})`, ...Object.values(c));
+  await syncCardVehicles(c.user_id);
   req.flash('success', `${c.provider} card added.`);
   res.redirect('/fuel-cards');
 });
@@ -97,6 +98,7 @@ router.get('/fuel-cards/:id/edit', async (req, res) => {
 router.post('/fuel-cards/:id', async (req, res) => {
   const c = await readCard(req.body);
   await run(`UPDATE fuel_cards SET ${Object.keys(c).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...Object.values(c), Number(req.params.id));
+  await syncCardVehicles(c.user_id);
   req.flash('success', 'Fuel card updated.');
   res.redirect('/fuel-cards');
 });
