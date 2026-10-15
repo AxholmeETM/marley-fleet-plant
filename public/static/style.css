@@ -390,3 +390,8 @@ div.pills .pill { white-space: normal; }
 
 /* Fuel leaderboard: top five, with a button to show the rest */
 .board-more { padding: 12px 16px; border-top: 1px solid var(--line); text-align: center; }
+
+/* History rows that open a pop-up */
+#history tr.clickable { cursor: pointer; }
+#history tr.clickable:hover td { background: rgba(15, 35, 75, 0.04); }
+.dlg .facts { margin-bottom: 14px; }

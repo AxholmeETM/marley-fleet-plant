@@ -1,0 +1,63 @@
+<%
+  // Pop-ups behind the History rows: open a defect (and resolve or reopen it) or a service record.
+  // Needs: assetType ('plant' | 'vehicle'), records, defects, documents, recordName(r), readingLabel, fmtReading(n).
+  const back = (assetType === 'plant' ? '/plant/' : '/vehicles/') + item.id + '#history';
+  const docsOf = (key, id) => documents.filter((d) => d[key] === id);
+  const docList = (ds) => ds.length ? '<ul class="doc-list">' + ds.map((d) => `<li><a href="/documents/${d.id}" target="_blank" rel="noopener">📎 ${escapeHtml(d.name)}</a></li>`).join('') + '</ul>' : '';
+%>
+<% for (const d of defects) { const ds = docsOf('defect_id', d.id); %>
+<dialog id="def-<%= d.id %>" class="dlg">
+  <div class="card">
+    <div class="dlg-head"><h2>Defect <% if (d.status === 'open') { %><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span><% } else { %><span class="pill ok">Resolved</span><% } %></h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <dl class="facts">
+      <dt>Reported</dt><dd><%= ukDate(d.reported_at) %> by <%= d.reported_by_name %></dd>
+      <dt>What's wrong</dt><dd style="white-space:pre-wrap"><%= d.description %></dd>
+      <% if (d.status === 'resolved') { %><dt>Fixed</dt><dd><%= ukDate(d.resolved_at) %><%= d.resolved_by_name ? ' by ' + d.resolved_by_name : '' %></dd><dt>What was done</dt><dd style="white-space:pre-wrap"><%= d.resolution || '—' %></dd><% } %>
+    </dl>
+    <%- docList(ds) %>
+    <% if (isAdmin && d.status === 'open') { %>
+    <form method="post" action="/defects/<%= d.id %>/resolve" enctype="multipart/form-data">
+      <input type="hidden" name="back" value="<%= back %>">
+      <div class="field"><label for="res-<%= d.id %>">What was done to fix it?</label><input id="res-<%= d.id %>" name="resolution" type="text" required placeholder="e.g. New battery fitted"></div>
+      <div class="field"><label for="resdocs-<%= d.id %>">Documents <span class="hint">(optional: invoice, photos or PDFs)</span></label><input id="resdocs-<%= d.id %>" name="docs" type="file" accept="image/*,application/pdf" multiple></div>
+      <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Mark as resolved</button></div>
+    </form>
+    <% } else if (isAdmin) { %>
+    <form method="post" action="/defects/<%= d.id %>/reopen"><input type="hidden" name="back" value="<%= back %>">
+      <div class="form-actions"><button class="btn" type="button" data-close>Close</button><button class="btn" type="submit">Reopen defect</button></div></form>
+    <% } else { %><div class="form-actions"><button class="btn" type="button" data-close>Close</button></div><% } %>
+  </div>
+</dialog>
+<% } %>
+<% for (const r of records) { const ds = docsOf('record_id', r.id); %>
+<dialog id="rec-<%= r.id %>" class="dlg">
+  <div class="card">
+    <div class="dlg-head"><h2><%= recordName(r) %></h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <dl class="facts">
+      <dt>Date</dt><dd><%= ukDate(r.record_date) %></dd>
+      <% if (r.reading != null) { %><dt><%= readingLabel %></dt><dd><%= fmtReading(r.reading) %></dd><% } %>
+      <% if (r.done_by) { %><dt>Done by</dt><dd><%= r.done_by %></dd><% } %>
+      <% if (r.cert_no) { %><dt>Certificate no</dt><dd><%= r.cert_no %></dd><% } %>
+      <% if (r.next_due) { %><dt>Next due</dt><dd><%= ukDate(r.next_due) %></dd><% } %>
+      <% if (r.notes) { %><dt>Notes</dt><dd style="white-space:pre-wrap"><%= r.notes %></dd><% } %>
+    </dl>
+    <%- docList(ds) %>
+    <% if (isAdmin || assetType === 'plant') { %>
+    <form method="post" action="/documents" enctype="multipart/form-data">
+      <input type="hidden" name="asset" value="<%= assetType %>:<%= item.id %>"><input type="hidden" name="record" value="<%= r.id %>"><input type="hidden" name="kind" value="<%= r.kind %>">
+      <div class="field"><label for="recdocs-<%= r.id %>">Add documents</label><input id="recdocs-<%= r.id %>" name="docs" type="file" accept="image/*,application/pdf" multiple required></div>
+      <div class="form-actions"><button class="btn" type="button" data-close>Close</button><button class="btn dark" type="submit">Upload</button></div>
+    </form>
+    <% } else { %><div class="form-actions"><button class="btn" type="button" data-close>Close</button></div><% } %>
+  </div>
+</dialog>
+<% } %>
+<script>
+  // Click a defect or service row in History to open it.
+  document.querySelectorAll('#history tr[data-dlg]').forEach((tr) => tr.addEventListener('click', (e) => {
+    if (e.target.closest('a, button, input')) return;
+    const dlg = document.getElementById(tr.dataset.dlg);
+    if (dlg) dlg.showModal();
+  }));
+  document.querySelectorAll('dialog [data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
+</script>

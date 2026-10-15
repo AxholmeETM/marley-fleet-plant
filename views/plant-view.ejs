@@ -54,9 +54,9 @@
   const kindName = (r) => r.kind === 'loler' ? (item.inspection_type === 'loler' || item.inspection_type === 'thorough' ? 'LOLER' : insp) : DOC_KINDS.plant[r.kind] || 'Service';
   const docsFor = (key, id) => documents.filter((d) => d[key] === id);
   const events = [
-    ...records.map((r) => ({ type: 'service', date: r.record_date, label: kindName(r), hours: r.reading, text: [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · '), docs: docsFor('record_id', r.id) })),
+    ...records.map((r) => ({ dlg: 'rec-' + r.id, type: 'service', date: r.record_date, label: kindName(r), hours: r.reading, text: [r.done_by, r.notes, r.next_due ? 'next due ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · '), docs: docsFor('record_id', r.id) })),
     ...checks.map((c) => ({ type: 'check', date: c.check_date, label: 'Check sheet', hours: c.hours, href: '/checks/plant/' + c.id, text: [c.user_name, c.job_ref].filter(Boolean).join(' · '), result: c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' })),
-    ...defects.map((d) => ({ type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>', docs: docsFor('defect_id', d.id) })),
+    ...defects.map((d) => ({ dlg: 'def-' + d.id, type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed: ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>', docs: docsFor('defect_id', d.id) })),
   ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
 %>
     <div class="card flush" id="history">
@@ -66,7 +66,7 @@
       <div class="table-wrap tl-scroll"><table>
         <thead><tr><th>Date</th><th>Type</th><th class="num">Hours</th><th>Details</th></tr></thead>
         <tbody><% for (const e of events) { %>
-          <tr data-type="<%= e.type %>"><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %><% if (e.docs && e.docs.length) { %><span class="doc-links"><% for (const d of e.docs) { %><a href="/documents/<%= d.id %>" target="_blank" rel="noopener" title="<%= d.name %>">📎 <%= e.docs.length > 1 ? d.name.slice(0, 18) : 'Document' %></a><% } %></span><% } %></td></tr>
+          <tr data-type="<%= e.type %>"<% if (e.dlg) { %> data-dlg="<%= e.dlg %>" class="clickable" title="Open"<% } %>><td class="nowrap"><% if (e.href) { %><a href="<%= e.href %>"><%= ukDate(e.date) %></a><% } else { %><%= ukDate(e.date) %><% } %></td><td class="nowrap"><%= e.label %></td><td class="num"><%= e.hours != null ? fmtHours(e.hours) : '—' %></td><td><%= e.text || '—' %><% if (e.result) { %> <%- e.result %><% } %><% if (e.docs && e.docs.length) { %><span class="doc-links"><% for (const d of e.docs) { %><a href="/documents/<%= d.id %>" target="_blank" rel="noopener" title="<%= d.name %>">📎 <%= e.docs.length > 1 ? d.name.slice(0, 18) : 'Document' %></a><% } %></span><% } %></td></tr>
         <% } %></tbody>
       </table>
       <p class="empty tl-none" hidden>Nothing of this type yet.</p></div><% } %>
@@ -142,4 +142,5 @@
     }));
   })();
 </script>
+<%- include('partials/history-dialogs', { assetType: 'plant', recordName: kindName, readingLabel: 'Running hours', fmtReading: (n) => fmtHours(n) }) %>
 <%- include('partials/footer') %>

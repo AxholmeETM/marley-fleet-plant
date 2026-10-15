@@ -72,7 +72,7 @@ router.post('/defects/:id/documents', requireAdmin, docUpload, async (req, res) 
 router.post('/defects/:id/reopen', requireAdmin, async (req, res) => {
   await run(`UPDATE defects SET status = 'open', resolved_by = NULL, resolved_at = NULL WHERE id = ?`, Number(req.params.id));
   req.flash('success', 'Defect reopened.');
-  res.redirect('/defects');
+  res.redirect(req.body.back && req.body.back.startsWith('/') && !req.body.back.startsWith('//') ? req.body.back : '/defects');
 });
 
 module.exports = router;

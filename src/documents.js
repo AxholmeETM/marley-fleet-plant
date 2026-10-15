@@ -78,9 +78,11 @@ router.post('/documents', upload, async (req, res) => {
   if (assetType === 'vehicle' && !isAdmin(req.user)) throw new UserError('Only the office can add vehicle documents.', 403);
   if (!req.files || !req.files.length) throw new UserError('Please choose a file to upload.');
   const kind = DOC_KINDS[assetType][req.body.kind] ? req.body.kind : 'other';
-  const n = await saveDocs(req.files, { assetType, assetId, kind, userId: req.user.id });
+  // Documents added from a History pop-up belong to that service record.
+  const record = Number(req.body.record) ? await get('SELECT id FROM service_records WHERE id = ? AND asset_type = ? AND asset_id = ?', Number(req.body.record), assetType, assetId) : null;
+  const n = await saveDocs(req.files, { assetType, assetId, kind, recordId: record ? record.id : null, userId: req.user.id });
   req.flash('success', `${n} document${n > 1 ? 's' : ''} added.`);
-  res.redirect(`/${assetType === 'plant' ? 'plant' : 'vehicles'}/${assetId}#documents`);
+  res.redirect(`/${assetType === 'plant' ? 'plant' : 'vehicles'}/${assetId}#${record ? 'history' : 'documents'}`);
 });
 
 module.exports = { router, upload, saveDocs, listDocs, DOC_KINDS };

@@ -74,7 +74,7 @@ async function createApp() {
     if (req.session.flash) req.session.flash = null;
     res.locals.path = req.path;
     res.locals.today = status.isoDate();
-    Object.assign(res.locals, { ukDate: status.ukDate, ukDateTime: status.ukDateTime, money, num, fmtHours: status.fmtHours, FUEL_LABELS, SEVERITY_LABELS, pill, userLabel });
+    Object.assign(res.locals, { escapeHtml, ukDate: status.ukDate, ukDateTime: status.ukDateTime, money, num, fmtHours: status.fmtHours, FUEL_LABELS, SEVERITY_LABELS, pill, userLabel });
     req.flash = (type, msg) => { req.session.flash = { type, msg }; };
     next();
   });
