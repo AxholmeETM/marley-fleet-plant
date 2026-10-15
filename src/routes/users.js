@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { all, get, run, transaction, isUniqueViolation } = require('../db');
-const { listVehicles, syncCardVehicles } = require('../queries');
+const { listVehicles, syncCardVehicles, linkVehiclesByName, SHEET_DRIVER } = require('../queries');
 const { requireAdmin, UserError, text } = require('../auth');
 const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
 
@@ -56,6 +56,7 @@ router.post('/users', async (req, res) => {
     id = (await run('INSERT INTO users (name, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email ? bcrypt.hashSync(u.password, 10) : null)).lastInsertRowid;
   } catch (err) { saveError(err); }
+  await linkVehiclesByName(id);
   req.flash('success', u.email ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
   res.redirect(`/users/${id}`);
 });
@@ -94,7 +95,23 @@ async function employeesFromCardsOnce() {
   if ((await run("INSERT INTO settings (key, value) VALUES ('cards_follow_vehicles', 'done') ON CONFLICT (key) DO NOTHING")).changes) {
     for (const u of await all('SELECT DISTINCT driver_id AS id FROM vehicles WHERE driver_id IS NOT NULL AND active = 1')) await syncCardVehicles(u.id);
   }
+  if ((await run("INSERT INTO settings (key, value) VALUES ('vehicle_drivers_linked', 'done') ON CONFLICT (key) DO NOTHING")).changes) await vehicleDriversFromSheet();
   fromCardsDone = true;
+}
+
+// Add an employee for each full driver name typed on a vehicle (skipping shared ones like "Leon/Jamie"),
+// link every vehicle to its named driver, and drop typed names on vehicles that already have a driver.
+async function vehicleDriversFromSheet() {
+  return transaction(async () => {
+    await run(`INSERT INTO users (name, role, employee_type, active)
+      SELECT DISTINCT ON (lower(n)) n, 'driver', 'driver', 1
+      FROM (SELECT ${SHEET_DRIVER} AS n FROM vehicles v WHERE v.user_name IS NOT NULL AND v.active = 1) x
+      WHERE n LIKE '% %' AND n !~* '( and |/|&)' AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(trim(u.name)) = lower(n))
+      ORDER BY lower(n)`);
+    const linked = await linkVehiclesByName();
+    await run('UPDATE vehicles SET user_name = NULL WHERE driver_id IS NOT NULL AND user_name IS NOT NULL');
+    return linked;
+  });
 }
 
 // Employee page: their details, plus the vehicles and fuel cards assigned to them.
@@ -117,7 +134,7 @@ router.post('/users/:id/vehicles', async (req, res) => {
   const v = await get('SELECT id, reg, driver_id FROM vehicles WHERE id = ?', Number(req.body.vehicle_id));
   if (!v) throw new UserError('Please choose a vehicle.');
   await transaction(async () => {
-    await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', id, v.id);
+    await run('UPDATE vehicles SET driver_id = ?, user_name = NULL WHERE id = ?', id, v.id);
     if (v.driver_id && v.driver_id !== id) await syncCardVehicles(v.driver_id, v.id);
     await syncCardVehicles(id);
   });
@@ -169,6 +186,7 @@ router.post('/users/:id', async (req, res) => {
     await run('UPDATE users SET name = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ?, password_hash = ? WHERE id = ?',
       u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, hash, id);
   } catch (err) { saveError(err); }
+  await linkVehiclesByName(id);
   req.flash('success', `${u.name} updated.`);
   res.redirect(`/users/${id}`);
 });
@@ -176,3 +194,4 @@ router.post('/users/:id', async (req, res) => {
 module.exports = router;
 module.exports.employeesFromCards = employeesFromCards;
 module.exports.employeesFromCardsOnce = employeesFromCardsOnce;
+module.exports.vehicleDriversFromSheet = vehicleDriversFromSheet;

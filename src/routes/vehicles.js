@@ -42,7 +42,6 @@ async function readVehicle(body) {
     status,
     colour: text(body.colour),
     tracked: TRACKED[body.tracked] ? body.tracked : null,
-    user_name: text(body.user_name),
     purchase_price: numberField(body.purchase_price, 'Purchase price'),
     purchase_date: dateField(body.purchase_date, 'Purchase date'),
     make: text(body.make),
@@ -122,6 +121,8 @@ router.post('/vehicles/:id', async (req, res) => {
   try {
     await run(`UPDATE vehicles SET ${Object.keys(v).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(v), id);
   } catch (err) { saveError(err); }
+  // Once a vehicle has a driver, the old typed name is dropped so every page shows the same person.
+  if (v.driver_id) await run('UPDATE vehicles SET user_name = NULL WHERE id = ?', id);
   // The assigned driver's fuel cards follow the vehicle (and leave it if the driver changed).
   if (before && before.driver_id && before.driver_id !== v.driver_id) await syncCardVehicles(before.driver_id, id);
   await syncCardVehicles(v.driver_id);

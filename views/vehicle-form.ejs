@@ -17,11 +17,10 @@
         <datalist id="vtypes"><option>Van</option><option>Pickup</option><option>Tipper</option><option>Crew cab</option><option>Car</option><option>HGV</option></datalist></div>
       <div class="field"><label for="fuel_type">Fuel</label>
         <select id="fuel_type" name="fuel_type"><option value="diesel">Diesel</option><option value="unleaded" <%= item.fuel_type === 'unleaded' ? 'selected' : '' %>>Unleaded</option></select></div>
-      <div class="field"><label for="driver_id">Driver's app account <span class="hint">(they do the walk-around)</span></label>
-        <select id="driver_id" name="driver_id"><option value="">No app account</option>
+      <div class="field"><label for="driver_id">Driver</label>
+        <select id="driver_id" name="driver_id"><option value="">No driver</option>
           <% for (const d of drivers) { %><option value="<%= d.id %>" <%= item.driver_id === d.id ? 'selected' : '' %>><%= d.name %></option><% } %>
-        </select></div>
-      <div class="field"><label for="user_name">User / driver name</label><input id="user_name" name="user_name" type="text" value="<%= item.user_name || '' %>" placeholder="If they don't have an account yet"></div>
+        </select><% if (!item.driver_id && item.user_name) { %><span class="hint">Spreadsheet says: <%= item.user_name %></span><% } %></div>
       <div class="field"><label for="tracked">Tracked</label>
         <select id="tracked" name="tracked"><option value="">Not known</option><% for (const [k, l] of Object.entries(TRACKED)) { %><option value="<%= k %>" <%= item.tracked === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
       <div class="field"><label for="mileage">Mileage</label><input id="mileage" name="mileage" type="number" min="0" step="1" value="<%= item.mileage ?? '' %>"></div>

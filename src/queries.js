@@ -83,4 +83,18 @@ async function syncCardVehicles(userId, removedVehicleId = null) {
   }
 }
 
-module.exports = { syncCardVehicles, listProjects, listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };
+// The driver name typed on a vehicle (from the fleet spreadsheet), without a trailing "?".
+const SHEET_DRIVER = `trim(regexp_replace(v.user_name, '\\s*\\?+\\s*$', ''))`;
+
+// Link each unassigned vehicle to the employee whose name matches its typed driver name, so the
+// driver is the same on every page. Pass a user id to link only that employee's vehicles.
+async function linkVehiclesByName(userId = null) {
+  const rows = await all(`SELECT DISTINCT ON (v.id) v.id AS vid, u.id AS uid FROM vehicles v
+    JOIN users u ON u.active = 1 AND lower(trim(u.name)) = lower(${SHEET_DRIVER})
+    WHERE v.driver_id IS NULL AND v.user_name IS NOT NULL ${userId ? 'AND u.id = ?' : ''} ORDER BY v.id, u.id`, ...(userId ? [userId] : []));
+  for (const r of rows) await run('UPDATE vehicles SET driver_id = ?, user_name = NULL WHERE id = ?', r.uid, r.vid);
+  for (const uid of new Set(rows.map((r) => r.uid))) await syncCardVehicles(uid);
+  return rows.length;
+}
+
+module.exports = { SHEET_DRIVER, linkVehiclesByName, syncCardVehicles, listProjects, listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };
