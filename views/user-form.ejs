@@ -14,8 +14,9 @@
     <legend>Employee type</legend>
     <span class="seg">
       <% for (const [k, l] of Object.entries(EMPLOYEE_TYPES)) { %>
-      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type || 'driver') === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
+      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type || (item.role === 'admin' ? '' : 'driver')) === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
       <% } %>
+      <input type="radio" id="et-none" name="employee_type" value="" <%= item.role === 'admin' && !item.employee_type ? 'checked' : '' %>><label for="et-none" id="et-none-label">Neither</label>
     </span>
   </fieldset>
   <div class="form-grid">
@@ -39,7 +40,10 @@
     const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards and users.' };
     function upd() {
       const role = document.querySelector('input[name="role"]:checked').value;
-      document.getElementById('emp-type').hidden = role === 'admin';
+      // Admins can also be a fleet driver or site manager, or neither.
+      const none = document.getElementById('et-none');
+      none.hidden = document.getElementById('et-none-label').hidden = role !== 'admin';
+      if (role !== 'admin' && none.checked) document.getElementById('et-driver').checked = true;
       document.getElementById('role-hint').textContent = hints[role];
     }
     document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener('change', upd));

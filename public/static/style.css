@@ -395,3 +395,4 @@ div.pills .pill { white-space: normal; }
 #history tr.clickable { cursor: pointer; }
 #history tr.clickable:hover td { background: rgba(15, 35, 75, 0.04); }
 .dlg .facts { margin-bottom: 14px; }
+.seg label[hidden] { display: none; }

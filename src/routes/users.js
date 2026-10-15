@@ -8,16 +8,17 @@ const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
 const router = express.Router();
 router.use('/users', requireAdmin);
 
-const SHOW = { employees: "u.role = 'driver'", drivers: "u.role = 'driver' AND u.employee_type = 'driver'",
-  site_managers: "u.role = 'driver' AND u.employee_type = 'site_manager'", admins: "u.role = 'admin'" };
+// Admin users can also be fleet drivers or site managers, so they show under those filters too.
+const SHOW = { employees: "u.role = 'driver'", drivers: "u.employee_type = 'driver'",
+  site_managers: "u.employee_type = 'site_manager'", admins: "u.role = 'admin'" };
 
 router.get('/users', async (req, res) => {
   const show = SHOW[req.query.show] ? req.query.show : '';
   const users = await all(`SELECT u.*, (SELECT string_agg(reg, ', ' ORDER BY reg) FROM vehicles v WHERE v.driver_id = u.id AND v.active = 1) AS vehicles,
       (SELECT COUNT(*) FROM fuel_cards c WHERE c.user_id = u.id AND c.status = 'active') AS cards
     FROM users u ${show ? 'WHERE ' + SHOW[show] : ''} ORDER BY u.active DESC, u.role = 'admin', u.name`);
-  const counts = await get(`SELECT COUNT(*) AS all_users, COUNT(*) FILTER (WHERE role = 'driver') AS employees, COUNT(*) FILTER (WHERE role = 'driver' AND employee_type = 'driver') AS drivers,
-    COUNT(*) FILTER (WHERE role = 'driver' AND employee_type = 'site_manager') AS site_managers, COUNT(*) FILTER (WHERE role = 'admin') AS admins FROM users`);
+  const counts = await get(`SELECT COUNT(*) AS all_users, COUNT(*) FILTER (WHERE role = 'driver') AS employees, COUNT(*) FILTER (WHERE employee_type = 'driver') AS drivers,
+    COUNT(*) FILTER (WHERE employee_type = 'site_manager') AS site_managers, COUNT(*) FILTER (WHERE role = 'admin') AS admins FROM users`);
   res.render('users', { title: 'Employees', users, show, counts });
 });
 
@@ -39,7 +40,8 @@ function readUser(body, existing) {
   const password = body.password ? String(body.password) : '';
   if (password && password.length < 8) throw new UserError('Password must be at least 8 characters.');
   if (email && !password && !(existing && existing.password_hash)) throw new UserError('Set a password so they can sign in, or leave the email blank.');
-  const employeeType = role === 'admin' ? null : body.employee_type;
+  // Admins can also be a fleet driver or site manager (or neither); employees must be one of them.
+  const employeeType = EMPLOYEE_TYPES[body.employee_type] ? body.employee_type : null;
   if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose fleet driver or site manager.');
   return { name, email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
 }
