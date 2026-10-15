@@ -12,9 +12,10 @@
 </form>
 <%- include('partials/pane-end') %>
 <div class="card flush">
+  <% const back = `/defects?status=${statusFilter}${assetFilter ? '&asset=' + assetFilter : ''}`; %>
   <% if (!defects.length) { %><p class="empty">No defects here.</p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Reported</th><th>Asset</th><th>Defect</th><th>Severity</th><th>Status</th></tr></thead>
+    <thead><tr><th>Reported</th><th>Asset</th><th>Defect</th><th>Severity</th><th>Documents</th><th>Status</th></tr></thead>
     <tbody><% for (const d of defects) { %>
       <tr>
         <td class="nowrap"><%= ukDate(d.reported_at) %><div class="small muted"><%= d.reported_by_name %></div></td>
@@ -22,10 +23,17 @@
           <% if (d.check_id) { %><div class="small"><a href="/checks/<%= d.asset_type %>/<%= d.check_id %>">From check</a></div><% } %></td>
         <td><%= d.description %></td>
         <td><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span></td>
+        <td class="defect-docs">
+          <% for (const doc of d.docs) { %><a href="/documents/<%= doc.id %>" target="_blank" rel="noopener" title="<%= doc.name %>">📎 <%= doc.name.length > 22 ? doc.name.slice(0, 20) + '…' : doc.name %></a><% } %>
+          <form method="post" action="/defects/<%= d.id %>/documents" enctype="multipart/form-data" class="doc-attach">
+            <input type="hidden" name="back" value="<%= back %>">
+            <label class="doc-add-link">+ Add<input type="file" name="docs" accept="image/*,application/pdf" multiple hidden></label>
+          </form>
+        </td>
         <td style="min-width:240px">
           <% if (d.status === 'open') { %>
             <form class="price-form" method="post" action="/defects/<%= d.id %>/resolve">
-              <input type="hidden" name="back" value="/defects?status=<%= statusFilter %><%= assetFilter ? '&asset=' + assetFilter : '' %>">
+              <input type="hidden" name="back" value="<%= back %>">
               <input type="text" name="resolution" placeholder="What was done?" required aria-label="Resolution">
               <button class="btn small" type="submit">Resolve</button>
             </form>
@@ -39,4 +47,8 @@
     <% } %></tbody>
   </table></div><% } %>
 </div>
+<script>
+  // Picking files on a defect uploads them straight away.
+  document.querySelectorAll('.doc-attach input[type=file]').forEach((f) => f.addEventListener('change', () => { if (f.files.length) f.form.submit(); }));
+</script>
 <%- include('partials/footer') %>

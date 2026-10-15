@@ -235,6 +235,11 @@ test('admin and driver flows', async () => {
   svg.append('asset', `plant:${sling.id}`);
   svg.append('docs', new Blob(['<svg/>'], { type: 'image/svg+xml' }), 'x.svg');
   assert.equal((await admin('POST', '/documents', svg)).status, 400);
+  const later = new FormData();
+  later.append('docs', pdf(), 'Invoice 55.pdf');
+  const wd = await get("SELECT id FROM defects WHERE description = 'Cracked windscreen'");
+  assert.equal((await admin('POST', `/defects/${wd.id}/documents`, later)).status, 302);
+  assert.match((await admin('GET', '/defects?status=all')).text, /Invoice 55\.pdf/);
   await run("DELETE FROM defects WHERE description = 'Cracked windscreen'");
 
   const defect = await get("SELECT id FROM defects WHERE asset_type = 'vehicle'");

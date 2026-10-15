@@ -355,3 +355,7 @@ div.pills .pill { white-space: normal; }
 .doc-add select { width: auto; }
 .doc-add input[type=file] { flex: 1; min-width: 180px; font-size: .85rem; }
 .doc-links a { white-space: nowrap; margin-left: 6px; font-size: .85rem; }
+.defect-docs { min-width: 120px; font-size: .85rem; }
+.defect-docs a { display: block; white-space: nowrap; }
+.doc-add-link { display: inline-block; margin: 2px 0 0; font-size: .82rem; font-weight: 500; color: var(--accent); cursor: pointer; }
+.doc-add-link:hover { text-decoration: underline; }

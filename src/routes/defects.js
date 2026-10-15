@@ -1,5 +1,5 @@
 const express = require('express');
-const { run, get, transaction } = require('../db');
+const { all, run, get, transaction } = require('../db');
 const { upload: docUpload, saveDocs } = require('../documents');
 const { listDefects, listPlant, listVehicles } = require('../queries');
 const { CATEGORIES } = require('../categories');
@@ -13,7 +13,10 @@ router.get('/defects', requireAdmin, async (req, res) => {
   const asset = String(req.query.asset || '');
   const category = CATEGORIES.some((c) => c.key === asset) ? asset : null;
   const assetType = ['plant', 'vehicle'].includes(asset) ? asset : null;
-  res.render('defects', { title: 'Defects', defects: await listDefects({ status: statusFilter, assetType, category }), statusFilter, assetFilter: category || assetType || '', CATEGORIES });
+  const defects = await listDefects({ status: statusFilter, assetType, category });
+  const docs = defects.length ? await all(`SELECT id, defect_id, name FROM documents WHERE defect_id IN (${defects.map(() => '?').join(', ')}) ORDER BY id`, ...defects.map((d) => d.id)) : [];
+  for (const d of defects) d.docs = docs.filter((x) => x.defect_id === d.id);
+  res.render('defects', { title: 'Defects', defects, statusFilter, assetFilter: category || assetType || '', CATEGORIES });
 });
 
 router.get('/defects/new', async (req, res) => {
@@ -43,12 +46,26 @@ router.post('/defects', docUpload, async (req, res) => {
   res.redirect(req.user.role === 'admin' ? '/defects' : '/');
 });
 
-router.post('/defects/:id/resolve', requireAdmin, async (req, res) => {
+router.post('/defects/:id/resolve', requireAdmin, docUpload, async (req, res) => {
+  const defect = await get('SELECT * FROM defects WHERE id = ?', Number(req.params.id));
+  if (!defect) throw new UserError('Defect not found.', 404);
   const resolution = text(req.body.resolution);
   if (!resolution) throw new UserError('Please say what was done to fix the defect.');
-  await run(`UPDATE defects SET status = 'resolved', resolution = ?, resolved_by = ?, resolved_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') WHERE id = ?`,
-    resolution, req.user.id, Number(req.params.id));
+  await transaction(async () => {
+    await run(`UPDATE defects SET status = 'resolved', resolution = ?, resolved_by = ?, resolved_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') WHERE id = ?`,
+      resolution, req.user.id, defect.id);
+    await saveDocs(req.files, { assetType: defect.asset_type, assetId: defect.asset_id, kind: 'defect', defectId: defect.id, userId: req.user.id });
+  });
   req.flash('success', 'Defect marked as resolved.');
+  res.redirect(req.body.back && req.body.back.startsWith('/') && !req.body.back.startsWith('//') ? req.body.back : '/defects');
+});
+
+router.post('/defects/:id/documents', requireAdmin, docUpload, async (req, res) => {
+  const defect = await get('SELECT * FROM defects WHERE id = ?', Number(req.params.id));
+  if (!defect) throw new UserError('Defect not found.', 404);
+  if (!req.files || !req.files.length) throw new UserError('Please choose a file to upload.');
+  const n = await saveDocs(req.files, { assetType: defect.asset_type, assetId: defect.asset_id, kind: 'defect', defectId: defect.id, userId: req.user.id });
+  req.flash('success', `${n} document${n > 1 ? 's' : ''} added to the defect.`);
   res.redirect(req.body.back && req.body.back.startsWith('/') && !req.body.back.startsWith('//') ? req.body.back : '/defects');
 });
 
