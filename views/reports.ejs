@@ -1,0 +1,15 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Reports</h1><p class="muted" style="margin:0">Each report opens ready to print. Choose <strong>Save as PDF</strong> as the printer to keep a copy.</p></div>
+</div>
+<%- include('partials/pane-end') %>
+<div class="report-grid">
+  <% for (const [key, r] of Object.entries(REPORTS)) { %>
+  <div class="card report-card">
+    <h2><%= r.label %></h2>
+    <p class="muted"><%= r.blurb %></p>
+    <div class="actions"><a class="btn primary" href="/reports/<%= key %>?print=1" target="_blank" rel="noopener">Save as PDF</a><a class="btn" href="/reports/<%= key %>" target="_blank" rel="noopener">View</a></div>
+  </div>
+  <% } %>
+</div>
+<%- include('partials/footer') %>

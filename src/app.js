@@ -97,6 +97,7 @@ async function createApp() {
   app.use(require('./routes/vehicles'));
   app.use(require('./routes/users'));
   app.use(require('./routes/projects'));
+  app.use(require('./routes/reports'));
   app.use(require('./routes/admin'));
 
   app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'That page does not exist.' }));

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marley Construction – <%= report.title %> – <%= ukDate(today) %></title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+</head>
+<body class="report-page">
+<div class="report-bar no-print">
+  <a class="btn" href="/reports">Back to reports</a>
+  <button class="btn primary" type="button" onclick="window.print()">Save as PDF</button>
+</div>
+<div class="report">
+  <header class="report-head">
+    <div class="logo-tile"><img src="/static/logo.png" alt="Marley"></div>
+    <div><h1><%= report.title %></h1><p>Marley Construction · Fleet &amp; Plant Register</p></div>
+    <div class="report-meta"><strong><%= report.count %></strong><br>Run <%= ukDate(today) %> by <%= user.name %></div>
+  </header>
+  <table class="report-table">
+    <colgroup><% for (const w of report.widths) { %><col style="width:<%= w %>%"><% } %></colgroup>
+    <thead><tr><% for (const c of report.columns) { %><th><%= c %></th><% } %></tr></thead>
+    <% if (!report.groups.length) { %><tbody><tr><td colspan="<%= report.columns.length %>">Nothing to report.</td></tr></tbody><% } %>
+    <% for (const g of report.groups) { %>
+    <tbody>
+      <% if (g.label) { %><tr class="group"><th colspan="<%= report.columns.length %>"><%= g.label %> <span><%= g.rows.length %></span></th></tr><% } %>
+      <% for (const row of g.rows) { %><tr><% for (const cell of row) { %><td><%
+        if (cell && cell.pill) { %><span class="pill <%= cell.pill.level %>"><%= cell.pill.text %></span><% if (cell.sub) { %><div class="sub"><%= cell.sub %></div><% } %><% }
+        else if (cell && cell.reg) { %><span class="reg"><%= cell.reg %></span><% }
+        else { %><%= cell %><% } %></td><% } %></tr><% } %>
+    </tbody>
+    <% } %>
+  </table>
+</div>
+<% if (autoPrint) { %><script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script><% } %>
+</body>
+</html>

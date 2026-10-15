@@ -171,6 +171,10 @@ test('admin and driver flows', async () => {
   assert.equal((await admin('GET', '/fuel-cards/assign')).status, 404);
 
   assert.equal((await admin('GET', '/admin')).location, '/projects');
+  // Reports: the office can run each one; drivers can't.
+  assert.match((await admin('GET', '/reports')).text, /Save as PDF/);
+  for (const k of ['plant', 'fleet', 'fuel-cards', 'equipment', 'employees', 'projects']) assert.equal((await admin('GET', `/reports/${k}`)).status, 200, k);
+  assert.doesNotMatch((await admin('GET', '/reports/fuel-cards')).text, /7064056072235900127|7064 0560 7223 5900 127/);
   assert.match((await admin('GET', '/users/new')).text, /Who can see what/);
   const dash = await admin('GET', '/');
   assert.match(dash.text, /Needs attention/);
@@ -240,6 +244,7 @@ test('admin and driver flows', async () => {
   assert.ok(entry.fuel_card_id);
   assert.ok(fs.existsSync(path.join(process.env.DATA_DIR, 'uploads', entry.receipt_file)));
   assert.equal((await driver('GET', `/receipts/${entry.receipt_file}`)).status, 200);
+  assert.notEqual((await driver('GET', '/reports/plant')).status, 200);
   // A fill logged by the office counts against the vehicle's driver, not the admin who typed it.
   const byOffice = new FormData();
   for (const [k, v] of [['vehicle_id', vehicle.id], ['fuel_type', 'diesel'], ['litres', '20']]) byOffice.append(k, v);
