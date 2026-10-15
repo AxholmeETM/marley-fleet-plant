@@ -48,8 +48,7 @@ function readUser(body, existing) {
   if (email && !password && !(existing && existing.password_hash)) throw new UserError('Set a password so they can sign in, or leave the email blank.');
   // Admins can also be a fleet driver or site manager (or neither); employees must be one of them.
   const employeeType = EMPLOYEE_TYPES[body.employee_type] ? body.employee_type : null;
-  if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose fleet driver or site manager.');
-  if (employeeType === 'worker') throw new UserError('Site workers have no account. Choose "No account needed" for them.');
+  if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose an employee type.');
   return { name, employee_no: text(body.employee_no), email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
 }
 

@@ -49,10 +49,7 @@
       const none = document.getElementById('et-none');
       none.hidden = document.getElementById('et-none-label').hidden = role !== 'admin';
       if (role !== 'admin' && none.checked) document.getElementById('et-driver').checked = true;
-      // Site worker is only for people with no account; no account means no email or password.
-      const worker = document.getElementById('et-worker');
-      worker.hidden = document.querySelector('label[for="et-worker"]').hidden = role !== 'none';
-      if (role !== 'none' && worker.checked) document.getElementById('et-driver').checked = true;
+      // No account means no email or password.
       document.querySelectorAll('.login-field').forEach((f) => { f.hidden = role === 'none'; });
       document.getElementById('role-hint').textContent = hints[role];
     }
