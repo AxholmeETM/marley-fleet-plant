@@ -1,6 +1,18 @@
 const express = require('express');
 const { all, get, run } = require('../db');
 const { listVehicles, syncCardVehicles } = require('../queries');
+
+// Picking a vehicle for a person's card makes them that vehicle's driver on Fleet, so Fleet, Employees
+// and Fuel cards always agree. The previous driver's cards are moved off it.
+async function cardFollows(c) {
+  if (!c.user_id) return;
+  const v = c.vehicle_id && await get('SELECT id, driver_id FROM vehicles WHERE id = ?', c.vehicle_id);
+  if (v && v.driver_id !== c.user_id) {
+    await run('UPDATE vehicles SET driver_id = ?, user_name = NULL WHERE id = ?', c.user_id, v.id);
+    await syncCardVehicles(v.driver_id);
+  }
+  await syncCardVehicles(c.user_id);
+}
 const { requireAdmin, UserError, text } = require('../auth');
 const { isValidDate, dueStatus } = require('../status');
 const { FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES } = require('../categories');
@@ -84,7 +96,7 @@ router.get('/fuel-cards/new', async (req, res) => await form(res, 'Add fuel card
 router.post('/fuel-cards', async (req, res) => {
   const c = await readCard(req.body);
   await run(`INSERT INTO fuel_cards (${Object.keys(c).join(', ')}) VALUES (${Object.keys(c).map(() => '?').join(', ')})`, ...Object.values(c));
-  await syncCardVehicles(c.user_id);
+  await cardFollows(c);
   req.flash('success', `${c.provider} card added.`);
   res.redirect('/fuel-cards');
 });
@@ -98,7 +110,7 @@ router.get('/fuel-cards/:id/edit', async (req, res) => {
 router.post('/fuel-cards/:id', async (req, res) => {
   const c = await readCard(req.body);
   await run(`UPDATE fuel_cards SET ${Object.keys(c).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...Object.values(c), Number(req.params.id));
-  await syncCardVehicles(c.user_id);
+  await cardFollows(c);
   req.flash('success', 'Fuel card updated.');
   res.redirect('/fuel-cards');
 });

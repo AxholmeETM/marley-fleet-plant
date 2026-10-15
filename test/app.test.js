@@ -128,6 +128,13 @@ test('admin and driver flows', async () => {
   assert.match((await admin('GET', `/fuel-cards/${named}/edit`)).text, /Printed on card: Printed Name/);
   await admin('POST', `/fuel-cards/${named}`, { provider: 'Esso', card_ref: 'N1', status: 'active', user_id: sam.id });
   assert.match((await admin('GET', '/fuel-cards')).text, /Pat Jones/);
+  // Choosing the card's vehicle makes its person that vehicle's driver on Fleet; changing the driver on Fleet moves the card.
+  const vanA = (await run("INSERT INTO vehicles (reg, active) VALUES ('MT01 AAA', 1)")).lastInsertRowid;
+  await admin('POST', `/fuel-cards/${named}`, { provider: 'Esso', card_ref: 'N1', status: 'active', user_id: pat.id, vehicle_id: vanA });
+  assert.equal((await get('SELECT driver_id FROM vehicles WHERE id = ?', vanA)).driver_id, pat.id);
+  await admin('POST', `/vehicles/${vanA}`, { reg: 'MT01 AAA', driver_id: '' });
+  assert.equal((await get('SELECT vehicle_id FROM fuel_cards WHERE id = ?', named)).vehicle_id, null);
+  await run('DELETE FROM vehicles WHERE id = ?', vanA);
   await run('DELETE FROM fuel_cards WHERE id = ?', named);
   const gone = (await run("INSERT INTO fuel_cards (provider, card_ref, status) VALUES ('Esso', 'X9', 'active')")).lastInsertRowid;
   assert.equal((await admin('POST', `/fuel-cards/${gone}/delete`)).location, '/fuel-cards');

@@ -94,6 +94,10 @@ async function employeesFromCardsOnce() {
   if ((await run("INSERT INTO settings (key, value) VALUES ('cards_follow_vehicles', 'done') ON CONFLICT (key) DO NOTHING")).changes) {
     for (const u of await all('SELECT DISTINCT driver_id AS id FROM vehicles WHERE driver_id IS NOT NULL AND active = 1')) await syncCardVehicles(u.id);
   }
+  // Once: make every linked card match its person's vehicle on Fleet.
+  if ((await run("INSERT INTO settings (key, value) VALUES ('cards_match_drivers', 'done') ON CONFLICT (key) DO NOTHING")).changes) {
+    for (const u of await all('SELECT DISTINCT user_id AS id FROM fuel_cards WHERE user_id IS NOT NULL')) await syncCardVehicles(u.id);
+  }
   fromCardsDone = true;
 }
 

@@ -74,13 +74,10 @@ async function listProjects(keep = null) {
 // taken off them, their cards pointing at it move to their other vehicle, or to none.
 async function syncCardVehicles(userId, removedVehicleId = null) {
   if (!userId) return;
-  const vehicles = await all('SELECT id FROM vehicles WHERE driver_id = ? AND active = 1 ORDER BY id', userId);
-  if (removedVehicleId) await run('UPDATE fuel_cards SET vehicle_id = NULL WHERE user_id = ? AND vehicle_id = ?', userId, removedVehicleId);
-  if (vehicles.length === 1) {
-    await run('UPDATE fuel_cards SET vehicle_id = ? WHERE user_id = ? AND vehicle_id IS DISTINCT FROM ?', vehicles[0].id, userId, vehicles[0].id);
-  } else if (vehicles.length) {
-    await run('UPDATE fuel_cards SET vehicle_id = ? WHERE user_id = ? AND vehicle_id IS NULL', vehicles[0].id, userId);
-  }
+  // A person's cards always point at one of their vehicles (the first if they have several), or none.
+  const ids = (await all('SELECT id FROM vehicles WHERE driver_id = ? AND active = 1 ORDER BY id', userId)).map((v) => v.id);
+  if (!ids.length) return run('UPDATE fuel_cards SET vehicle_id = NULL WHERE user_id = ?', userId);
+  await run(`UPDATE fuel_cards SET vehicle_id = ? WHERE user_id = ? AND (vehicle_id IS NULL OR vehicle_id NOT IN (${ids.map(() => '?').join(', ')}))`, ids[0], userId, ...ids);
 }
 
 module.exports = { syncCardVehicles, listProjects, listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };
