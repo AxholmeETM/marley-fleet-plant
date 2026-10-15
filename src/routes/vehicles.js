@@ -101,13 +101,11 @@ router.get('/vehicles/:id', async (req, res) => {
   const checks = await all(`SELECT c.*, u.name AS user_name FROM vehicle_checks c JOIN users u ON u.id = c.user_id
     WHERE c.vehicle_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 30`, item.id);
   const records = await all(`SELECT * FROM service_records WHERE asset_type = 'vehicle' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
-  const fuel = await all(`SELECT f.*, u.name AS driver_name FROM fuel_entries f JOIN users u ON u.id = f.user_id
-    WHERE f.vehicle_id = ? ${isAdmin(req.user) ? '' : 'AND f.user_id = ' + Number(req.user.id)} ORDER BY f.fill_date DESC, f.id DESC LIMIT 20`, item.id);
   const defects = await listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
   const cards = await all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
   const documents = await listDocs('vehicle', item.id);
   const crumbs = isAdmin(req.user) ? [['Fleet', '/vehicles'], [VEHICLE_CATEGORIES[item.category] || 'Vehicles', `/vehicles?category=${item.category}`], [item.reg]] : [['Home', '/'], [item.reg]];
-  res.render('vehicle-view', { title: item.reg, crumbs, item, checks, records, fuel, defects, cards, documents, DOC_KINDS, addMonths, addDays, ...LOOKUPS });
+  res.render('vehicle-view', { title: item.reg, crumbs, item, checks, records, defects, cards, documents, DOC_KINDS, addMonths, addDays, ...LOOKUPS });
 });
 
 router.get('/vehicles/:id/edit', async (req, res) => {
