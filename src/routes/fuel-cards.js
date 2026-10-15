@@ -50,7 +50,8 @@ async function readCard(body) {
     last4,
     card_number: cardNumber || null,
     holder: text(body.holder),
-    user_id: await checkUser(body.user_id),
+    // No longer on the form (fuel cards are admin-only); keep any existing link unless one is sent.
+    ...(body.user_id !== undefined ? { user_id: await checkUser(body.user_id) } : {}),
     vehicle_id: vehicleId,
     card_type: text(body.card_type),
     expiry: expiry ? expiry.slice(0, 7) : null,

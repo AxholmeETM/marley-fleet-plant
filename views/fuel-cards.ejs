@@ -11,7 +11,7 @@
 <div class="card flush">
   <% if (!cards.length) { %><p class="empty">No fuel cards yet. <a href="/fuel-cards/new">Add one.</a></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Company</th><th>Card</th><th>Assigned to</th><th>Vehicle</th><th>Fuel</th><th>Expiry</th><th>Last used</th><th></th></tr></thead>
+    <thead><tr><th>Company</th><th>Card</th><th>Name on card</th><th>Vehicle</th><th>Fuel</th><th>Expiry</th><th>Last used</th><th></th></tr></thead>
     <tbody><% for (const c of cards) { %>
       <tr>
         <td><%= c.provider %></td>

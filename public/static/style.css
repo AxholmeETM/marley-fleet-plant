@@ -360,3 +360,5 @@ div.pills .pill { white-space: normal; }
 .doc-add-link { display: inline-block; margin: 2px 0 0; font-size: .82rem; font-weight: 500; color: var(--accent); cursor: pointer; }
 .doc-add-link:hover { text-decoration: underline; }
 #history { overflow: hidden; }
+/* Keep form fields in a grid level: every label on one line so inputs in a row line up. */
+.form-grid > .field > label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
