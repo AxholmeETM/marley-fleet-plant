@@ -100,6 +100,17 @@ test('admin and driver flows', async () => {
   await admin('POST', `/users/${laura.id}/vehicles/${vehicle.id}/remove`);
   await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', dave, vehicle.id);
   assert.match((await admin('GET', '/users')).text, /No login/);
+  // Employees can be created from the names on the fuel cards in one click.
+  await run("INSERT INTO fuel_cards (provider, card_ref, holder, user_id, status) VALUES ('Esso', 'T1', 'Pat Jones(2)', (SELECT id FROM users WHERE role = 'admin' LIMIT 1), 'active'), ('Esso', 'T2', 'pat jones', NULL, 'active'), ('Esso', 'T3', 'Jim and Keith', NULL, 'active'), ('Esso', 'T4', 'Laura', NULL, 'active')");
+  assert.equal((await admin('POST', '/users/from-fuel-cards')).status, 302);
+  const pat = await get("SELECT * FROM users WHERE name = 'Pat Jones'");
+  assert.ok(pat && pat.email === null);
+  assert.equal((await get("SELECT COUNT(*) AS n FROM fuel_cards WHERE card_ref IN ('T1', 'T2') AND user_id = ?", pat.id)).n, 2);
+  assert.equal((await get("SELECT user_id FROM fuel_cards WHERE card_ref = 'T3'")).user_id, null);
+  assert.equal((await get("SELECT user_id FROM fuel_cards WHERE card_ref = 'T4'")).user_id, laura.id);
+  await admin('POST', '/users/from-fuel-cards');
+  assert.equal((await get("SELECT COUNT(*) AS n FROM users WHERE lower(name) = 'pat jones'")).n, 1);
+  await run("DELETE FROM fuel_cards WHERE card_ref IN ('T1', 'T2', 'T3', 'T4')");
   await admin('POST', '/plant', { plant_no: 'mcl-ex-0001', category: 'excavator', owner: 'MCL', make: 'JCB', model: '245', job_ref: 'J100', running_hours: 990,
     service_schedule: '50, 200, 500', service_interval_hours: 500, last_service_hours: 750, tracks_hours: '1', weekly_checks: '1', inspection_type: 'loler', loler_interval_months: 12 });
   const plant = await get("SELECT * FROM plant WHERE plant_no = 'MCL-EX-0001'");

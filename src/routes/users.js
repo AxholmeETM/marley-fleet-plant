@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { all, get, run, isUniqueViolation } = require('../db');
+const { all, get, run, transaction, isUniqueViolation } = require('../db');
 const { listVehicles } = require('../queries');
 const { requireAdmin, UserError, text } = require('../auth');
 const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
@@ -58,6 +58,36 @@ router.post('/users', async (req, res) => {
   } catch (err) { saveError(err); }
   req.flash('success', u.email ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
   res.redirect(`/users/${id}`);
+});
+
+// One click: add an employee (fleet driver, no login) for each full name on a fuel card, then link each card to its person.
+// Shared cards ("Jim and Keith", "A / B", "A - B") are skipped; a first name alone links only if exactly one employee has it.
+// Cards already linked to an employee are left alone; cards linked to an admin user move to the named employee.
+const CARD_NAME = `trim(regexp_replace(c.holder, '\\s*\\(.*\\)\\s*$', ''))`;
+const CARD_FILTER = `c.holder IS NOT NULL AND trim(c.holder) <> '' AND c.holder !~* '( and |/| - )'`;
+async function employeesFromCards() {
+  return transaction(async () => {
+    const added = (await run(`INSERT INTO users (name, role, employee_type, active)
+      SELECT DISTINCT ON (lower(n)) initcap(n), 'driver', 'driver', 1
+      FROM (SELECT ${CARD_NAME} AS n FROM fuel_cards c WHERE ${CARD_FILTER}) x
+      WHERE n LIKE '% %' AND NOT EXISTS (SELECT 1 FROM users u WHERE lower(trim(u.name)) = lower(n))
+      ORDER BY lower(n) RETURNING id`)).changes;
+    const linked = (await run(`UPDATE fuel_cards c SET user_id = o.user_id
+      FROM (SELECT c.id AS card_id, COALESCE(
+          (SELECT u.id FROM users u WHERE lower(trim(u.name)) = lower(${CARD_NAME}) ORDER BY u.active DESC, u.id LIMIT 1),
+          (SELECT MIN(u.id) FROM users u WHERE ${CARD_NAME} NOT LIKE '% %' AND u.active = 1 AND u.role = 'driver'
+             AND lower(split_part(trim(u.name), ' ', 1)) = lower(${CARD_NAME}) HAVING COUNT(*) = 1)) AS user_id
+        FROM fuel_cards c WHERE ${CARD_FILTER}) o
+      WHERE c.id = o.card_id AND o.user_id IS NOT NULL AND o.user_id IS DISTINCT FROM c.user_id
+        AND (c.user_id IS NULL OR c.user_id IN (SELECT id FROM users WHERE role = 'admin'))`)).changes;
+    return { added, linked };
+  });
+}
+
+router.post('/users/from-fuel-cards', async (req, res) => {
+  const { added, linked } = await employeesFromCards();
+  req.flash('success', `${added} employee${added === 1 ? '' : 's'} added and ${linked} fuel card${linked === 1 ? '' : 's'} linked from the names on the cards.`);
+  res.redirect('/users');
 });
 
 // Employee page: their details, plus the vehicles and fuel cards assigned to them.
