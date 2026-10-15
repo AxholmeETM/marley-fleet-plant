@@ -54,14 +54,14 @@ router.post('/fuel', upload.single('receipt'), async (req, res) => {
     if (!litres) throw new UserError('Please enter how many litres you put in.');
     if (!req.file) throw new UserError('Please attach a photo of the receipt.');
     const mileage = numberField(req.body.mileage, 'Mileage', { integer: true });
-    const card = Number(req.body.fuel_card_id) ? await get("SELECT id FROM fuel_cards WHERE id = ? AND status = 'active'", Number(req.body.fuel_card_id)) : null;
+    const card = Number(req.body.fuel_card_id) ? await get("SELECT id, user_id FROM fuel_cards WHERE id = ? AND status = 'active'", Number(req.body.fuel_card_id)) : null;
     if (Number(req.body.fuel_card_id) && !card) throw new UserError('That fuel card is no longer active. Please choose another.');
     const fileName = `receipt-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${MIME_EXT[req.file.mimetype]}`;
     await storage.save(fileName, req.file.buffer);
     saved = fileName;
-    await run(`INSERT INTO fuel_entries (vehicle_id, user_id, fill_date, fuel_type, litres, mileage, station, notes, fuel_card_id, receipt_file, receipt_name)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      vehicle.id, req.user.id, date, req.body.fuel_type, litres, mileage, text(req.body.station), text(req.body.notes), card ? card.id : null,
+    await run(`INSERT INTO fuel_entries (vehicle_id, user_id, driver_id, fill_date, fuel_type, litres, mileage, station, notes, fuel_card_id, receipt_file, receipt_name)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      vehicle.id, req.user.id, vehicle.driver_id || (card && card.user_id) || req.user.id, date, req.body.fuel_type, litres, mileage, text(req.body.station), text(req.body.notes), card ? card.id : null,
       fileName, req.file.originalname);
     if (mileage != null) await run('UPDATE vehicles SET mileage = GREATEST(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, vehicle.id);
     req.flash('success', `Fuel logged: ${litres} L of ${req.body.fuel_type === 'adblue' ? 'AdBlue' : req.body.fuel_type} for ${vehicle.reg}.`);
@@ -75,8 +75,8 @@ router.post('/fuel', upload.single('receipt'), async (req, res) => {
 // Receipts are only served to signed-in users: admins see all, drivers their own.
 router.get('/receipts/:file', async (req, res) => {
   const name = path.basename(req.params.file);
-  const entry = await get('SELECT user_id FROM fuel_entries WHERE receipt_file = ?', name);
-  if (!entry || (req.user.role !== 'admin' && entry.user_id !== req.user.id)) {
+  const entry = await get('SELECT user_id, driver_id FROM fuel_entries WHERE receipt_file = ?', name);
+  if (!entry || (req.user.role !== 'admin' && entry.user_id !== req.user.id && entry.driver_id !== req.user.id)) {
     return res.status(404).render('error', { title: 'Not found', message: 'Receipt not found.' });
   }
   const file = await storage.read(name);
@@ -155,7 +155,7 @@ router.get('/fuel', requireAdmin, async (req, res) => {
   if (show === 'verified') where.push('f.verified = 1');
   const entries = await all(`
     SELECT f.*, v.reg, u.name AS driver_name, c.provider AS card_provider, c.card_ref, c.last4 AS card_last4 FROM fuel_entries f
-    JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = f.user_id LEFT JOIN fuel_cards c ON c.id = f.fuel_card_id
+    JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = COALESCE(f.driver_id, f.user_id) LEFT JOIN fuel_cards c ON c.id = f.fuel_card_id
     WHERE ${where.join(' AND ')} ORDER BY f.fill_date DESC, f.id DESC`, ...params);
 
   const byType = Object.fromEntries(FUEL_TYPES.map((t) => [t, { litres: 0, cost: 0, pricedLitres: 0, fills: 0 }]));
@@ -167,7 +167,7 @@ router.get('/fuel', requireAdmin, async (req, res) => {
   const counts = await get(`SELECT COUNT(*) AS fills, COUNT(*) FILTER (WHERE cost IS NULL) AS unpriced, COUNT(*) FILTER (WHERE verified = 0) AS unverified, SUM(cost) AS cost
     FROM fuel_entries WHERE fill_date BETWEEN ? AND ?`, p.from, p.to);
 
-  const drivers = await leaderboard('f.user_id', 'u.name', 'JOIN users u ON u.id = f.user_id', p.from, p.to);
+  const drivers = await leaderboard('COALESCE(f.driver_id, f.user_id)', 'u.name', 'JOIN users u ON u.id = COALESCE(f.driver_id, f.user_id)', p.from, p.to);
   const vehicles = await leaderboard('f.vehicle_id', "v.reg || COALESCE(' – ' || v.make || ' ' || v.model, '')", 'JOIN vehicles v ON v.id = f.vehicle_id', p.from, p.to);
   const mpg = await approxMpg(p.from, p.to);
   vehicles.forEach((v) => Object.assign(v, mpg[v.id] || {}));
@@ -188,7 +188,7 @@ router.get('/fuel/next', requireAdmin, async (req, res) => {
 
 router.get('/fuel/:id', requireAdmin, async (req, res) => {
   const entry = await get(`SELECT f.*, v.reg, v.make, v.model, u.name AS driver_name, a.name AS priced_by_name FROM fuel_entries f
-    JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = f.user_id LEFT JOIN users a ON a.id = f.priced_by
+    JOIN vehicles v ON v.id = f.vehicle_id JOIN users u ON u.id = COALESCE(f.driver_id, f.user_id) LEFT JOIN users a ON a.id = f.priced_by
     WHERE f.id = ?`, Number(req.params.id));
   if (!entry) return res.status(404).render('error', { title: 'Not found', message: 'Fuel entry not found.' });
   const remaining = (await get('SELECT COUNT(*) AS n FROM fuel_entries WHERE verified = 0 AND id != ?', entry.id)).n;

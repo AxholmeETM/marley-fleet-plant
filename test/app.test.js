@@ -233,6 +233,14 @@ test('admin and driver flows', async () => {
   assert.ok(entry.fuel_card_id);
   assert.ok(fs.existsSync(path.join(process.env.DATA_DIR, 'uploads', entry.receipt_file)));
   assert.equal((await driver('GET', `/receipts/${entry.receipt_file}`)).status, 200);
+  // A fill logged by the office counts against the vehicle's driver, not the admin who typed it.
+  const byOffice = new FormData();
+  for (const [k, v] of [['vehicle_id', vehicle.id], ['fuel_type', 'diesel'], ['litres', '20']]) byOffice.append(k, v);
+  byOffice.append('receipt', new Blob([Buffer.from([0xff, 0xd8, 0xff, 0xe0])], { type: 'image/jpeg' }), 'r2.jpg');
+  await admin('POST', '/fuel', byOffice);
+  const office = await get('SELECT f.driver_id, v.driver_id AS vehicle_driver FROM fuel_entries f JOIN vehicles v ON v.id = f.vehicle_id ORDER BY f.id DESC LIMIT 1');
+  assert.ok(office.vehicle_driver && office.driver_id === office.vehicle_driver);
+  await run('DELETE FROM fuel_entries WHERE id = (SELECT MAX(id) FROM fuel_entries)');
 
   const bad = new FormData();
   bad.append('vehicle_id', vehicle.id);
