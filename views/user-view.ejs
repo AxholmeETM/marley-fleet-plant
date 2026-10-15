@@ -1,0 +1,53 @@
+<%- include('partials/header') %>
+<% const cardLabel = (c) => [c.provider, c.card_ref ? '#' + c.card_ref : '', c.last4 ? '••' + c.last4 : ''].filter(Boolean).join(' '); %>
+<div class="page-head">
+  <div><h1><%= item.name %></h1></div>
+  <div class="actions"><a class="btn primary" href="/users/<%= item.id %>/edit">Edit Details</a></div>
+</div>
+<%- include('partials/pane-end') %>
+<div class="grid grid-2">
+  <div class="card">
+    <h2>Details</h2>
+    <dl class="facts">
+      <dt>Status</dt><dd><%- item.active ? '<span class="pill ok">Active</span>' : '<span class="pill none">Disabled</span>' %></dd>
+      <dt>Type</dt><dd><%= userLabel(item) %></dd>
+      <dt>Job role</dt><dd><%= item.job_title || '—' %></dd>
+      <dt>Phone</dt><dd><%= item.phone || '—' %></dd>
+      <dt>Email</dt><dd><%= item.email || '—' %></dd>
+      <dt>Sign in</dt><dd><%= item.email && item.password_hash ? 'Yes, with their email' : 'No login' %></dd>
+    </dl>
+  </div>
+  <div>
+    <div class="card flush assign">
+      <div class="card-head"><h2>Vehicles</h2></div>
+      <% if (!myVehicles.length) { %><p class="empty">No vehicle assigned.</p><% } else { %>
+      <ul class="assign-list"><% for (const v of myVehicles) { %>
+        <li><a href="/vehicles/<%= v.id %>"><span class="reg"><%= v.reg %></span></a> <span><%= [v.make, v.model].filter(Boolean).join(' ') %></span>
+          <form method="post" action="/users/<%= item.id %>/vehicles/<%= v.id %>/remove"><button class="btn small" type="submit">Remove</button></form></li>
+      <% } %></ul><% } %>
+      <form class="assign-add" method="post" action="/users/<%= item.id %>/vehicles">
+        <select name="vehicle_id" required aria-label="Vehicle to assign"><option value="">Assign a vehicle…</option>
+          <% for (const v of otherVehicles) { %><option value="<%= v.id %>"><%= v.reg %> – <%= [v.make, v.model].filter(Boolean).join(' ') %><%= v.driver_name ? ' (now ' + v.driver_name + ')' : '' %></option><% } %>
+        </select>
+        <button class="btn" type="submit">Assign</button>
+      </form>
+    </div>
+    <div class="card flush assign">
+      <div class="card-head"><h2>Fuel cards</h2></div>
+      <% if (!myCards.length) { %><p class="empty">No fuel card assigned.</p><% } else { %>
+      <ul class="assign-list"><% for (const c of myCards) { %>
+        <li><a href="/fuel-cards/<%= c.id %>/edit"><%= cardLabel(c) %></a>
+          <span class="muted small"><%= [c.holder, c.reg].filter(Boolean).join(' · ') %></span>
+          <% if (c.status !== 'active') { %><span class="pill none"><%= FUEL_CARD_STATUSES[c.status] %></span><% } %>
+          <form method="post" action="/users/<%= item.id %>/cards/<%= c.id %>/remove"><button class="btn small" type="submit">Remove</button></form></li>
+      <% } %></ul><% } %>
+      <form class="assign-add" method="post" action="/users/<%= item.id %>/cards">
+        <select name="card_id" required aria-label="Fuel card to assign"><option value="">Assign a fuel card…</option>
+          <% for (const c of otherCards) { %><option value="<%= c.id %>"><%= cardLabel(c) %><%= c.holder ? ' – ' + c.holder : '' %><%= c.user_name ? ' (now ' + c.user_name + ')' : '' %></option><% } %>
+        </select>
+        <button class="btn" type="submit">Assign</button>
+      </form>
+    </div>
+  </div>
+</div>
+<%- include('partials/footer') %>

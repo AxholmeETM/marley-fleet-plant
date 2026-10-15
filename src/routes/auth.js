@@ -12,7 +12,7 @@ router.get('/login', async (req, res) => {
 router.post('/login', async (req, res) => {
   const email = String(req.body.email || '').trim();
   const user = await get('SELECT * FROM users WHERE lower(email) = lower(?) AND active = 1', email);
-  if (!user || !bcrypt.compareSync(String(req.body.password || ''), user.password_hash)) {
+  if (!user || !user.password_hash || !bcrypt.compareSync(String(req.body.password || ''), user.password_hash)) {
     return res.status(401).render('login', { title: 'Sign in', error: 'Email or password is incorrect.', email });
   }
   req.session.uid = user.id;

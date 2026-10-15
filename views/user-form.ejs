@@ -25,14 +25,14 @@
       <datalist id="job-titles">
         <% for (const t of ['Groundworker', 'Plant Operator', 'Labourer', 'Ganger', 'Site Manager', 'Assistant Site Manager', 'Contracts Manager', 'Plant Fitter', 'Fleet Driver', 'Admin Assistant', 'Office Manager', 'Director']) { %><option value="<%= t %>"><% } %>
       </datalist></div>
-    <div class="field"><label for="email">Email <span class="hint">(used to sign in)</span></label><input id="email" name="email" type="email" value="<%= item.email || '' %>" required></div>
+    <div class="field"><label for="email">Email <span class="hint">(blank = no login)</span></label><input id="email" name="email" type="email" value="<%= item.email || '' %>"></div>
     <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" value="<%= item.phone || '' %>"></div>
-    <div class="field"><label for="password"><%= item.id ? 'Reset password' : 'Password' %> <span class="hint"><%= item.id ? '(leave blank to keep)' : '(at least 8 characters)' %></span></label>
-      <input id="password" name="password" type="text" minlength="8" autocomplete="new-password" <%= item.id ? '' : 'required' %>></div>
+    <div class="field"><label for="password"><%= item.id && item.password_hash ? 'Reset password' : 'Password' %> <span class="hint"><%= item.id && item.password_hash ? '(blank = keep)' : '(8+ characters, to sign in)' %></span></label>
+      <input id="password" name="password" type="text" minlength="8" autocomplete="new-password" ></div>
     <div class="field"><label for="active">Status</label>
       <select id="active" name="active"><option value="1">Active</option><option value="0" <%= item.active === 0 ? 'selected' : '' %>>Disabled (cannot sign in)</option></select></div>
   </div>
-  <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="/users">Cancel</a></div>
+  <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="<%= item.id ? '/users/' + item.id : '/users' %>">Cancel</a></div>
 </form>
 <script>
   (function () {

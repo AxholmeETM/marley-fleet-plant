@@ -88,6 +88,18 @@ test('admin and driver flows', async () => {
   const dave = (await get("SELECT id FROM users WHERE email = 'dave@test.local'")).id;
   assert.match((await admin('POST', '/vehicles', { reg: 'yx21 kpl', make: 'Ford', model: 'Transit', fuel_type: 'diesel', driver_id: dave, mot_due: status.addDays(status.isoDate(), 5) })).location, /^\/vehicles\/\d+$/);
   const vehicle = await get("SELECT * FROM vehicles WHERE reg = 'YX21 KPL'");
+  // Employees without an email have no login; vehicles and fuel cards can be assigned from their page.
+  assert.match((await admin('POST', '/users', { name: 'Laura Severn', role: 'driver', employee_type: 'driver', job_title: 'Groundworker' })).location, /^\/users\/\d+$/);
+  const laura = await get("SELECT * FROM users WHERE name = 'Laura Severn'");
+  assert.equal(laura.email, null);
+  assert.equal(laura.password_hash, null);
+  assert.equal((await admin('POST', '/users', { name: 'No Pass', email: 'np@test.local', role: 'driver', employee_type: 'driver' })).status, 400);
+  await admin('POST', `/users/${laura.id}/vehicles`, { vehicle_id: vehicle.id });
+  assert.equal((await get('SELECT driver_id FROM vehicles WHERE id = ?', vehicle.id)).driver_id, laura.id);
+  assert.match((await admin('GET', `/users/${laura.id}`)).text, /YX21 KPL/);
+  await admin('POST', `/users/${laura.id}/vehicles/${vehicle.id}/remove`);
+  await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', dave, vehicle.id);
+  assert.match((await admin('GET', '/users')).text, /No login/);
   await admin('POST', '/plant', { plant_no: 'mcl-ex-0001', category: 'excavator', owner: 'MCL', make: 'JCB', model: '245', job_ref: 'J100', running_hours: 990,
     service_schedule: '50, 200, 500', service_interval_hours: 500, last_service_hours: 750, tracks_hours: '1', weekly_checks: '1', inspection_type: 'loler', loler_interval_months: 12 });
   const plant = await get("SELECT * FROM plant WHERE plant_no = 'MCL-EX-0001'");

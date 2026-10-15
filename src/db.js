@@ -187,6 +187,9 @@ CREATE INDEX IF NOT EXISTS idx_defects_asset ON defects (asset_type, asset_id, s
 CREATE INDEX IF NOT EXISTS idx_fuel_date ON fuel_entries (fill_date);
 CREATE INDEX IF NOT EXISTS idx_records_asset ON service_records (asset_type, asset_id, kind);
 CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users (lower(email));
+-- Employees don't all need to sign in: those without an email have no login.
+ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS plant_no ON plant (lower(plant_no));
 CREATE UNIQUE INDEX IF NOT EXISTS vehicles_reg ON vehicles (lower(reg));
 

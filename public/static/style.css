@@ -377,3 +377,10 @@ div.pills .pill { white-space: normal; }
 .fixed-cols { table-layout: fixed; width: 100%; }
 .fixed-cols td { overflow: hidden; text-overflow: ellipsis; }
 .table-wrap a:has(> .reg) { display: inline-flex; vertical-align: middle; }
+/* Employee page: assigned vehicles and fuel cards */
+.assign-list { list-style: none; margin: 0; padding: 0 22px; }
+.assign-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.assign-list li:first-child { border-top: 0; }
+.assign-list form { margin-left: auto; }
+.assign-add { display: flex; gap: 8px; padding: 14px 22px 18px; border-top: 1px solid var(--line); }
+.assign-add select { flex: 1; min-width: 0; }

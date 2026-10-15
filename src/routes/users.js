@@ -1,8 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { all, get, run, isUniqueViolation } = require('../db');
+const { listVehicles } = require('../queries');
 const { requireAdmin, UserError, text } = require('../auth');
-const { EMPLOYEE_TYPES } = require('../categories');
+const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
 
 const router = express.Router();
 router.use('/users', requireAdmin);
@@ -17,10 +18,10 @@ router.get('/users', async (req, res) => {
     FROM users u ${show ? 'WHERE ' + SHOW[show] : ''} ORDER BY u.active DESC, u.role = 'admin', u.name`);
   const counts = await get(`SELECT COUNT(*) AS all_users, COUNT(*) FILTER (WHERE role = 'driver') AS employees, COUNT(*) FILTER (WHERE role = 'driver' AND employee_type = 'driver') AS drivers,
     COUNT(*) FILTER (WHERE role = 'driver' AND employee_type = 'site_manager') AS site_managers, COUNT(*) FILTER (WHERE role = 'admin') AS admins FROM users`);
-  res.render('users', { title: 'Users', users, show, counts });
+  res.render('users', { title: 'Employees', users, show, counts });
 });
 
-const userForm = (res, title, item) => res.render('user-form', { title, crumbs: [['Admin', '/admin'], ['Users', '/users'], [item.id ? item.name : title]], item, EMPLOYEE_TYPES });
+const userForm = (res, title, item) => res.render('user-form', { title, crumbs: [['Employees', '/users'], ...(item.id ? [[item.name, `/users/${item.id}`], ['Edit']] : [[title]])], item, EMPLOYEE_TYPES });
 
 router.get('/users/new', async (req, res) => {
   const role = req.query.role === 'admin' ? 'admin' : 'driver';
@@ -28,29 +29,81 @@ router.get('/users/new', async (req, res) => {
   userForm(res, role === 'admin' ? 'Add admin user' : 'Add employee', { role, employee_type: type, active: 1 });
 });
 
-function readUser(body, isNew) {
+// Employees without an email have no login; admin users always need one.
+function readUser(body, existing) {
   const name = text(body.name);
   const email = text(body.email);
-  if (!name || !email) throw new UserError('Name and email are required.');
-  if (isNew && (!body.password || body.password.length < 8)) throw new UserError('Password must be at least 8 characters.');
-  if (!isNew && body.password && body.password.length < 8) throw new UserError('Password must be at least 8 characters.');
   const role = body.role === 'admin' ? 'admin' : 'driver';
+  if (!name) throw new UserError('Please enter their name.');
+  if (role === 'admin' && !email) throw new UserError('Admin users need an email to sign in with.');
+  const password = body.password ? String(body.password) : '';
+  if (password && password.length < 8) throw new UserError('Password must be at least 8 characters.');
+  if (email && !password && !(existing && existing.password_hash)) throw new UserError('Set a password so they can sign in, or leave the email blank.');
   const employeeType = role === 'admin' ? null : body.employee_type;
   if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose fleet driver or site manager.');
-  return { name, email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1 };
+  return { name, email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
 }
 
+const saveError = (err) => {
+  if (isUniqueViolation(err)) throw new UserError('Someone already uses that email.');
+  throw err;
+};
+
 router.post('/users', async (req, res) => {
-  const u = readUser(req.body, true);
+  const u = readUser(req.body, null);
+  let id;
   try {
-    await run('INSERT INTO users (name, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, bcrypt.hashSync(req.body.password, 10));
-  } catch (err) {
-    if (isUniqueViolation(err)) throw new UserError('A user with that email already exists.');
-    throw err;
-  }
-  req.flash('success', `${u.name} added. Give them their email and password to sign in.`);
-  res.redirect('/users');
+    id = (await run('INSERT INTO users (name, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email ? bcrypt.hashSync(u.password, 10) : null)).lastInsertRowid;
+  } catch (err) { saveError(err); }
+  req.flash('success', u.email ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
+  res.redirect(`/users/${id}`);
+});
+
+// Employee page: their details, plus the vehicles and fuel cards assigned to them.
+router.get('/users/:id', async (req, res) => {
+  const item = await get('SELECT * FROM users WHERE id = ?', Number(req.params.id));
+  if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Employee not found.' });
+  const vehicles = await listVehicles();
+  const cards = await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
+    ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`);
+  res.render('user-view', {
+    title: item.name, crumbs: [['Employees', '/users'], [item.name]], item, EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
+    myVehicles: vehicles.filter((v) => v.driver_id === item.id), otherVehicles: vehicles.filter((v) => v.driver_id !== item.id && v.active),
+    myCards: cards.filter((c) => c.user_id === item.id), otherCards: cards.filter((c) => c.user_id !== item.id && c.status === 'active'),
+  });
+});
+
+router.post('/users/:id/vehicles', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!await get('SELECT id FROM users WHERE id = ?', id)) throw new UserError('Employee not found.', 404);
+  const v = await get('SELECT id, reg FROM vehicles WHERE id = ?', Number(req.body.vehicle_id));
+  if (!v) throw new UserError('Please choose a vehicle.');
+  await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', id, v.id);
+  req.flash('success', `${v.reg} assigned.`);
+  res.redirect(`/users/${id}`);
+});
+
+router.post('/users/:id/vehicles/:vid/remove', async (req, res) => {
+  await run('UPDATE vehicles SET driver_id = NULL WHERE id = ? AND driver_id = ?', Number(req.params.vid), Number(req.params.id));
+  req.flash('success', 'Vehicle unassigned.');
+  res.redirect(`/users/${Number(req.params.id)}`);
+});
+
+router.post('/users/:id/cards', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!await get('SELECT id FROM users WHERE id = ?', id)) throw new UserError('Employee not found.', 404);
+  const c = await get('SELECT id FROM fuel_cards WHERE id = ?', Number(req.body.card_id));
+  if (!c) throw new UserError('Please choose a fuel card.');
+  await run('UPDATE fuel_cards SET user_id = ? WHERE id = ?', id, c.id);
+  req.flash('success', 'Fuel card assigned.');
+  res.redirect(`/users/${id}`);
+});
+
+router.post('/users/:id/cards/:cid/remove', async (req, res) => {
+  await run('UPDATE fuel_cards SET user_id = NULL WHERE id = ? AND user_id = ?', Number(req.params.cid), Number(req.params.id));
+  req.flash('success', 'Fuel card unassigned.');
+  res.redirect(`/users/${Number(req.params.id)}`);
 });
 
 router.get('/users/:id/edit', async (req, res) => {
@@ -61,18 +114,18 @@ router.get('/users/:id/edit', async (req, res) => {
 
 router.post('/users/:id', async (req, res) => {
   const id = Number(req.params.id);
-  const u = readUser(req.body, false);
+  const existing = await get('SELECT * FROM users WHERE id = ?', id);
+  if (!existing) throw new UserError('Employee not found.', 404);
+  const u = readUser(req.body, existing);
   if (id === req.user.id && (u.role !== 'admin' || !u.active)) throw new UserError('You cannot remove your own admin access.');
+  // A new password, or no email (no login), changes the stored password; otherwise it stays.
+  const hash = !u.email ? null : u.password ? bcrypt.hashSync(u.password, 10) : existing.password_hash;
   try {
-    await run('UPDATE users SET name = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ? WHERE id = ?',
-      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, id);
-  } catch (err) {
-    if (isUniqueViolation(err)) throw new UserError('A user with that email already exists.');
-    throw err;
-  }
-  if (req.body.password) await run('UPDATE users SET password_hash = ? WHERE id = ?', bcrypt.hashSync(req.body.password, 10), id);
+    await run('UPDATE users SET name = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ?, password_hash = ? WHERE id = ?',
+      u.name, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, hash, id);
+  } catch (err) { saveError(err); }
   req.flash('success', `${u.name} updated.`);
-  res.redirect('/users');
+  res.redirect(`/users/${id}`);
 });
 
 module.exports = router;
