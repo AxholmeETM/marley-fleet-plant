@@ -2,6 +2,12 @@
 </div>
 </div>
 <script>
+// How tall the fixed top pane is, so list headings can stick just below it.
+(function () {
+  const pane = document.querySelector('.pane');
+  const set = () => document.documentElement.style.setProperty('--pane-h', (pane ? pane.offsetHeight : 0) + 'px');
+  set(); addEventListener('resize', set);
+})();
 // Filter bars update the list as soon as a choice changes; the search box waits for a pause in typing.
 document.querySelectorAll('form.filters').forEach((form) => {
   const go = () => form.requestSubmit ? form.requestSubmit() : form.submit();

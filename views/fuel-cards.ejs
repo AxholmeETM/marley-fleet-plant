@@ -15,17 +15,16 @@
 <%- include('partials/pane-end') %>
 <div class="card flush">
   <% if (!cards.length) { %><p class="empty"><%= company || name ? 'No fuel cards match these filters.' : 'No fuel cards yet.' %> <a href="/fuel-cards/new">Add one.</a></p><% } else { %>
-  <div class="table-wrap"><table>
-    <thead><tr><th>Company</th><th>Card</th><th>Name on card</th><th>Vehicle</th><th>Fuel</th><th>Expiry</th><th>Last used</th><th></th></tr></thead>
+  <div class="table-wrap"><table class="nowrap-table fixed-cols">
+    <colgroup><col style="width:24%"><col style="width:28%"><col style="width:22%"><col style="width:180px"><col style="width:190px"><col style="width:64px"></colgroup>
+    <thead><tr><th>Company</th><th>Card</th><th>Name on card</th><th>Vehicle</th><th>Expiry</th><th></th></tr></thead>
     <tbody><% for (const c of cards) { %>
       <tr>
-        <td><%= c.provider %></td>
+        <td title="<%= c.provider %>"><%= c.provider %></td>
         <td class="nowrap"><%= c.card_ref ? '#' + c.card_ref : '' %> <span class="muted"><%= c.card_number ? c.card_number.replace(/(.{4})(?=.)/g, '$1 ') : c.last4 ? '••••' + c.last4 : '' %></span></td>
-        <td><%= c.holder || c.user_name || '—' %></td>
+        <td title="<%= c.holder || c.user_name || '' %>"><%= c.holder || c.user_name || '—' %></td>
         <td><% if (c.reg) { %><a href="/vehicles/<%= c.vehicle_id %>"><span class="reg"><%= c.reg %></span></a><% } else { %>—<% } %></td>
-        <td class="small"><%= c.card_type || '—' %></td>
-        <td class="nowrap"><%= c.expiry ? c.expiry.slice(5, 7) + '/' + c.expiry.slice(0, 4) : '—' %> <% if (c.status !== 'active' || c.expiry) { %><%- pill(c.expiryStatus.level === 'ok' ? { level: 'ok', text: 'Active' } : c.expiryStatus) %><% } %></td>
-        <td class="nowrap"><%= ukDate(c.last_used) %></td>
+        <td class="nowrap"><%= c.expiry ? c.expiry.slice(5, 7) + '/' + c.expiry.slice(0, 4) : '—' %> <% if (c.status !== 'active' || c.expiry) { %><%- pill(c.expiryStatus.level === 'ok' ? { level: 'ok', text: 'Active' } : c.expiryStatus.level === 'overdue' && c.status === 'active' ? { level: 'overdue', text: 'Expired' } : c.expiryStatus.level === 'soon' ? { level: 'soon', text: 'Expiring' } : c.expiryStatus) %><% } %></td>
         <td><a href="/fuel-cards/<%= c.id %>/edit">Edit</a></td>
       </tr>
     <% } %></tbody>
