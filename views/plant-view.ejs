@@ -6,7 +6,7 @@
     <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a>
     <button class="btn" type="button" data-open="record-dlg">Add record</button>
-    <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit</a><% } %>
+    <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit Details</a><% } %>
   </div>
 </div>
 <%- include('partials/pane-end') %>

@@ -359,3 +359,4 @@ div.pills .pill { white-space: normal; }
 .defect-docs a { display: block; white-space: nowrap; }
 .doc-add-link { display: inline-block; margin: 2px 0 0; font-size: .82rem; font-weight: 500; color: var(--accent); cursor: pointer; }
 .doc-add-link:hover { text-decoration: underline; }
+#history { overflow: hidden; }
