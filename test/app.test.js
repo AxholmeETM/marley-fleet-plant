@@ -170,7 +170,8 @@ test('admin and driver flows', async () => {
   assert.equal((await get('SELECT COUNT(*) AS n FROM fuel_cards WHERE user_id = ?', dave)).n, 2);
   assert.equal((await admin('GET', '/fuel-cards/assign')).status, 404);
 
-  assert.match((await admin('GET', '/admin')).text, /Fleet drivers/);
+  assert.equal((await admin('GET', '/admin')).location, '/projects');
+  assert.match((await admin('GET', '/users/new')).text, /Who can see what/);
   const dash = await admin('GET', '/');
   assert.match(dash.text, /Needs attention/);
   assert.match(dash.text, /MOT/);

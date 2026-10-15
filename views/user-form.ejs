@@ -36,6 +36,7 @@
   </div>
   <div class="form-actions"><button class="btn primary" type="submit">Save</button><a class="btn" href="<%= item.id ? '/users/' + item.id : '/users' %>">Cancel</a></div>
 </form>
+<div style="max-width:680px;margin-top:18px"><%- include('partials/who-sees-what') %></div>
 <script>
   (function () {
     const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards and users.' };

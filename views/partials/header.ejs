@@ -16,7 +16,7 @@
       <%
         // [href, label, other paths that belong to the same section]
         const nav = isAdmin
-          ? [['/', 'Dashboard'], ['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/fuel-cards', 'Fuel cards'], ['/fuel', 'Fuel Logs'], ['/equipment', 'Equipment'], ['/users', 'Employees'], ['/admin', 'Admin', ['/projects']]]
+          ? [['/', 'Dashboard'], ['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/fuel-cards', 'Fuel cards'], ['/fuel', 'Fuel Logs'], ['/equipment', 'Equipment'], ['/users', 'Employees'], ['/projects', 'Projects']]
           : user.employee_type === 'site_manager'
             ? [['/', 'Home'], ['/plant', 'Plant'], ['/equipment', 'Equipment'], ['/checks/plant/new', 'Plant check'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']]
             : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']];
@@ -44,10 +44,8 @@
   const SUBNAV = {
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
     '/fuel': [['/fuel', 'Summary', (p) => p === '/fuel'], ['/fuel/log', 'Fuel log and receipts', (p) => p === '/fuel/log']],
-    '/admin': [['/admin', 'Overview', (p) => p === '/admin'], ['/projects', 'Projects', (p) => p.startsWith('/projects')]],
   };
-  // The Admin overview's tiles already link to its tabs, so the tabs start on the pages below it.
-  const subnav = !crumbs && isAdmin && current && path !== '/admin' && SUBNAV[current[0]];
+  const subnav = !crumbs && isAdmin && current && SUBNAV[current[0]];
   if (crumbs) { %>
 <nav class="crumbs" aria-label="Breadcrumb"><% crumbs.forEach(([label, href], i) => { %><%- i ? '<span class="sep">›</span>' : '' %><% if (href) { %><a href="<%= href %>"><%= label %></a><% } else { %><span aria-current="page"><%= label %></span><% } %><% }) %></nav>
 <% } else if (subnav) { %>
