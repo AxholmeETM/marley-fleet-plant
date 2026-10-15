@@ -542,3 +542,8 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 .wk-ev .reg.sm { font-size: .7rem; }
 .wk-none { color: var(--line-strong); text-align: center; margin-top: 8px; }
 @media (max-width: 900px) { .wk-grid { grid-template-columns: minmax(0, 1fr); } .wk-col { min-height: 0; } }
+/* Calendar page: the full-width version of the dashboard calendar */
+.cal-page .cal-cell { min-height: 110px; }
+.cal-page .cal-ev { font-size: .74rem; }
+.cal-page .wk-col { min-height: 360px; }
+.cal-page .wk-ev { font-size: .78rem; }

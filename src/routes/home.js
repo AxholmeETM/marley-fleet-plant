@@ -114,7 +114,7 @@ router.get('/', async (req, res) => {
 
   res.render('dashboard', {
     title: 'Dashboard',
-    todo, months, calendar: await calendarEvents(plant, vehicles),
+    todo, months,
     stats: {
       plantTotal: plant.length,
       vehicleTotal: vehicles.length,
@@ -128,6 +128,12 @@ router.get('/', async (req, res) => {
       defectsOpen: defects.length,
     },
   });
+});
+
+// Calendar page (admins): every due date on a week or month view.
+router.get('/calendar', async (req, res) => {
+  if (req.user.role !== 'admin') return res.redirect('/');
+  res.render('calendar', { title: 'Calendar', calendar: await calendarEvents(await listPlant(), await listVehicles()) });
 });
 
 async function driverHome(req, res) {

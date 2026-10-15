@@ -16,7 +16,7 @@
       <%
         // [href, label, other paths that belong to the same section]; admins get headings that open to show their pages.
         const menu = isAdmin
-          ? [['/', 'Dashboard'],
+          ? [['/', 'Dashboard', ['/calendar']],
             { label: 'Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
             { label: 'Fuel', items: [['/fuel', 'Fuel Logs'], ['/fuel-cards', 'Fuel Cards']] },
             ['/users', 'Employees'],
@@ -28,7 +28,7 @@
         const under = (base) => path === base || path.startsWith(base + '/');
         const isActive = ([href, , also = []]) => {
           if (typeof navActive !== 'undefined') return navActive === href;
-          if (href === '/') return path === '/';
+          if (href === '/') return path === '/' || also.includes(path);
           if (isAdmin || href === '/plant' || href === '/equipment') return [href, ...also].some(under);
           return path === href;
         };
@@ -59,6 +59,7 @@
 <%
   // Second-level tabs for the sections that hold more than one page.
   const SUBNAV = {
+    '/': [['/', 'Dashboard', (p) => p === '/'], ['/calendar', 'Calendar', (p) => p === '/calendar']],
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
     '/fuel': [['/fuel', 'Summary', (p) => p === '/fuel'], ['/fuel/log', 'Fuel log and receipts', (p) => p === '/fuel/log']],
   };
