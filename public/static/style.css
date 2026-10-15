@@ -66,6 +66,14 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .side-nav a { color: rgba(255, 255, 255, .82); padding: 9px 12px; border-radius: 10px; font-size: .93rem; white-space: nowrap; transition: background .15s, color .15s; }
 .side-nav a:hover { background: rgba(255, 255, 255, .1); color: #fff; text-decoration: none; }
 .side-nav a.active { background: #fff; color: var(--navy); font-weight: 600; }
+/* Menu headings (admins): click to open and show their pages; the heading for the current page starts open */
+.nav-head { display: flex; align-items: center; justify-content: space-between; width: 100%; background: none; border: 0; cursor: pointer; font: inherit;
+  color: rgba(255, 255, 255, .82); padding: 9px 12px; border-radius: 10px; font-size: .93rem; text-align: left; transition: background .15s, color .15s; }
+.nav-head:hover { background: rgba(255, 255, 255, .1); color: #fff; }
+.nav-head .chev { width: 7px; height: 7px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); margin: -3px 2px 0 8px; transition: transform .15s; flex: none; }
+.nav-group.open .nav-head .chev { transform: rotate(-135deg); margin-top: 3px; }
+.nav-items { display: none; flex-direction: column; gap: 2px; padding: 2px 0 4px 12px; }
+.nav-group.open .nav-items { display: flex; }
 .side-user { border-top: 1px solid rgba(255, 255, 255, .14); padding: 14px 6px 0; display: flex; flex-direction: column; gap: 6px; font-size: .88rem; }
 .side-user form { margin: 0; }
 .side-user a, .side-user .linkbtn { color: #fff; text-align: left; }
@@ -295,6 +303,9 @@ legend + * { clear: both; }
   .side-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
   .side-nav::-webkit-scrollbar { display: none; }
   .side-nav a { padding: 6px 12px; border-radius: 999px; font-size: .88rem; }
+  /* Narrow screens: the menu is one scrolling row, so headings are skipped and every page shows */
+  .nav-head { display: none; }
+  .nav-group, .nav-items, .nav-group.open .nav-items { display: contents; }
   .side-user { border: 0; padding: 0; flex-direction: row; gap: 12px; }
   .side-user .who { display: none; }
   .pane { position: static; box-shadow: none; }

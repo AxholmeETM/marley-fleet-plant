@@ -14,12 +14,17 @@
   <a class="brand with-logo" href="/"><img class="brand-logo" src="/static/logo.png" alt="Marley"><span>Marley Construction<small>Fleet &amp; Plant Register</small></span></a>
     <nav class="side-nav" aria-label="Main menu">
       <%
-        // [href, label, other paths that belong to the same section]
-        const nav = isAdmin
-          ? [['/', 'Dashboard'], ['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/fuel-cards', 'Fuel cards'], ['/fuel', 'Fuel Logs'], ['/equipment', 'Equipment'], ['/users', 'Employees'], ['/projects', 'Projects'], ['/reports', 'Reports']]
+        // [href, label, other paths that belong to the same section]; admins get headings that open to show their pages.
+        const menu = isAdmin
+          ? [['/', 'Dashboard'],
+            { label: 'Plant and Fleet Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
+            { label: 'Fuel', items: [['/fuel-cards', 'Fuel Cards'], ['/fuel', 'Fuel Logs']] },
+            ['/users', 'Employees'],
+            { label: 'Admin', items: [['/projects', 'Projects'], ['/reports', 'Reports']] }]
           : user.employee_type === 'site_manager'
             ? [['/', 'Home'], ['/plant', 'Plant'], ['/equipment', 'Equipment'], ['/checks/plant/new', 'Plant check'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']]
             : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']];
+        const nav = menu.flatMap((m) => m.items || [m]);
         const under = (base) => path === base || path.startsWith(base + '/');
         const isActive = ([href, , also = []]) => {
           if (typeof navActive !== 'undefined') return navActive === href;
@@ -28,10 +33,22 @@
           return path === href;
         };
         const current = nav.find(isActive);
-        for (const item of nav) { %>
-        <a href="<%= item[0] %>" class="<%= item === current ? 'active' : '' %>"><%= item[1] %></a>
-      <% } %>
+        for (const m of menu) {
+          if (!m.items) { %>
+        <a href="<%= m[0] %>" class="<%= m === current ? 'active' : '' %>"><%= m[1] %></a>
+      <%  } else { const open = m.items.includes(current); %>
+        <div class="nav-group<%= open ? ' open' : '' %>">
+          <button type="button" class="nav-head" aria-expanded="<%= open %>"><%= m.label %><span class="chev" aria-hidden="true"></span></button>
+          <div class="nav-items"><% for (const item of m.items) { %><a href="<%= item[0] %>" class="<%= item === current ? 'active' : '' %>"><%= item[1] %></a><% } %></div>
+        </div>
+      <%  }
+        } %>
     </nav>
+    <script>
+      document.querySelectorAll('.nav-head').forEach((b) => b.addEventListener('click', () => {
+        b.setAttribute('aria-expanded', b.parentElement.classList.toggle('open'));
+      }));
+    </script>
     <div class="side-user">
       <a href="/account" class="who"><%= user.name %></a>
       <form method="post" action="/logout"><button class="linkbtn" type="submit">Sign out</button></form>

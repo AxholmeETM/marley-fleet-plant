@@ -84,11 +84,11 @@ router.get('/fuel-cards', async (req, res) => {
   const company = companies.includes(req.query.company) ? req.query.company : '';
   const name = names.includes(req.query.name) ? req.query.name : '';
   const cards = all_.filter((c) => (!company || c.provider === company) && (!name || nameOf(c) === name));
-  res.render('fuel-cards', { title: 'Fuel cards', cards, show, company, name, companies, names, FUEL_CARD_STATUSES });
+  res.render('fuel-cards', { title: 'Fuel Cards', cards, show, company, name, companies, names, FUEL_CARD_STATUSES });
 });
 
 async function form(res, title, item) {
-  res.render('fuel-card-form', { title, crumbs: [['Fuel cards', '/fuel-cards'], [item.id ? cardLabel(item) : 'Add card']], item, vehicles: await listVehicles(), users: await activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
+  res.render('fuel-card-form', { title, crumbs: [['Fuel Cards', '/fuel-cards'], [item.id ? cardLabel(item) : 'Add card']], item, vehicles: await listVehicles(), users: await activeUsers(), FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES });
 }
 
 router.get('/fuel-cards/new', async (req, res) => await form(res, 'Add fuel card', { status: 'active', vehicle_id: Number(req.query.vehicle) || null }));

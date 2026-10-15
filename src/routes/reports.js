@@ -59,7 +59,7 @@ const REPORTS = {
     },
   },
   'fuel-cards': {
-    label: 'Fuel cards', blurb: 'All fuel cards by company, with the employee, vehicle, expiry and status. Shows the full card numbers, never PINs.',
+    label: 'Fuel Cards', blurb: 'All fuel cards by company, with the employee, vehicle, expiry and status. Shows the full card numbers, never PINs.',
     async build() {
       const cards = (await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
         ORDER BY c.provider, c.status <> 'active', CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorateCard);
@@ -69,7 +69,7 @@ const REPORTS = {
           c.expiry ? `${c.expiry.slice(5, 7)}/${c.expiry.slice(0, 4)}` : '—',
           c.status !== 'active' ? pill('none', FUEL_CARD_STATUSES[c.status] || c.status) : exp && exp.level === 'overdue' ? pill('overdue', 'Expired') : exp && exp.level === 'soon' ? pill('soon', 'Expiring') : pill('ok', 'Active')];
       }) }));
-      return { title: 'Fuel cards report', count: `${cards.length} card${cards.length === 1 ? '' : 's'}`,
+      return { title: 'Fuel Cards report', count: `${cards.length} card${cards.length === 1 ? '' : 's'}`,
         columns: ['Card', 'Card number', 'Name on card', 'Vehicle', 'Card type', 'Expiry', 'Status'], widths: [8, 19, 20, 12, 16, 9, 9], groups };
     },
   },
