@@ -29,7 +29,7 @@
 
 <div class="grid grid-2">
   <div>
-    <div class="card">
+    <div class="card" id="details-card">
       <h2>Details</h2>
       <dl class="facts">
         <dt>Status</dt><dd><span class="pill <%= item.status === 'in_use' ? 'ok' : ['stolen', 'repair'].includes(item.status) ? 'overdue' : 'none' %>"><%= PLANT_STATUSES[item.status] || item.status %></span></dd>
@@ -123,16 +123,18 @@
       document.querySelectorAll('.tl-filter a').forEach((a) => a.classList.toggle('active', a.dataset.filter === t));
       if (none) none.hidden = shown > 0;
     }
-    // Size the box to the first six rows of the full list and keep it that size whichever filter is picked.
-    const box = document.querySelector('.tl-scroll');
+    // On a computer screen the History card is always the same height as the Details card, and scrolls inside.
+    // On a phone (cards stacked) the list shows the first six rows and scrolls.
+    const box = document.querySelector('.tl-scroll'), card = document.getElementById('history'), details = document.getElementById('details-card');
     let current = 'all';
-    // On a computer screen, shrink it further if needed so the page itself doesn't scroll.
     function fit() {
-      if (!box || current !== 'all') return;
-      box.style.height = rows.length > 6 ? rows[6].offsetTop + 'px' : '';
-      if (innerWidth <= 900 || rows.length <= 6) return;
-      const over = document.documentElement.scrollHeight - innerHeight;
-      if (over > 0) box.style.height = Math.max(200, box.offsetHeight - over) + 'px';
+      if (innerWidth > 900) {
+        card.style.height = details.offsetHeight + 'px';
+        if (box) box.style.height = Math.max(120, card.getBoundingClientRect().bottom - box.getBoundingClientRect().top - 1) + 'px';
+      } else {
+        card.style.height = '';
+        if (box && current === 'all') box.style.height = rows.length > 6 ? rows[6].offsetTop + 'px' : '';
+      }
     }
     fit(); addEventListener('resize', fit);
     document.querySelectorAll('[data-filter]').forEach((a) => a.addEventListener('click', (e) => {
