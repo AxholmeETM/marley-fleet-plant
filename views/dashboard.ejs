@@ -27,6 +27,7 @@
         <% for (const [k, label] of TABS) { const n = todo.filter((t) => tabOf(t) === k).reduce((sum, t) => sum + t.count, 0); %>
         <button type="button" role="tab" data-tab="<%= k %>" aria-selected="<%= k === firstTab %>"><%= label %> <span class="n"><%= n %></span></button>
         <% } %>
+        <button type="button" role="tab" data-tab="calendar" aria-selected="false">Calendar</button>
       </div>
     </div>
     <% for (const [k, , empty] of TABS) { const rows = todo.filter((t) => tabOf(t) === k); %>
@@ -46,6 +47,12 @@
     <% } %>
     </div>
     <% } %>
+    <div class="todo-scroll cal" data-panel="calendar" hidden>
+      <div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-title"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn small" id="cal-today">Today</button></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div class="cal-day" id="cal-day"></div>
+    </div>
+    <script type="application/json" id="cal-data"><%- JSON.stringify(calendar).replace(/</g, '\\u003c') %></script>
   </div>
   <script>
     (function () {
@@ -68,6 +75,46 @@
         const h = open.getBoundingClientRect().height - spare;
         panels.forEach((p) => { p.style.maxHeight = Math.max(220, h) + 'px'; });
       }
+      // Calendar: a month grid of due dates. Past dates show red, the next 30 days amber; click a day to list it.
+      const events = JSON.parse(document.getElementById('cal-data').textContent);
+      const today = new Date().toISOString().slice(0, 10);
+      const soon = new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10);
+      const pad = (n) => String(n).padStart(2, '0');
+      const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+      const tone = (d) => (d < today ? 'bad' : d <= soon ? 'warn' : 'ok');
+      let ym = today.slice(0, 7);
+      let picked = today;
+      function dayList(d) {
+        const list = events.filter((e) => e.d === d);
+        const nice = new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        document.getElementById('cal-day').innerHTML = `<div class="todo-group">${nice}</div>` + (list.length
+          ? '<ul>' + list.map((e) => `<li class="lv-${tone(e.d)}"><div class="todo-main"><a class="todo-title" href="${esc(e.h)}">${e.r ? `<span class="reg sm">${esc(e.r)}</span> ` : ''}${esc(e.t)}</a><div class="todo-detail">${esc(e.k)}</div></div><a class="btn small" href="${esc(e.h)}">Open</a></li>`).join('') + '</ul>'
+          : '<p class="empty">Nothing due on this day.</p>');
+      }
+      function draw() {
+        const [y, m] = ym.split('-').map(Number);
+        document.getElementById('cal-title').textContent = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        const first = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+        const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+        let html = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => `<div class="cal-dow">${d}</div>`).join('');
+        for (let i = 0; i < first; i++) html += '<div class="cal-cell blank"></div>';
+        for (let n = 1; n <= days; n++) {
+          const d = `${ym}-${pad(n)}`;
+          const list = events.filter((e) => e.d === d);
+          html += `<button type="button" class="cal-cell${d === today ? ' today' : ''}${d === picked ? ' picked' : ''}" data-d="${d}"><span class="cal-n">${n}</span>`
+            + list.slice(0, 2).map((e) => `<span class="cal-ev ${tone(d)}" title="${esc(e.k)}: ${esc(e.r ? e.r + ' ' + e.t : e.t)}">${esc(e.k)} · ${esc(e.r || e.t.split(' · ')[0])}</span>`).join('')
+            + (list.length > 2 ? `<span class="cal-more">+${list.length - 2} more</span>` : '') + '</button>';
+        }
+        const grid = document.getElementById('cal-grid');
+        grid.innerHTML = html;
+        grid.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { picked = b.dataset.d; draw(); }));
+        dayList(picked);
+      }
+      const step = (k) => { const [y, m] = ym.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + k, 1)); ym = `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}`; picked = ym === today.slice(0, 7) ? today : `${ym}-01`; draw(); };
+      document.getElementById('cal-prev').addEventListener('click', () => step(-1));
+      document.getElementById('cal-next').addEventListener('click', () => step(1));
+      document.getElementById('cal-today').addEventListener('click', () => { ym = today.slice(0, 7); picked = today; draw(); });
+      draw();
       window.addEventListener('resize', fit);
       fit();
     })();

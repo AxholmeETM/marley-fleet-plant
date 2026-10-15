@@ -71,6 +71,27 @@ async function todoList(plant, vehicles, defects, receipts) {
   return items.sort((a, b) => (a.when !== b.when ? (a.when === 'now' ? -1 : 1) : a.rank - b.rank || String(a.sort || '').localeCompare(String(b.sort || ''))));
 }
 
+// Everything with a due date, for the Dashboard calendar: inspections, MOT, tax, vehicle services and fuel card expiries.
+// Hours-based plant services have no date, so they only show when a calendar backstop date applies.
+async function calendarEvents(plant, vehicles) {
+  const out = [];
+  const add = (st, title, kind, href, reg = null) => { if (st && st.due) out.push({ d: String(st.due).slice(0, 10), t: title, k: kind, h: href, r: reg }); };
+  for (const p of plant) {
+    add(p.loler, `${p.plant_no} · ${p.description}`, INSPECTION_TYPES[p.inspection_type] || 'LOLER', `/plant/${p.id}#record-loler`);
+    add(p.service, `${p.plant_no} · ${p.description}`, p.service.name || 'Service', `/plant/${p.id}#record-service`);
+  }
+  for (const v of vehicles) {
+    const title = [v.make, v.model].filter(Boolean).join(' ');
+    add(v.mot, title, 'MOT', `/vehicles/${v.id}#record-mot`, v.reg);
+    add(v.tax, title, 'Road tax', `/vehicles/${v.id}#record-tax`, v.reg);
+    add(v.service, title, 'Service', `/vehicles/${v.id}#record-service`, v.reg);
+  }
+  for (const c of (await all(`${fuelCards.CARD_SQL} WHERE c.status = 'active' AND c.expiry IS NOT NULL`)).map(fuelCards.decorate)) {
+    add(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card${c.holder_display ? ' · ' + c.holder_display : ''}`, 'Card expires', `/fuel-cards/${c.id}/edit`);
+  }
+  return out.sort((a, b) => a.d.localeCompare(b.d));
+}
+
 router.get('/', async (req, res) => {
   if (req.user.role !== 'admin') return await driverHome(req, res);
 
@@ -93,7 +114,7 @@ router.get('/', async (req, res) => {
 
   res.render('dashboard', {
     title: 'Dashboard',
-    todo, months,
+    todo, months, calendar: await calendarEvents(plant, vehicles),
     stats: {
       plantTotal: plant.length,
       vehicleTotal: vehicles.length,
