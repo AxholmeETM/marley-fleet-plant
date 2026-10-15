@@ -64,7 +64,10 @@
   function pickCard() {
     if (!card) return;
     const linked = [...card.options].find((o) => o.dataset.vehicle && o.dataset.vehicle === vehicle.value);
+    const cur = card.selectedOptions[0];
     if (linked) linked.selected = true;
+    // Don't carry over a card that belongs to a different vehicle.
+    else if (cur && cur.dataset.vehicle && cur.dataset.vehicle !== vehicle.value) card.value = '';
   }
   pickCard();
   vehicle.addEventListener('change', function () {
