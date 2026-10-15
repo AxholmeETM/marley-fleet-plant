@@ -485,14 +485,18 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 .todo li { grid-template-columns: minmax(0, 1fr) auto; padding-left: 17px; border-left: 5px solid var(--line-strong); }
 .todo li.lv-bad { border-left-color: var(--red); } .todo li.lv-warn { border-left-color: #e0a100; }
 @media (max-width: 640px) { .todo li { grid-template-columns: minmax(0, 1fr); } .todo li .btn { grid-column: 1; } }
-/* Dashboard tiles are filled in traffic-light colours: red = act now, amber = coming up, green = all clear */
-.kpis-4 .kpi.bad { background: #d70015; }
-.kpis-4 .kpi.warn { background: #f5a300; }
-.kpis-4 .kpi.good { background: #1f9d45; }
-.kpis-4 .kpi.bad, .kpis-4 .kpi.good { color: #fff; }
-.kpis-4 .kpi.warn { color: #2a1a00; }
-.kpis-4 .kpi.bad .label, .kpis-4 .kpi.bad .sub, .kpis-4 .kpi.good .label, .kpis-4 .kpi.good .sub { color: rgba(255, 255, 255, .88); }
-.kpis-4 .kpi.warn .label, .kpis-4 .kpi.warn .sub { color: rgba(42, 26, 0, .78); }
-.kpis-4 .kpi .value { color: inherit; }
-.kpis-4 .kpi::before { display: none; }
+/* Dashboard tiles are filled in soft traffic-light colours: red = act now, amber = coming up, green = all clear */
 .kpis-4 .kpi { box-shadow: none; }
+.kpis-4 .kpi::before { display: none; }
+.kpis-4 .kpi.bad { background: #fde4e3; color: #a3121f; }
+.kpis-4 .kpi.warn { background: #fff1d6; color: #8a5300; }
+.kpis-4 .kpi.good { background: #e1f4e6; color: #1b6e34; }
+.kpis-4 .kpi .value { color: inherit; }
+.kpis-4 .kpi .label, .kpis-4 .kpi .sub { color: inherit; opacity: .8; }
+/* To do tabs: Defects | Overdue | Coming up, each with a count */
+.todo-head { padding: 16px 18px 12px 22px; }
+.seg-tabs { display: inline-flex; gap: 2px; padding: 3px; background: var(--grey-bg); border-radius: 10px; max-width: 100%; overflow-x: auto; }
+.seg-tabs button { font: inherit; font-size: .85rem; font-weight: 500; border: 0; background: none; color: var(--ink); padding: 6px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+.seg-tabs button[aria-selected="true"] { background: var(--card); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.seg-tabs .n { display: inline-block; min-width: 1.5em; padding: 0 5px; margin-left: 4px; border-radius: 999px; background: rgba(1, 2, 76, .08); font-size: .75rem; text-align: center; font-variant-numeric: tabular-nums; }
+.todo-scroll[hidden] { display: none; }
