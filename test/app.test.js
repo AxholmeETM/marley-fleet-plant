@@ -97,7 +97,13 @@ test('admin and driver flows', async () => {
   await admin('POST', `/users/${laura.id}/vehicles`, { vehicle_id: vehicle.id });
   assert.equal((await get('SELECT driver_id FROM vehicles WHERE id = ?', vehicle.id)).driver_id, laura.id);
   assert.match((await admin('GET', `/users/${laura.id}`)).text, /YX21 KPL/);
+  // Her fuel card follows the vehicle she's assigned, and is cleared when the vehicle is taken off her.
+  const lcard = (await run("INSERT INTO fuel_cards (provider, card_ref, holder, status) VALUES ('Esso', 'L1', 'Laura Severn', 'active')")).lastInsertRowid;
+  await admin('POST', `/users/${laura.id}/cards`, { card_id: lcard });
+  assert.equal((await get('SELECT vehicle_id FROM fuel_cards WHERE id = ?', lcard)).vehicle_id, vehicle.id);
   await admin('POST', `/users/${laura.id}/vehicles/${vehicle.id}/remove`);
+  assert.equal((await get('SELECT vehicle_id FROM fuel_cards WHERE id = ?', lcard)).vehicle_id, null);
+  await run('DELETE FROM fuel_cards WHERE id = ?', lcard);
   await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', dave, vehicle.id);
   assert.match((await admin('GET', '/users')).text, /No login/);
   // Employees are created from the names on the fuel cards (run once on the live database).

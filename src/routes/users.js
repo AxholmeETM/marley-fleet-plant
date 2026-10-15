@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { all, get, run, transaction, isUniqueViolation } = require('../db');
-const { listVehicles } = require('../queries');
+const { listVehicles, syncCardVehicles } = require('../queries');
 const { requireAdmin, UserError, text } = require('../auth');
 const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
 
@@ -84,13 +84,17 @@ async function employeesFromCards() {
   });
 }
 
-// Runs once per database (the first request after this was deployed): adds the people named on the fuel cards.
+// One-off data jobs, each run once per database on the first request after it was deployed.
 let fromCardsDone = false;
 async function employeesFromCardsOnce() {
   if (fromCardsDone) return;
   const claimed = (await run("INSERT INTO settings (key, value) VALUES ('employees_from_fuel_cards', 'done') ON CONFLICT (key) DO NOTHING")).changes;
-  fromCardsDone = true;
   if (claimed) await employeesFromCards();
+  // Once: point each person's fuel cards at the vehicle already assigned to them.
+  if ((await run("INSERT INTO settings (key, value) VALUES ('cards_follow_vehicles', 'done') ON CONFLICT (key) DO NOTHING")).changes) {
+    for (const u of await all('SELECT DISTINCT driver_id AS id FROM vehicles WHERE driver_id IS NOT NULL AND active = 1')) await syncCardVehicles(u.id);
+  }
+  fromCardsDone = true;
 }
 
 // Employee page: their details, plus the vehicles and fuel cards assigned to them.
@@ -110,15 +114,22 @@ router.get('/users/:id', async (req, res) => {
 router.post('/users/:id/vehicles', async (req, res) => {
   const id = Number(req.params.id);
   if (!await get('SELECT id FROM users WHERE id = ?', id)) throw new UserError('Employee not found.', 404);
-  const v = await get('SELECT id, reg FROM vehicles WHERE id = ?', Number(req.body.vehicle_id));
+  const v = await get('SELECT id, reg, driver_id FROM vehicles WHERE id = ?', Number(req.body.vehicle_id));
   if (!v) throw new UserError('Please choose a vehicle.');
-  await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', id, v.id);
+  await transaction(async () => {
+    await run('UPDATE vehicles SET driver_id = ? WHERE id = ?', id, v.id);
+    if (v.driver_id && v.driver_id !== id) await syncCardVehicles(v.driver_id, v.id);
+    await syncCardVehicles(id);
+  });
   req.flash('success', `${v.reg} assigned.`);
   res.redirect(`/users/${id}`);
 });
 
 router.post('/users/:id/vehicles/:vid/remove', async (req, res) => {
-  await run('UPDATE vehicles SET driver_id = NULL WHERE id = ? AND driver_id = ?', Number(req.params.vid), Number(req.params.id));
+  await transaction(async () => {
+    await run('UPDATE vehicles SET driver_id = NULL WHERE id = ? AND driver_id = ?', Number(req.params.vid), Number(req.params.id));
+    await syncCardVehicles(Number(req.params.id), Number(req.params.vid));
+  });
   req.flash('success', 'Vehicle unassigned.');
   res.redirect(`/users/${Number(req.params.id)}`);
 });
@@ -129,6 +140,7 @@ router.post('/users/:id/cards', async (req, res) => {
   const c = await get('SELECT id FROM fuel_cards WHERE id = ?', Number(req.body.card_id));
   if (!c) throw new UserError('Please choose a fuel card.');
   await run('UPDATE fuel_cards SET user_id = ? WHERE id = ?', id, c.id);
+  await syncCardVehicles(id);
   req.flash('success', 'Fuel card assigned.');
   res.redirect(`/users/${id}`);
 });

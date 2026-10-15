@@ -1,6 +1,6 @@
 const express = require('express');
 const { all, run, get, transaction, isUniqueViolation } = require('../db');
-const { listVehicles, getVehicle, listDefects, listDrivers } = require('../queries');
+const { listVehicles, getVehicle, listDefects, listDrivers, syncCardVehicles } = require('../queries');
 const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
 const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
@@ -91,6 +91,7 @@ router.post('/vehicles', async (req, res) => {
   try {
     id = (await run(`INSERT INTO vehicles (${cols.join(', ')}) VALUES (${cols.map(() => '?').join(', ')})`, ...Object.values(v))).lastInsertRowid;
   } catch (err) { saveError(err); }
+  await syncCardVehicles(v.driver_id);
   req.flash('success', `${v.reg} added to the fleet register.`);
   res.redirect(`/vehicles/${id}`);
 });
@@ -117,9 +118,13 @@ router.get('/vehicles/:id/edit', async (req, res) => {
 router.post('/vehicles/:id', async (req, res) => {
   const id = Number(req.params.id);
   const v = await readVehicle(req.body);
+  const before = await get('SELECT driver_id FROM vehicles WHERE id = ?', id);
   try {
     await run(`UPDATE vehicles SET ${Object.keys(v).map((c) => `${c} = ?`).join(', ')} WHERE id = ?`, ...Object.values(v), id);
   } catch (err) { saveError(err); }
+  // The assigned driver's fuel cards follow the vehicle (and leave it if the driver changed).
+  if (before && before.driver_id && before.driver_id !== v.driver_id) await syncCardVehicles(before.driver_id, id);
+  await syncCardVehicles(v.driver_id);
   req.flash('success', `${v.reg} updated.`);
   res.redirect(`/vehicles/${id}`);
 });

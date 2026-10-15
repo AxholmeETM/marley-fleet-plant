@@ -1,4 +1,4 @@
-const { all, get } = require('./db');
+const { all, get, run } = require('./db');
 const { decoratePlant, decorateVehicle } = require('./status');
 
 const PLANT_SQL = `
@@ -69,4 +69,18 @@ async function listProjects(keep = null) {
   return await all('SELECT code, name, active FROM projects WHERE active = 1 OR code = ? ORDER BY code', keep);
 }
 
-module.exports = { listProjects, listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };
+// A person's fuel cards follow the vehicle assigned to them, so the card shows that vehicle on the fuel card
+// pages, the vehicle page and the Log fuel form. With one vehicle, all their cards point at it. When a vehicle is
+// taken off them, their cards pointing at it move to their other vehicle, or to none.
+async function syncCardVehicles(userId, removedVehicleId = null) {
+  if (!userId) return;
+  const vehicles = await all('SELECT id FROM vehicles WHERE driver_id = ? AND active = 1 ORDER BY id', userId);
+  if (removedVehicleId) await run('UPDATE fuel_cards SET vehicle_id = NULL WHERE user_id = ? AND vehicle_id = ?', userId, removedVehicleId);
+  if (vehicles.length === 1) {
+    await run('UPDATE fuel_cards SET vehicle_id = ? WHERE user_id = ? AND vehicle_id IS DISTINCT FROM ?', vehicles[0].id, userId, vehicles[0].id);
+  } else if (vehicles.length) {
+    await run('UPDATE fuel_cards SET vehicle_id = ? WHERE user_id = ? AND vehicle_id IS NULL', vehicles[0].id, userId);
+  }
+}
+
+module.exports = { syncCardVehicles, listProjects, listPlant, getPlant, listVehicles, getVehicle, listDefects, listDrivers };
