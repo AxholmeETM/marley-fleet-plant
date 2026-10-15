@@ -3,75 +3,85 @@
   <div><h1>Dashboard</h1><p class="muted" style="margin:0"><%= ukDate(today) %> · <%= stats.plantTotal %> plant · <%= stats.vehicleTotal %> vehicles</p></div>
 </div>
 <%- include('partials/pane-end') %>
-<div class="section-title"><h2>Plant</h2></div>
-<div class="kpis">
-  <a class="kpi <%= stats.plantServiceOverdue ? 'bad' : stats.plantService ? 'warn' : 'good' %>" href="/plant?filter=attention">
-    <div class="label">Services due</div><div class="value"><%= stats.plantService %></div>
-    <div class="sub"><%= stats.plantServiceOverdue %> overdue on running hours</div></a>
-  <a class="kpi <%= stats.plantLoler ? 'bad' : 'good' %>" href="/plant?filter=attention">
-    <div class="label">LOLER, tests &amp; calibration</div><div class="value"><%= stats.plantLoler %></div>
-    <div class="sub">overdue or due in 30 days</div></a>
-  <a class="kpi <%= stats.plantChecks ? 'bad' : 'good' %>" href="/checks?type=plant">
-    <div class="label">Weekly checks overdue</div><div class="value"><%= stats.plantChecks %></div>
-    <div class="sub">no check sheet in 7 days</div></a>
-  <a class="kpi <%= stats.defectsUnsafe ? 'bad' : stats.defectsOpen ? 'warn' : 'good' %>" href="/defects">
-    <div class="label">Open defects</div><div class="value"><%= stats.defectsOpen %></div>
-    <div class="sub"><%= stats.defectsUnsafe %> marked unsafe</div></a>
+<div class="kpis kpis-4">
+  <a class="kpi <%= stats.unsafe ? 'bad' : 'good' %>" href="/defects"><div class="label">Unsafe defects</div><div class="value"><%= stats.unsafe %></div>
+    <div class="sub"><%= stats.unsafe ? 'do not use until fixed' : 'none reported' %></div></a>
+  <a class="kpi <%= stats.overdue ? 'bad' : 'good' %>" href="#todo"><div class="label">Overdue</div><div class="value"><%= stats.overdue %></div>
+    <div class="sub">services, LOLER, MOT, tax</div></a>
+  <a class="kpi <%= stats.dueSoon ? 'warn' : 'good' %>" href="#todo"><div class="label">Due in 30 days</div><div class="value"><%= stats.dueSoon %></div>
+    <div class="sub">plan these in</div></a>
+  <a class="kpi <%= stats.receipts ? 'warn' : 'good' %>" href="/fuel/log?show=unverified&period=year"><div class="label">Receipts to check</div><div class="value"><%= stats.receipts %></div>
+    <div class="sub"><%= stats.receiptsCost ? money(stats.receiptsCost) + ' waiting for the office' : 'waiting for the office' %></div></a>
 </div>
 
-<div class="section-title"><h2>Fleet</h2></div>
-<div class="kpis">
-  <a class="kpi <%= stats.walkaroundsDone < stats.walkaroundsExpected ? 'warn' : 'good' %>" href="/checks?type=vehicle">
-    <div class="label">Walk-arounds today</div><div class="value"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></div>
-    <div class="sub">vehicles with a driver assigned</div></a>
-  <a class="kpi <%= stats.mot ? 'bad' : 'good' %>" href="/vehicles?filter=attention">
-    <div class="label">MOT due</div><div class="value"><%= stats.mot %></div><div class="sub">overdue or due in 30 days</div></a>
-  <a class="kpi <%= stats.tax ? 'bad' : 'good' %>" href="/vehicles?filter=attention">
-    <div class="label">Tax due</div><div class="value"><%= stats.tax %></div><div class="sub">overdue or due in 30 days</div></a>
-  <a class="kpi <%= stats.vehicleService ? 'warn' : 'good' %>" href="/vehicles?filter=attention">
-    <div class="label">Services due</div><div class="value"><%= stats.vehicleService %></div><div class="sub">overdue or due in 30 days</div></a>
-</div>
-
-<div class="section-title"><h2>Fuel this month</h2><a class="small" href="/fuel">Fuel Logs →</a></div>
-<div class="kpis">
-  <a class="kpi" href="/fuel"><div class="label">Fuel used</div><div class="value"><%= num(fuelTotals.litres) %> L</div><div class="sub">diesel and unleaded</div></a>
-  <a class="kpi" href="/fuel?type=adblue"><div class="label">AdBlue</div><div class="value"><%= num(fuelTotals.adblue) %> L</div><div class="sub">&nbsp;</div></a>
-  <a class="kpi" href="/fuel"><div class="label">Spend</div><div class="value"><%= money(fuelTotals.cost) %></div><div class="sub">from priced receipts</div></a>
-  <a class="kpi <%= allUnverified ? 'warn' : 'good' %>" href="/fuel?show=unverified&period=year"><div class="label">Receipts to check</div><div class="value"><%= allUnverified %></div><div class="sub">waiting for the office</div></a>
-</div>
-
-<div class="grid grid-2">
-  <div class="card flush">
-    <h2>Needs attention</h2>
-    <% if (!attention.length) { %><p class="empty">Nothing overdue or due soon. 👍</p><% } else { %>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Asset</th><th>Due</th><th>Status</th></tr></thead>
-      <tbody>
-      <% for (const a of attention.slice(0, 25)) { %>
-        <tr><td><a href="<%= a.href %>"><%= a.asset %></a></td><td><%= a.what %></td><td><%- pill(a.status) %></td></tr>
-      <% } %>
-      </tbody>
-    </table></div>
-    <% if (attention.length > 25) { %><p class="empty"><%= attention.length - 25 %> more. See the plant and fleet registers.</p><% } %>
-    <% } %>
+<div class="dash-grid">
+  <div class="card flush todo" id="todo">
+    <h2>To do <span class="muted small">most urgent first</span></h2>
+    <% if (!todo.length) { %><p class="empty">Nothing needs doing. Everything is in date. 👍</p><% } else {
+      // Each group shows its first few rows; "Show all" opens the rest.
+      let shown = 0;
+      let hiddenRows = 0;
+      for (const [when, label, limit] of [['now', 'Now', 15], ['soon', 'Coming up', 10]]) {
+        const rows = todo.filter((t) => t.when === when);
+        if (!rows.length) continue; %>
+    <div class="todo-group"><%= label %></div>
+    <ul>
+      <% rows.forEach((t, i) => { shown++; const more = i >= limit; if (more) hiddenRows++; %>
+      <li class="<%= more ? 'more-row' : '' %>" <%= more ? 'hidden' : '' %>>
+        <span class="todo-bar <%= t.level %>"></span>
+        <div class="todo-main">
+          <a class="todo-title" href="<%= t.href %>"><% if (t.reg) { %><span class="reg sm"><%= t.reg %></span> <% } %><%= t.title %></a>
+          <div class="todo-detail"><%= t.detail %></div>
+        </div>
+        <a class="btn small <%= t.primary ? 'primary' : '' %>" href="<%= t.href %>"><%= t.action %></a>
+      </li>
+      <% }) %>
+    </ul>
+    <% } if (hiddenRows) { %>
+    <p class="empty" style="padding-top:10px"><button class="linkbtn" type="button" id="todo-toggle" data-more="Show all <%= shown %>" data-less="Show fewer">Show all <%= shown %></button></p>
+    <% } } %>
   </div>
-  <div class="card flush">
-    <h2>Open defects</h2>
-    <% if (!defects.length) { %><p class="empty">No open defects.</p><% } else { %>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Asset</th><th>Defect</th><th>Severity</th></tr></thead>
-      <tbody>
-      <% for (const d of defects) { %>
-        <tr>
-          <td><a href="/<%= d.asset_type === 'plant' ? 'plant' : 'vehicles' %>/<%= d.asset_id %>"><%= d.asset_name %></a><div class="small muted"><%= ukDate(d.reported_at) %> · <%= d.reported_by_name %></div></td>
-          <td><%= d.description %></td>
-          <td><span class="pill <%= d.severity %>"><%= SEVERITY_LABELS[d.severity] %></span></td>
-        </tr>
-      <% } %>
-      </tbody>
-    </table></div>
-    <p class="empty" style="padding-top:10px"><a href="/defects">All defects →</a></p>
-    <% } %>
+
+  <div class="dash-side">
+    <div class="card">
+      <div class="card-head"><h2>Fuel</h2><a class="small" href="/fuel">Fuel Logs →</a></div>
+      <% const cMax = Math.max(1000, ...months.map((m) => m.litres)) * 1.18;
+         const cW = 300;
+         const cH = 150;
+         const cTop = 6;
+         const cBot = 22;
+         const cBw = 30;
+         const cStep = cW / months.length;
+         const cy = (v) => cTop + (cH - cTop - cBot) * (1 - v / cMax); %>
+      <svg class="fuel-chart" viewBox="0 0 <%= cW %> <%= cH %>" role="img" aria-label="Litres of fuel used per month, last 6 months">
+        <% for (const g of [0, 0.5, 1]) { %><line x1="0" x2="<%= cW %>" y1="<%= cy(cMax * g / 1.18) %>" y2="<%= cy(cMax * g / 1.18) %>" stroke="#e3e8ef"/><% } %>
+        <% months.forEach((m, i) => { const x = i * cStep + (cStep - cBw) / 2; const last = i === months.length - 1; %>
+        <rect x="<%= x %>" y="<%= cy(m.litres) %>" width="<%= cBw %>" height="<%= cy(0) - cy(m.litres) %>" rx="4" fill="<%= last ? '#01024c' : '#c9cae3' %>"><title><%= m.label %>: <%= num(m.litres) %> L</title></rect>
+        <text x="<%= x + cBw / 2 %>" y="<%= cH - 6 %>" text-anchor="middle" class="ax"><%= m.label %></text>
+        <% if (last) { %><text x="<%= x + cBw / 2 %>" y="<%= cy(m.litres) - 5 %>" text-anchor="middle" class="val"><%= num(m.litres) %> L</text><% } %>
+        <% }) %>
+      </svg>
+      <p class="small muted" style="margin:6px 0 0">Litres used, last 6 months · <%= money(months[months.length - 1].cost) %> spent this month</p>
+    </div>
+    <div class="card flush">
+      <h2>Today</h2>
+      <div class="today-list">
+        <a href="/checks?type=vehicle"><span>Walk-arounds done</span><span class="pill <%= stats.walkaroundsDone >= stats.walkaroundsExpected ? 'ok' : 'soon' %>"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></span></a>
+        <a href="/checks?type=plant"><span>Plant check sheets in date</span><span class="pill <%= stats.checksOk >= stats.checksExpected ? 'ok' : 'soon' %>"><%= stats.checksOk %> / <%= stats.checksExpected %></span></a>
+        <a href="/defects"><span>Open defects</span><span class="pill <%= stats.defectsOpen ? 'soon' : 'ok' %>"><%= stats.defectsOpen %></span></a>
+      </div>
+    </div>
   </div>
 </div>
+<script>
+  (function () {
+    const b = document.getElementById('todo-toggle');
+    if (!b) return;
+    b.addEventListener('click', () => {
+      const open = b.textContent === b.dataset.more;
+      document.querySelectorAll('#todo .more-row').forEach((r) => { r.hidden = !open; });
+      b.textContent = open ? b.dataset.less : b.dataset.more;
+    });
+  })();
+</script>
 <%- include('partials/footer') %>

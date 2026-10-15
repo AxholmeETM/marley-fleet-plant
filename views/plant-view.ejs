@@ -112,6 +112,9 @@
     kind.addEventListener('change', upd); upd();
     const dlg = document.getElementById('record-dlg');
     document.querySelectorAll('[data-open="record-dlg"]').forEach((b) => b.addEventListener('click', () => dlg.showModal()));
+    // A link ending #record-service (or -loler, -mot, -tax) opens this pop-up with that type picked.
+    const want = (location.hash.match(/^#record-(\w+)$/) || [])[1];
+    if (want && kind.querySelector(`option[value="${want}"]`)) { kind.value = want; kind.dispatchEvent(new Event('change')); dlg.showModal(); }
     dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
     const rows = document.querySelectorAll('#history tr[data-type]'), none = document.querySelector('.tl-none');

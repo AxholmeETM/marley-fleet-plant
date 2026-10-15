@@ -190,7 +190,7 @@ test('admin and driver flows', async () => {
   assert.match((await admin('GET', '/reports/fuel-cards')).text, /7064 0560 7223 5900 127/);
   assert.match((await admin('GET', '/users/new')).text, /Who can see what/);
   const dash = await admin('GET', '/');
-  assert.match(dash.text, /Needs attention/);
+  assert.match(dash.text, /To do/);
   assert.match(dash.text, /MOT/);
 
   // Driver does a walk-around with a defect, a plant check and logs fuel with a receipt.

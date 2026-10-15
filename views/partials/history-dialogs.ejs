@@ -62,5 +62,8 @@
     const dlg = document.getElementById(tr.dataset.dlg);
     if (dlg) dlg.showModal();
   }));
+  // A link ending #def-12 or #rec-12 opens that defect or record.
+  const linked = /^#(def|rec)-\d+$/.test(location.hash) && document.getElementById(location.hash.slice(1));
+  if (linked) linked.showModal();
   document.querySelectorAll('dialog [data-close]').forEach((b) => b.addEventListener('click', () => b.closest('dialog').close()));
 </script>

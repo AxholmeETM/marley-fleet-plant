@@ -452,3 +452,27 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 .report-table thead th { white-space: normal; }
 .report-table tbody tr:hover td { background: none !important; }
 .field[hidden] { display: none; }
+
+/* Dashboard: four tiles, then the to-do list with fuel and today's checks beside it */
+.kpis-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dash-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.dash-side { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.todo > h2 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding-bottom: 10px; }
+.todo > h2 .small { font-weight: 500; }
+.todo ul { list-style: none; margin: 0; padding: 0; }
+.todo-group { padding: 10px 22px 6px; font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.todo li { display: grid; grid-template-columns: 5px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 11px 22px 11px 0; border-bottom: 1px solid var(--line); }
+.todo li:last-child { border-bottom: 0; }
+.todo-bar { align-self: stretch; border-radius: 0 3px 3px 0; background: var(--line-strong); }
+.todo-bar.bad { background: var(--red); } .todo-bar.warn { background: #e0a100; }
+.todo-title { font-weight: 600; color: var(--ink); }
+.todo-detail { font-size: .82rem; color: var(--muted); margin-top: 1px; overflow-wrap: anywhere; }
+.reg.sm { width: auto; font-size: .82rem; padding: 0 6px; line-height: 1.5; }
+.fuel-chart { width: 100%; height: auto; display: block; margin-top: 12px; }
+.fuel-chart .ax { fill: var(--muted); font-size: 10px; }
+.fuel-chart .val { fill: var(--ink); font-size: 10px; font-weight: 600; }
+.today-list a { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 11px 22px; border-top: 1px solid var(--line); color: var(--ink); }
+.today-list a:hover { background: var(--hover); text-decoration: none; }
+@media (max-width: 1100px) { .kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dash-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 640px) { .todo li { grid-template-columns: 5px minmax(0, 1fr); } .todo li .btn { grid-column: 2; justify-self: start; } }
+.todo li[hidden] { display: none; }
