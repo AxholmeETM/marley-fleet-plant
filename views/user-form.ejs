@@ -1,13 +1,14 @@
 <%- include('partials/header') %>
+<% const noAccount = item.role !== 'admin' && (item.no_account || (item.id && !item.email)); %>
 <div class="page-head"><div><h1><%= title %></h1></div></div>
 <%- include('partials/pane-end') %>
 <form class="card" method="post" action="/users<%= item.id ? '/' + item.id : '' %>" style="max-width:680px">
   <fieldset>
     <legend>Account type</legend>
     <span class="seg">
-      <input type="radio" id="role-emp" name="role" value="driver" <%= item.role !== 'admin' && item.employee_type !== 'worker' ? 'checked' : '' %>><label for="role-emp">Employee</label>
+      <input type="radio" id="role-emp" name="role" value="driver" <%= item.role !== 'admin' && !noAccount ? 'checked' : '' %>><label for="role-emp">Employee</label>
       <input type="radio" id="role-admin" name="role" value="admin" <%= item.role === 'admin' ? 'checked' : '' %>><label for="role-admin">Admin user</label>
-      <input type="radio" id="role-none" name="role" value="none" <%= item.role !== 'admin' && item.employee_type === 'worker' ? 'checked' : '' %>><label for="role-none">No account needed</label>
+      <input type="radio" id="role-none" name="role" value="none" <%= noAccount ? 'checked' : '' %>><label for="role-none">No account needed</label>
     </span>
     <p class="hint" id="role-hint"></p>
   </fieldset>
@@ -15,7 +16,7 @@
     <legend>Employee type</legend>
     <span class="seg">
       <% for (const [k, l] of Object.entries(EMPLOYEE_TYPES)) { %>
-      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type === 'worker' ? 'driver' : item.employee_type || (item.role === 'admin' ? '' : 'driver')) === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
+      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type || (item.role === 'admin' ? '' : 'driver')) === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
       <% } %>
       <input type="radio" id="et-none" name="employee_type" value="" <%= item.role === 'admin' && !item.employee_type ? 'checked' : '' %>><label for="et-none" id="et-none-label">Neither</label>
     </span>
@@ -41,19 +42,25 @@
 <script>
   (function () {
     const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards and users.',
-      none: 'Logged on the system only, with no login. For site workers.' };
+      none: 'Logged on the system only, with no login.' };
     function upd() {
       const role = document.querySelector('input[name="role"]:checked').value;
       // Admins can also be a fleet driver or site manager, or neither.
       const none = document.getElementById('et-none');
       none.hidden = document.getElementById('et-none-label').hidden = role !== 'admin';
       if (role !== 'admin' && none.checked) document.getElementById('et-driver').checked = true;
-      // No account needed: no employee type, email or password.
-      document.getElementById('emp-type').hidden = role === 'none';
+      // Site worker is only for people with no account; no account means no email or password.
+      const worker = document.getElementById('et-worker');
+      worker.hidden = document.querySelector('label[for="et-worker"]').hidden = role !== 'none';
+      if (role !== 'none' && worker.checked) document.getElementById('et-driver').checked = true;
       document.querySelectorAll('.login-field').forEach((f) => { f.hidden = role === 'none'; });
       document.getElementById('role-hint').textContent = hints[role];
     }
-    document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener('change', upd));
+    // Choosing No account needed picks Site worker, which can still be changed.
+    document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener('change', () => {
+      if (r.value === 'none') document.getElementById('et-worker').checked = true;
+      upd();
+    }));
     upd();
   })();
 </script>

@@ -27,16 +27,17 @@ const userForm = (res, title, item) => res.render('user-form', { title, crumbs: 
 router.get('/users/new', async (req, res) => {
   const role = req.query.role === 'admin' ? 'admin' : 'driver';
   const type = req.query.role === 'none' ? 'worker' : EMPLOYEE_TYPES[req.query.type] ? req.query.type : 'driver';
-  userForm(res, role === 'admin' ? 'Add admin user' : 'Add employee', { role, employee_type: type, active: 1 });
+  userForm(res, role === 'admin' ? 'Add admin user' : 'Add employee', { role, employee_type: type, active: 1, no_account: req.query.role === 'none' });
 });
 
 // Employees without an email have no login; admin users always need one.
-// "No account needed" (site workers) logs the person on the system with no login at all.
+// "No account needed" logs the person on the system with no login at all (e.g. site workers).
 function readUser(body, existing) {
   const name = text(body.name);
   if (body.role === 'none') {
     if (!name) throw new UserError('Please enter their name.');
-    return { name, employee_no: text(body.employee_no), email: null, phone: text(body.phone), role: 'driver', employee_type: 'worker', job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password: '' };
+    if (!EMPLOYEE_TYPES[body.employee_type]) throw new UserError('Please choose an employee type.');
+    return { name, employee_no: text(body.employee_no), email: null, phone: text(body.phone), role: 'driver', employee_type: body.employee_type, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password: '' };
   }
   const email = text(body.email);
   const role = body.role === 'admin' ? 'admin' : 'driver';
@@ -48,6 +49,7 @@ function readUser(body, existing) {
   // Admins can also be a fleet driver or site manager (or neither); employees must be one of them.
   const employeeType = EMPLOYEE_TYPES[body.employee_type] ? body.employee_type : null;
   if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose fleet driver or site manager.');
+  if (employeeType === 'worker') throw new UserError('Site workers have no account. Choose "No account needed" for them.');
   return { name, employee_no: text(body.employee_no), email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
 }
 
