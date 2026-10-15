@@ -10,7 +10,7 @@ router.use('/users', requireAdmin);
 
 // Admin users can also be fleet drivers or site managers, so they show under those filters too.
 const SHOW = { employees: "u.role = 'driver'", drivers: "u.employee_type = 'driver'",
-  site_managers: "u.employee_type = 'site_manager'", admins: "u.role = 'admin'" };
+  site_managers: "u.employee_type = 'site_manager'", workers: "u.employee_type = 'worker'", admins: "u.role = 'admin'" };
 
 router.get('/users', async (req, res) => {
   const show = SHOW[req.query.show] ? req.query.show : '';
@@ -18,7 +18,7 @@ router.get('/users', async (req, res) => {
       (SELECT COUNT(*) FROM fuel_cards c WHERE c.user_id = u.id AND c.status = 'active') AS cards
     FROM users u ${show ? 'WHERE ' + SHOW[show] : ''} ORDER BY u.active DESC, u.role = 'admin', u.name`);
   const counts = await get(`SELECT COUNT(*) AS all_users, COUNT(*) FILTER (WHERE role = 'driver') AS employees, COUNT(*) FILTER (WHERE employee_type = 'driver') AS drivers,
-    COUNT(*) FILTER (WHERE employee_type = 'site_manager') AS site_managers, COUNT(*) FILTER (WHERE role = 'admin') AS admins FROM users`);
+    COUNT(*) FILTER (WHERE employee_type = 'site_manager') AS site_managers, COUNT(*) FILTER (WHERE employee_type = 'worker') AS workers, COUNT(*) FILTER (WHERE role = 'admin') AS admins FROM users`);
   res.render('users', { title: 'Employees', users, show, counts });
 });
 
@@ -26,13 +26,18 @@ const userForm = (res, title, item) => res.render('user-form', { title, crumbs: 
 
 router.get('/users/new', async (req, res) => {
   const role = req.query.role === 'admin' ? 'admin' : 'driver';
-  const type = EMPLOYEE_TYPES[req.query.type] ? req.query.type : 'driver';
+  const type = req.query.role === 'none' ? 'worker' : EMPLOYEE_TYPES[req.query.type] ? req.query.type : 'driver';
   userForm(res, role === 'admin' ? 'Add admin user' : 'Add employee', { role, employee_type: type, active: 1 });
 });
 
 // Employees without an email have no login; admin users always need one.
+// "No account needed" (site workers) logs the person on the system with no login at all.
 function readUser(body, existing) {
   const name = text(body.name);
+  if (body.role === 'none') {
+    if (!name) throw new UserError('Please enter their name.');
+    return { name, employee_no: text(body.employee_no), email: null, phone: text(body.phone), role: 'driver', employee_type: 'worker', job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password: '' };
+  }
   const email = text(body.email);
   const role = body.role === 'admin' ? 'admin' : 'driver';
   if (!name) throw new UserError('Please enter their name.');

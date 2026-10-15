@@ -112,6 +112,13 @@ test('admin and driver flows', async () => {
   await admin('POST', '/users', { name: 'Id Two', employee_no: 'e100', role: 'driver', employee_type: 'driver', active: '1' });
   assert.equal(await get("SELECT id FROM users WHERE name = 'Id Two'"), undefined);
   await run("DELETE FROM users WHERE name = 'Id One'");
+  // No account needed: a site worker is logged with no email or password, even if one was typed.
+  await admin('POST', '/users', { name: 'Sid Worker', role: 'none', employee_type: 'driver', email: 'sid@x.test', password: 'password123', active: '1' });
+  const sid = await get("SELECT * FROM users WHERE name = 'Sid Worker'");
+  assert.ok(sid && sid.email === null && sid.password_hash === null && sid.employee_type === 'worker' && sid.role === 'driver');
+  assert.match((await admin('GET', '/users?show=workers')).text, /Sid Worker/);
+  assert.match((await admin('GET', `/users/${sid.id}/edit`)).text, /id="role-none" name="role" value="none" checked/);
+  await run("DELETE FROM users WHERE name = 'Sid Worker'");
   // Employees are created from the names on the fuel cards (run once on the live database).
   await run("INSERT INTO fuel_cards (provider, card_ref, holder, user_id, status) VALUES ('Esso', 'T1', 'Pat Jones(2)', (SELECT id FROM users WHERE role = 'admin' LIMIT 1), 'active'), ('Esso', 'T2', 'pat jones', NULL, 'active'), ('Esso', 'T3', 'Jim and Keith', NULL, 'active'), ('Esso', 'T4', 'Laura', NULL, 'active')");
   const { employeesFromCards } = require('../src/routes/users');

@@ -440,3 +440,4 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 }
 .report-table thead th { white-space: normal; }
 .report-table tbody tr:hover td { background: none !important; }
+.field[hidden] { display: none; }

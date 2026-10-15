@@ -6,7 +6,7 @@
 <form class="filters" method="get">
   <div class="field"><label for="show">Type</label>
     <select id="show" name="show">
-      <% for (const [key, label, n] of [['', 'Everyone', counts.all_users], ['drivers', 'Fleet drivers', counts.drivers], ['site_managers', 'Site managers', counts.site_managers], ['admins', 'Admin users', counts.admins]]) { %>
+      <% for (const [key, label, n] of [['', 'Everyone', counts.all_users], ['drivers', 'Fleet drivers', counts.drivers], ['site_managers', 'Site managers', counts.site_managers], ['workers', 'Site workers', counts.workers], ['admins', 'Admin users', counts.admins]]) { %>
         <option value="<%= key %>" <%= show === key ? 'selected' : '' %>><%= label %> (<%= n || 0 %>)</option>
       <% } %>
     </select></div>

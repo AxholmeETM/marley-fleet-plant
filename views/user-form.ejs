@@ -5,8 +5,9 @@
   <fieldset>
     <legend>Account type</legend>
     <span class="seg">
-      <input type="radio" id="role-emp" name="role" value="driver" <%= item.role !== 'admin' ? 'checked' : '' %>><label for="role-emp">Employee</label>
+      <input type="radio" id="role-emp" name="role" value="driver" <%= item.role !== 'admin' && item.employee_type !== 'worker' ? 'checked' : '' %>><label for="role-emp">Employee</label>
       <input type="radio" id="role-admin" name="role" value="admin" <%= item.role === 'admin' ? 'checked' : '' %>><label for="role-admin">Admin user</label>
+      <input type="radio" id="role-none" name="role" value="none" <%= item.role !== 'admin' && item.employee_type === 'worker' ? 'checked' : '' %>><label for="role-none">No account needed</label>
     </span>
     <p class="hint" id="role-hint"></p>
   </fieldset>
@@ -14,7 +15,7 @@
     <legend>Employee type</legend>
     <span class="seg">
       <% for (const [k, l] of Object.entries(EMPLOYEE_TYPES)) { %>
-      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type || (item.role === 'admin' ? '' : 'driver')) === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
+      <input type="radio" id="et-<%= k %>" name="employee_type" value="<%= k %>" <%= (item.employee_type === 'worker' ? 'driver' : item.employee_type || (item.role === 'admin' ? '' : 'driver')) === k ? 'checked' : '' %>><label for="et-<%= k %>"><%= l %></label>
       <% } %>
       <input type="radio" id="et-none" name="employee_type" value="" <%= item.role === 'admin' && !item.employee_type ? 'checked' : '' %>><label for="et-none" id="et-none-label">Neither</label>
     </span>
@@ -27,9 +28,9 @@
       <datalist id="job-titles">
         <% for (const t of ['Groundworker', 'Plant Operator', 'Labourer', 'Ganger', 'Site Manager', 'Assistant Site Manager', 'Contracts Manager', 'Plant Fitter', 'Fleet Driver', 'Admin Assistant', 'Office Manager', 'Director']) { %><option value="<%= t %>"><% } %>
       </datalist></div>
-    <div class="field"><label for="email">Email <span class="hint">(blank = no login)</span></label><input id="email" name="email" type="email" value="<%= item.email || '' %>"></div>
+    <div class="field login-field"><label for="email">Email <span class="hint">(blank = no login)</span></label><input id="email" name="email" type="email" value="<%= item.email || '' %>"></div>
     <div class="field"><label for="phone">Phone</label><input id="phone" name="phone" type="tel" value="<%= item.phone || '' %>"></div>
-    <div class="field"><label for="password"><%= item.id && item.password_hash ? 'Reset password' : 'Password' %> <span class="hint"><%= item.id && item.password_hash ? '(blank = keep)' : '(8+ characters, to sign in)' %></span></label>
+    <div class="field login-field"><label for="password"><%= item.id && item.password_hash ? 'Reset password' : 'Password' %> <span class="hint"><%= item.id && item.password_hash ? '(blank = keep)' : '(8+ characters, to sign in)' %></span></label>
       <input id="password" name="password" type="text" minlength="8" autocomplete="new-password" ></div>
     <div class="field"><label for="active">Status</label>
       <select id="active" name="active"><option value="1">Active</option><option value="0" <%= item.active === 0 ? 'selected' : '' %>>Disabled (cannot sign in)</option></select></div>
@@ -39,13 +40,17 @@
 <div style="max-width:680px;margin-top:18px"><%- include('partials/who-sees-what') %></div>
 <script>
   (function () {
-    const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards and users.' };
+    const hints = { driver: 'Can do walk-around and plant checks, log fuel with their fuel cards, and report defects.', admin: 'Sees everything: registers, fuel dashboard, fuel cards and users.',
+      none: 'Logged on the system only, with no login. For site workers.' };
     function upd() {
       const role = document.querySelector('input[name="role"]:checked').value;
       // Admins can also be a fleet driver or site manager, or neither.
       const none = document.getElementById('et-none');
       none.hidden = document.getElementById('et-none-label').hidden = role !== 'admin';
       if (role !== 'admin' && none.checked) document.getElementById('et-driver').checked = true;
+      // No account needed: no employee type, email or password.
+      document.getElementById('emp-type').hidden = role === 'none';
+      document.querySelectorAll('.login-field').forEach((f) => { f.hidden = role === 'none'; });
       document.getElementById('role-hint').textContent = hints[role];
     }
     document.querySelectorAll('input[name="role"]').forEach((r) => r.addEventListener('change', upd));

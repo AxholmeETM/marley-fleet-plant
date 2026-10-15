@@ -74,7 +74,8 @@ const TRACKED = { yes: 'Yes (tracker company)', own: 'Yes (we own the tracker)',
 
 // Admins run the office side. Employees (role 'driver' in the database) are fleet drivers or site managers.
 const EMPLOYEE_TYPES = { driver: 'Fleet driver', site_manager: 'Site manager' };
-const userLabel = (u) => (u.role === 'admin' ? ['Admin', EMPLOYEE_TYPES[u.employee_type]].filter(Boolean).join(' · ') : EMPLOYEE_TYPES[u.employee_type] || 'Employee');
+// Site workers are logged on the system only, with no account.
+const userLabel = (u) => (u.role === 'admin' ? ['Admin', EMPLOYEE_TYPES[u.employee_type]].filter(Boolean).join(' · ') : u.employee_type === 'worker' ? 'Site worker' : EMPLOYEE_TYPES[u.employee_type] || 'Employee');
 
 const FUEL_CARD_PROVIDERS = ['Esso', 'Key Fuels (The Fuelcard Company)', 'FastFuels (Silvey)'];
 const FUEL_CARD_STATUSES = { active: 'Active', expired: 'Expired', stopped: 'Stopped', cancelled: 'Cancelled', lost: 'Lost / stolen' };

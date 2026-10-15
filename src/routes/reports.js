@@ -4,7 +4,7 @@ const { listPlant, listVehicles } = require('../queries');
 const { requireAdmin } = require('../auth');
 const { ukDate, fmtHours } = require('../status');
 const { decorate: decorateCard } = require('./fuel-cards');
-const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES } = require('../categories');
+const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES, userLabel } = require('../categories');
 
 const router = express.Router();
 router.use('/reports', requireAdmin);
@@ -75,16 +75,17 @@ const REPORTS = {
   },
   equipment: { label: 'Equipment', blurb: 'All equipment, grouped by category, with the same columns as the plant report.', build: () => plantReport('equipment') },
   employees: {
-    label: 'Employees', blurb: 'Everyone, grouped by fleet drivers, site managers and other admin users, with their vehicles and fuel cards.',
+    label: 'Employees', blurb: 'Everyone, grouped by fleet drivers, site managers, site workers and other admin users, with their vehicles and fuel cards.',
     async build() {
       const users = await all(`SELECT u.*, (SELECT string_agg(reg, ', ' ORDER BY reg) FROM vehicles v WHERE v.driver_id = u.id AND v.active = 1) AS vehicles,
           (SELECT string_agg(provider || COALESCE(' #' || card_ref, ''), ', ' ORDER BY provider, card_ref) FROM fuel_cards c WHERE c.user_id = u.id AND c.status = 'active') AS cards
         FROM users u ORDER BY u.active DESC, u.name`);
-      const row = (u) => [u.employee_no || '—', u.name, u.role === 'admin' ? 'Admin' + (EMPLOYEE_TYPES[u.employee_type] ? ' · ' + EMPLOYEE_TYPES[u.employee_type] : '') : EMPLOYEE_TYPES[u.employee_type] || 'Employee',
+      const row = (u) => [u.employee_no || '—', u.name, userLabel(u),
         u.job_title || '—', u.phone || '—', u.email || 'No login', u.vehicles || '—', u.cards || '—', pill(u.active ? 'ok' : 'none', u.active ? 'Active' : 'Disabled')];
       const groups = [
         { label: 'Fleet drivers', rows: users.filter((u) => u.employee_type === 'driver').map(row) },
         { label: 'Site managers', rows: users.filter((u) => u.employee_type === 'site_manager').map(row) },
+        { label: 'Site workers', rows: users.filter((u) => u.employee_type === 'worker').map(row) },
         { label: 'Other admin users', rows: users.filter((u) => u.role === 'admin' && !EMPLOYEE_TYPES[u.employee_type]).map(row) },
       ].filter((g) => g.rows.length);
       return { title: 'Employees report', count: `${users.length} ${users.length === 1 ? 'person' : 'people'}`,
