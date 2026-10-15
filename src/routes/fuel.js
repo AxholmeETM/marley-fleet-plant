@@ -65,7 +65,7 @@ router.post('/fuel', upload.single('receipt'), async (req, res) => {
       fileName, req.file.originalname);
     if (mileage != null) await run('UPDATE vehicles SET mileage = GREATEST(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, vehicle.id);
     req.flash('success', `Fuel logged: ${litres} L of ${req.body.fuel_type === 'adblue' ? 'AdBlue' : req.body.fuel_type} for ${vehicle.reg}.`);
-    res.redirect(req.user.role === 'admin' ? '/fuel' : '/');
+    res.redirect(req.user.role === 'admin' ? '/fuel/log' : '/');
   } catch (err) {
     if (saved) await storage.remove(saved).catch(() => {});
     throw err;
@@ -143,7 +143,9 @@ async function approxMpg(from, to) {
   return out;
 }
 
-router.get('/fuel', requireAdmin, async (req, res) => {
+// Summary (totals and leaderboard) and the fuel log itself are two tabs over the same filters.
+router.get(['/fuel', '/fuel/log'], requireAdmin, async (req, res) => {
+  const tab = req.path === '/fuel/log' ? 'log' : 'summary';
   const p = period(req.query);
   const type = FUEL_TYPES.includes(req.query.type) ? req.query.type : '';
   const show = ['unpriced', 'unverified', 'verified'].includes(req.query.show) ? req.query.show : '';
@@ -173,7 +175,7 @@ router.get('/fuel', requireAdmin, async (req, res) => {
   vehicles.forEach((v) => Object.assign(v, mpg[v.id] || {}));
 
   res.render('fuel-dashboard', {
-    title: 'Fuel Logs', period: p, type, show, entries, byType, counts,
+    title: tab === 'log' ? 'Fuel log and receipts' : 'Fuel Logs', tab, period: p, type, show, entries, byType, counts,
     board: req.query.board === 'vehicles' ? 'vehicles' : 'drivers', drivers, vehicles,
     query: req.query,
   });
@@ -193,7 +195,7 @@ router.get('/fuel/:id', requireAdmin, async (req, res) => {
   if (!entry) return res.status(404).render('error', { title: 'Not found', message: 'Fuel entry not found.' });
   const remaining = (await get('SELECT COUNT(*) AS n FROM fuel_entries WHERE verified = 0 AND id != ?', entry.id)).n;
   const cards = await all('SELECT id, provider, card_ref, last4, holder, status FROM fuel_cards ORDER BY status, provider, card_ref');
-  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, crumbs: [['Fuel Logs', '/fuel'], [`${entry.reg} · ${ukDate(entry.fill_date)}`]], entry, remaining, FUEL_TYPES, cards });
+  res.render('fuel-entry', { title: `Fuel receipt – ${entry.reg}`, crumbs: [['Fuel Logs', '/fuel'], ['Fuel log and receipts', '/fuel/log'], [`${entry.reg} · ${ukDate(entry.fill_date)}`]], entry, remaining, FUEL_TYPES, cards });
 });
 
 router.post('/fuel/:id', requireAdmin, async (req, res) => {
@@ -221,7 +223,7 @@ router.post('/fuel/:id', requireAdmin, async (req, res) => {
     return res.redirect('/fuel');
   }
   req.flash('success', 'Fuel entry saved.');
-  res.redirect(req.body.return_to === 'dashboard' ? `/fuel${req.body.qs ? '?' + req.body.qs : ''}` : `/fuel/${entry.id}`);
+  res.redirect(req.body.return_to === 'dashboard' ? `/fuel/log${req.body.qs ? '?' + req.body.qs : ''}` : `/fuel/${entry.id}`);
 });
 
 module.exports = router;

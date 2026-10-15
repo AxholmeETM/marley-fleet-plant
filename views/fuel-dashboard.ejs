@@ -6,7 +6,7 @@
   const top = Math.max(1, ...board_rows.map((r) => r.fuel || r.adblue));
 %>
 <div class="page-head">
-  <div><h1>Fuel Logs</h1><p class="muted" style="margin:0"><%= ukDate(period.from) %> to <%= ukDate(period.to) %></p></div>
+  <div><h1><%= title %></h1><p class="muted" style="margin:0"><%= ukDate(period.from) %> to <%= ukDate(period.to) %></p></div>
   <div class="actions">
     <a class="btn dark" href="/fuel/next">Check receipts one by one</a>
     <a class="btn primary" href="/fuel/new">Log fuel</a>
@@ -28,24 +28,25 @@
     <select id="type" name="type"><option value="">All fuel</option>
       <% for (const t of ['diesel', 'unleaded', 'adblue']) { %><option value="<%= t %>" <%= type === t ? 'selected' : '' %>><%= FUEL_LABELS[t] %></option><% } %>
     </select></div>
-  <div class="field"><label for="show">Receipts</label>
+  <% if (tab === 'log') { %><div class="field"><label for="show">Receipts</label>
     <select id="show" name="show">
       <option value="">All</option>
       <option value="unpriced" <%= show === 'unpriced' ? 'selected' : '' %>>No price yet</option>
       <option value="unverified" <%= show === 'unverified' ? 'selected' : '' %>>Not checked</option>
       <option value="verified" <%= show === 'verified' ? 'selected' : '' %>>Checked</option>
-    </select></div>
-  <input type="hidden" name="board" value="<%= board %>">
+    </select></div><% } else { %>
+  <input type="hidden" name="board" value="<%= board %>"><% } %>
   <a class="btn" href="<%= path %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
+<% if (tab === 'summary') { %>
 <div class="kpis">
   <% for (const t of ['diesel', 'unleaded', 'adblue']) { const b = byType[t]; %>
   <div class="kpi"><div class="label"><%= FUEL_LABELS[t] %></div><div class="value"><%= num(b.litres, 1) %> L</div>
     <div class="sub"><%= money(b.cost) %><% if (b.pricedLitres) { %> · avg £<%= (b.cost / b.pricedLitres).toFixed(3) %>/L<% } %> · <%= b.fills %> fill<%= b.fills === 1 ? '' : 's' %></div></div>
   <% } %>
   <div class="kpi"><div class="label">Total spend</div><div class="value"><%= money(counts.cost || 0) %></div><div class="sub"><%= counts.fills %> receipts this period</div></div>
-  <a class="kpi <%= counts.unverified ? 'warn' : 'good' %>" href="?<%= qs({ show: 'unverified' }) %>"><div class="label">To check</div><div class="value"><%= counts.unverified || 0 %></div><div class="sub"><%= counts.unpriced || 0 %> still need a price</div></a>
+  <a class="kpi <%= counts.unverified ? 'warn' : 'good' %>" href="/fuel/log?<%= qs({ show: 'unverified', board: '' }) %>"><div class="label">To check</div><div class="value"><%= counts.unverified || 0 %></div><div class="sub"><%= counts.unpriced || 0 %> still need a price</div></a>
 </div>
 
 <div class="card flush">
@@ -77,8 +78,8 @@
   </table></div><% } %>
 </div>
 
-<details class="card flush docs fold" id="fuel-log">
-  <summary><h2>Fuel log and receipts</h2><span class="count"><%= entries.length %></span></summary>
+<% } else { %>
+<div class="card flush" id="fuel-log">
   <% if (!entries.length) { %><p class="empty">No entries match.</p><% } else { %>
   <div class="table-wrap"><table>
     <thead><tr><th>Receipt</th><th>Date</th><th>Vehicle</th><th>Driver</th><th>Card</th><th>Fuel</th><th class="num">Litres</th><th class="num">Mileage</th><th>Price (£, total)</th><th></th></tr></thead>
@@ -107,18 +108,13 @@
       </tr>
     <% } %></tbody>
   </table></div><% } %>
-</details>
+</div>
 <script>
-  // Remember whether the fuel log was left open, so pricing receipts doesn't keep closing it.
-  (function () {
-    const log = document.getElementById('fuel-log');
-    try { if (localStorage.getItem('fuelLogOpen') === '1') log.open = true; } catch (e) {}
-    log.addEventListener('toggle', () => { try { localStorage.setItem('fuelLogOpen', log.open ? '1' : '0'); } catch (e) {} });
-  })();
   // A receipt can only be ticked as checked once its total price is entered.
   document.querySelectorAll('.price-form').forEach((f) => {
     const cost = f.querySelector('[name=cost]'), tick = f.querySelector('[name=verified]');
     cost.addEventListener('input', () => { tick.disabled = !(parseFloat(cost.value) > 0); if (tick.disabled) tick.checked = false; });
   });
 </script>
+<% } %>
 <%- include('partials/footer') %>

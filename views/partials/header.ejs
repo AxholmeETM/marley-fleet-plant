@@ -43,6 +43,7 @@
   // Second-level tabs for the sections that hold more than one page.
   const SUBNAV = {
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
+    '/fuel': [['/fuel', 'Summary', (p) => p === '/fuel'], ['/fuel/log', 'Fuel log and receipts', (p) => p === '/fuel/log']],
     '/admin': [['/admin', 'Overview', (p) => p === '/admin'], ['/projects', 'Projects', (p) => p.startsWith('/projects')]],
   };
   // The Admin overview's tiles already link to its tabs, so the tabs start on the pages below it.
