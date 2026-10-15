@@ -1,6 +1,6 @@
 /* Marley Fleet & Plant – Apple-style interface: system font, white page and panels, navy bar and accents. */
 :root {
-  --navy: #0b1f3f;
+  --navy: #01024c;
   --ink: #0f1c33;
   --ink-2: #33415a;
   --muted: #64708a;
@@ -10,12 +10,12 @@
   --card: #ffffff;
   --field: #ffffff;
   --hover: #f3f6fa;
-  --brand: #0b1f3f;
-  --accent: #13366b;
-  --accent-hover: #1b4585;
-  --accent-soft: #e7edf6;
+  --brand: #01024c;
+  --accent: #01024c;
+  --accent-hover: #1c1e78;
+  --accent-soft: #e8e8f3;
   --accent-ink: #ffffff;
-  --blue: #1d4e8f;
+  --blue: #23268f;
   --red: #d70015;
   --red-bg: #ffeceb;
   --amber: #a05a00;
@@ -23,9 +23,9 @@
   --green: #1a7f37;
   --green-bg: #e7f6ea;
   --grey-bg: #eef2f7;
-  --bar: #0b1f3f;
-  --shadow: 0 0 0 1px #e3e8ef, 0 1px 3px rgba(11, 31, 63, .05);
-  --shadow-lift: 0 0 0 1px #cfd7e3, 0 10px 28px rgba(11, 31, 63, .10);
+  --bar: #01024c;
+  --shadow: 0 0 0 1px #e3e8ef, 0 1px 3px rgba(1, 2, 76, .05);
+  --shadow-lift: 0 0 0 1px #cfd7e3, 0 10px 28px rgba(1, 2, 76, .10);
   --radius: 18px;
   --radius-sm: 12px;
   color-scheme: light;
@@ -56,6 +56,11 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 .brand:hover { text-decoration: none; }
 .brand-mark { background: var(--brand); color: var(--bg); width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; font-weight: 700; font-size: .95rem; flex: none; }
 .sidebar .brand-mark { background: #fff; color: var(--navy); }
+/* Marley logo: the roof mark above the name in the menu, and on a navy tile on the sign-in page */
+.brand.with-logo { flex-direction: column; align-items: flex-start; gap: 10px; }
+.brand-logo { display: block; width: 150px; height: auto; }
+.login .logo-tile { background: var(--navy); border-radius: 14px; padding: 14px 16px; display: inline-block; margin-bottom: 18px; }
+.login .logo-tile img { display: block; width: 140px; height: auto; }
 .brand small { display: block; font-weight: 400; color: rgba(255, 255, 255, .65); font-size: .72rem; letter-spacing: 0; }
 .side-nav { display: flex; flex-direction: column; gap: 2px; flex: 1; }
 .side-nav a { color: rgba(255, 255, 255, .82); padding: 9px 12px; border-radius: 10px; font-size: .93rem; white-space: nowrap; transition: background .15s, color .15s; }
@@ -69,7 +74,7 @@ h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .5rem; }
 
 /* Fixed pane at the top of each page: where you are, what the page is, search and buttons */
 .pane { position: sticky; top: 0; z-index: 40; background: #fff;
-  border-bottom: 1px solid var(--line); box-shadow: 0 6px 18px rgba(11, 31, 63, .04); }
+  border-bottom: 1px solid var(--line); box-shadow: 0 6px 18px rgba(1, 2, 76, .04); }
 .pane-inner { max-width: 1280px; margin: 0 auto; padding: 20px 24px 4px; }
 .pane .page-head { margin-bottom: 16px; }
 .pane .filters, .pane .tabs, .pane > .pane-inner > .field { margin-bottom: 16px; }
@@ -330,7 +335,7 @@ div.pills .pill { white-space: normal; }
 .card.flush > .card-head { padding: 16px 16px 10px 22px; }
 .card-head h2, .card-head .subnav { margin: 0; }
 .dlg { border: 0; padding: 0; background: transparent; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); }
-.dlg::backdrop { background: rgba(11, 31, 63, .45); }
+.dlg::backdrop { background: rgba(1, 2, 76, .45); }
 .dlg .card { margin: 0; box-shadow: var(--shadow-lift); }
 .dlg-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .dlg-x { border: 0; background: var(--grey-bg); width: 30px; height: 30px; border-radius: 50%; font-size: 1.2rem; line-height: 1; cursor: pointer; color: var(--ink); flex: none; }
