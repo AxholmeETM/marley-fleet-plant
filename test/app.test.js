@@ -118,25 +118,16 @@ test('admin and driver flows', async () => {
   await employeesFromCards();
   assert.equal((await get("SELECT COUNT(*) AS n FROM users WHERE lower(name) = 'pat jones'")).n, 1);
   await run("DELETE FROM fuel_cards WHERE card_ref IN ('T1', 'T2', 'T3', 'T4')");
-  // Driver names typed on vehicles become employees and the vehicles are linked to them.
-  await run("INSERT INTO vehicles (reg, user_name, active) VALUES ('SH01 EET', 'Sam Sheet?', 1), ('SH02 EET', 'pat jones', 1), ('SH03 EET', 'Leon/Jamie', 1)");
-  const { vehicleDriversFromSheet } = require('../src/routes/users');
-  await vehicleDriversFromSheet();
-  const sam = await get("SELECT id FROM users WHERE name = 'Sam Sheet'");
-  assert.ok(sam);
-  assert.deepEqual(await get("SELECT driver_id, user_name FROM vehicles WHERE reg = 'SH01 EET'"), { driver_id: sam.id, user_name: null });
-  assert.equal((await get("SELECT driver_id FROM vehicles WHERE reg = 'SH02 EET'")).driver_id, pat.id);
-  assert.deepEqual(await get("SELECT driver_id, user_name FROM vehicles WHERE reg = 'SH03 EET'"), { driver_id: null, user_name: 'Leon/Jamie' });
-  // A new employee picks up a vehicle with their name on it.
-  await run("INSERT INTO vehicles (reg, user_name, active) VALUES ('SH04 EET', 'Kim Later', 1)");
-  await admin('POST', '/users', { name: 'Kim Later', role: 'driver', employee_type: 'driver', active: '1' });
-  assert.ok((await get("SELECT driver_id FROM vehicles WHERE reg = 'SH04 EET'")).driver_id);
-  await run("DELETE FROM vehicles WHERE reg LIKE 'SH0_ EET'");
+  // Only the driver assigned on Employees is shown; a typed name from the spreadsheet is ignored.
+  await run("INSERT INTO vehicles (reg, user_name, active) VALUES ('SH01 EET', 'Sam Sheet', 1)");
+  assert.doesNotMatch((await admin('GET', '/vehicles')).text, /Sam Sheet/);
+  await run("DELETE FROM vehicles WHERE reg = 'SH01 EET'");
+  const sam = pat;
   // Fuel cards take their name from Employees.
   const named = (await run("INSERT INTO fuel_cards (provider, card_ref, holder, status) VALUES ('Esso', 'N1', 'Printed Name', 'active')")).lastInsertRowid;
   assert.match((await admin('GET', `/fuel-cards/${named}/edit`)).text, /Printed on card: Printed Name/);
   await admin('POST', `/fuel-cards/${named}`, { provider: 'Esso', card_ref: 'N1', status: 'active', user_id: sam.id });
-  assert.match((await admin('GET', '/fuel-cards')).text, /Sam Sheet/);
+  assert.match((await admin('GET', '/fuel-cards')).text, /Pat Jones/);
   await run('DELETE FROM fuel_cards WHERE id = ?', named);
   const gone = (await run("INSERT INTO fuel_cards (provider, card_ref, status) VALUES ('Esso', 'X9', 'active')")).lastInsertRowid;
   assert.equal((await admin('POST', `/fuel-cards/${gone}/delete`)).location, '/fuel-cards');

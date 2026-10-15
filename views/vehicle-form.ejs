@@ -20,7 +20,7 @@
       <div class="field"><label for="driver_id">Driver</label>
         <select id="driver_id" name="driver_id"><option value="">No driver</option>
           <% for (const d of drivers) { %><option value="<%= d.id %>" <%= item.driver_id === d.id ? 'selected' : '' %>><%= d.name %></option><% } %>
-        </select><% if (!item.driver_id && item.user_name) { %><span class="hint">Spreadsheet says: <%= item.user_name %></span><% } %></div>
+        </select></div>
       <div class="field"><label for="tracked">Tracked</label>
         <select id="tracked" name="tracked"><option value="">Not known</option><% for (const [k, l] of Object.entries(TRACKED)) { %><option value="<%= k %>" <%= item.tracked === k ? 'selected' : '' %>><%= l %></option><% } %></select></div>
       <div class="field"><label for="mileage">Mileage</label><input id="mileage" name="mileage" type="number" min="0" step="1" value="<%= item.mileage ?? '' %>"></div>

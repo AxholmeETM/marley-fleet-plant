@@ -188,7 +188,7 @@ function decorateVehicle(v) {
   const parked = { level: 'none', text: { sorn: 'SORN', off_road: 'Off road', sold: 'Sold' }[v.status] || '—' };
   return {
     ...v,
-    driver_display: v.driver_name || v.user_name || null,
+    driver_display: v.driver_name || null,
     mot: v.status === 'sorn' || v.status === 'sold' ? parked : dueStatus(v.mot_due),
     tax: v.status === 'sorn' || v.status === 'sold' ? parked : dueStatus(v.tax_due),
     service: onRoad ? vehicleService(v) : parked,
