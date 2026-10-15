@@ -62,8 +62,16 @@ async function readCard(body) {
 
 router.get('/fuel-cards', async (req, res) => {
   const show = req.query.show === 'all' ? 'all' : 'active';
-  const cards = (await all(`${CARD_SQL} ${show === 'active' ? "WHERE c.status = 'active'" : ''} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorate);
-  res.render('fuel-cards', { title: 'Fuel cards', cards, show, FUEL_CARD_STATUSES });
+  const all_ = (await all(`${CARD_SQL} ${show === 'active' ? "WHERE c.status = 'active'" : ''} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorate);
+  // Filters: fuel company and the name on the card (or the person it's linked to).
+  const nameOf = (c) => c.holder || c.user_name || '';
+  const sorted = (xs) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const companies = sorted(all_.map((c) => c.provider));
+  const names = sorted(all_.map(nameOf));
+  const company = companies.includes(req.query.company) ? req.query.company : '';
+  const name = names.includes(req.query.name) ? req.query.name : '';
+  const cards = all_.filter((c) => (!company || c.provider === company) && (!name || nameOf(c) === name));
+  res.render('fuel-cards', { title: 'Fuel cards', cards, show, company, name, companies, names, FUEL_CARD_STATUSES });
 });
 
 async function form(res, title, item) {

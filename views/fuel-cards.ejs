@@ -3,13 +3,18 @@
   <div><h1>Fuel cards</h1><p class="muted" style="margin:0">Who holds each card and which vehicle it's for. Card PINs are never stored here.</p></div>
   <div class="actions"><a class="btn primary" href="/fuel-cards/new">Add fuel card</a></div>
 </div>
-<div class="tabs">
-  <a href="?show=active" class="<%= show === 'active' ? 'active' : '' %>">Active</a>
-  <a href="?show=all" class="<%= show === 'all' ? 'active' : '' %>">All (incl. expired, stopped, cancelled)</a>
-</div>
+<form class="filters" method="get">
+  <div class="field"><label for="show">Status</label>
+    <select id="show" name="show"><option value="active" <%= show === 'active' ? 'selected' : '' %>>Active</option><option value="all" <%= show === 'all' ? 'selected' : '' %>>All, incl. expired and stopped</option></select></div>
+  <div class="field"><label for="company">Fuel company</label>
+    <select id="company" name="company"><option value="">All</option><% for (const c of companies) { %><option <%= company === c ? 'selected' : '' %>><%= c %></option><% } %></select></div>
+  <div class="field"><label for="name">Name on card</label>
+    <select id="name" name="name"><option value="">All</option><% for (const n of names) { %><option <%= name === n ? 'selected' : '' %>><%= n %></option><% } %></select></div>
+  <a class="btn" href="<%= path %>">Reset</a>
+</form>
 <%- include('partials/pane-end') %>
 <div class="card flush">
-  <% if (!cards.length) { %><p class="empty">No fuel cards yet. <a href="/fuel-cards/new">Add one.</a></p><% } else { %>
+  <% if (!cards.length) { %><p class="empty"><%= company || name ? 'No fuel cards match these filters.' : 'No fuel cards yet.' %> <a href="/fuel-cards/new">Add one.</a></p><% } else { %>
   <div class="table-wrap"><table>
     <thead><tr><th>Company</th><th>Card</th><th>Name on card</th><th>Vehicle</th><th>Fuel</th><th>Expiry</th><th>Last used</th><th></th></tr></thead>
     <tbody><% for (const c of cards) { %>
