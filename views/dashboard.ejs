@@ -48,7 +48,8 @@
     </div>
     <% } %>
     <div class="todo-scroll cal" data-panel="calendar" hidden>
-      <div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-title"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn small" id="cal-today">Today</button></div>
+      <div class="cal-bar"><button type="button" class="cal-nav" id="cal-prev" aria-label="Previous month">‹</button><b id="cal-title"></b><button type="button" class="cal-nav" id="cal-next" aria-label="Next month">›</button><button type="button" class="linkbtn small" id="cal-today">Today</button>
+        <span class="seg-tabs cal-mode"><button type="button" data-mode="week" aria-selected="true">Week</button><button type="button" data-mode="month" aria-selected="false">Month</button></span></div>
       <div class="cal-grid" id="cal-grid"></div>
       <div class="cal-day" id="cal-day"></div>
     </div>
@@ -84,14 +85,42 @@
       const tone = (d) => (d < today ? 'bad' : d <= soon ? 'warn' : 'ok');
       let ym = today.slice(0, 7);
       let picked = today;
+      let mode = 'week';
+      // Dates are handled as YYYY-MM-DD strings in UTC so the days never shift.
+      const toDate = (d) => new Date(d + 'T12:00:00Z');
+      const iso = (t) => t.toISOString().slice(0, 10);
+      const plusDays = (d, n) => iso(new Date(toDate(d).getTime() + n * 864e5));
+      const monday = (d) => plusDays(d, -((toDate(d).getUTCDay() + 6) % 7));
+      const evRow = (e) => `<li class="lv-${tone(e.d)}"><div class="todo-main"><a class="todo-title" href="${esc(e.h)}">${e.r ? `<span class="reg sm">${esc(e.r)}</span> ` : ''}${esc(e.t)}</a><div class="todo-detail">${esc(e.k)}</div></div><a class="btn small" href="${esc(e.h)}">Open</a></li>`;
+      // Week: seven columns, Monday to Sunday, every item listed in full.
+      function drawWeek() {
+        const start = monday(picked);
+        const end = plusDays(start, 6);
+        const f = (d, o) => toDate(d).toLocaleDateString('en-GB', o);
+        document.getElementById('cal-title').textContent = `${f(start, { day: 'numeric', month: 'short' })} – ${f(end, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+        let html = '';
+        for (let i = 0; i < 7; i++) {
+          const d = plusDays(start, i);
+          const list = events.filter((e) => e.d === d);
+          html += `<div class="wk-col${d === today ? ' today' : ''}"><div class="wk-head"><span>${f(d, { weekday: 'short' })}</span><b>${f(d, { day: 'numeric' })}</b></div>`
+            + (list.length ? list.map((e) => `<a class="wk-ev ${tone(d)}" href="${esc(e.h)}"><b>${esc(e.k)}</b>${e.r ? `<span class="reg sm">${esc(e.r)}</span>` : ''}<span>${esc(e.t)}</span></a>`).join('') : '<span class="wk-none">—</span>')
+            + '</div>';
+        }
+        const grid = document.getElementById('cal-grid');
+        grid.className = 'wk-grid';
+        grid.innerHTML = html;
+        const all = events.filter((e) => e.d >= start && e.d <= end);
+        document.getElementById('cal-day').innerHTML = `<div class="todo-group">This week: ${all.length} item${all.length === 1 ? '' : 's'}</div>` + (all.length ? '<ul>' + all.map(evRow).join('') + '</ul>' : '<p class="empty">Nothing due this week.</p>');
+      }
       function dayList(d) {
         const list = events.filter((e) => e.d === d);
         const nice = new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
         document.getElementById('cal-day').innerHTML = `<div class="todo-group">${nice}</div>` + (list.length
-          ? '<ul>' + list.map((e) => `<li class="lv-${tone(e.d)}"><div class="todo-main"><a class="todo-title" href="${esc(e.h)}">${e.r ? `<span class="reg sm">${esc(e.r)}</span> ` : ''}${esc(e.t)}</a><div class="todo-detail">${esc(e.k)}</div></div><a class="btn small" href="${esc(e.h)}">Open</a></li>`).join('') + '</ul>'
+          ? '<ul>' + list.map(evRow).join('') + '</ul>'
           : '<p class="empty">Nothing due on this day.</p>');
       }
       function draw() {
+        if (mode === 'week') return drawWeek();
         const [y, m] = ym.split('-').map(Number);
         document.getElementById('cal-title').textContent = new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
         const first = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
@@ -106,14 +135,23 @@
             + (list.length > 2 ? `<span class="cal-more">+${list.length - 2} more</span>` : '') + '</button>';
         }
         const grid = document.getElementById('cal-grid');
+        grid.className = 'cal-grid';
         grid.innerHTML = html;
         grid.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => { picked = b.dataset.d; draw(); }));
         dayList(picked);
       }
-      const step = (k) => { const [y, m] = ym.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + k, 1)); ym = `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}`; picked = ym === today.slice(0, 7) ? today : `${ym}-01`; draw(); };
+      const step = (k) => {
+        if (mode === 'week') { picked = plusDays(picked, 7 * k); ym = picked.slice(0, 7); return draw(); }
+        const [y, m] = ym.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + k, 1)); ym = `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}`; picked = ym === today.slice(0, 7) ? today : `${ym}-01`; draw(); };
       document.getElementById('cal-prev').addEventListener('click', () => step(-1));
       document.getElementById('cal-next').addEventListener('click', () => step(1));
       document.getElementById('cal-today').addEventListener('click', () => { ym = today.slice(0, 7); picked = today; draw(); });
+      document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+        mode = b.dataset.mode;
+        document.querySelectorAll('[data-mode]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+        ym = picked.slice(0, 7);
+        draw();
+      }));
       draw();
       window.addEventListener('resize', fit);
       fit();

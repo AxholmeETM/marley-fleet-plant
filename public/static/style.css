@@ -527,3 +527,18 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 .cal-day ul { list-style: none; margin: 0; padding: 0; }
 .todo li.lv-ok { border-left-color: var(--navy); }
 @media (max-width: 640px) { .cal-cell { min-height: 46px; } .cal-ev { display: none; } .cal-cell:has(.cal-ev) .cal-n { box-shadow: inset 0 -3px 0 #e0a100; } }
+/* Calendar week view: seven columns with every item in full */
+.cal-mode { margin-left: auto; }
+.wk-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 0 16px 12px; }
+.wk-col { min-width: 0; min-height: 220px; border: 1px solid var(--line); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 5px; background: var(--card); }
+.wk-col.today { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); }
+.wk-head { display: flex; justify-content: space-between; align-items: baseline; font-size: .74rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 0 2px 2px; }
+.wk-head b { font-size: 1rem; color: var(--ink); letter-spacing: 0; }
+.wk-col.today .wk-head b { color: var(--navy); }
+.wk-ev { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; font-size: .72rem; line-height: 1.3; padding: 5px 6px; border-radius: 7px; color: inherit; overflow-wrap: anywhere; }
+.wk-ev:hover { text-decoration: none; filter: brightness(.97); }
+.wk-ev b { font-size: .7rem; }
+.wk-ev.bad { background: #fde4e3; color: #a3121f; } .wk-ev.warn { background: #fff1d6; color: #8a5300; } .wk-ev.ok { background: var(--accent-soft); color: var(--navy); }
+.wk-ev .reg.sm { font-size: .7rem; }
+.wk-none { color: var(--line-strong); text-align: center; margin-top: 8px; }
+@media (max-width: 900px) { .wk-grid { grid-template-columns: minmax(0, 1fr); } .wk-col { min-height: 0; } }
