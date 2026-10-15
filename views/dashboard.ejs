@@ -1,11 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head">
   <div><h1>Dashboard</h1><p class="muted" style="margin:0"><%= ukDate(today) %> · <%= stats.plantTotal %> plant · <%= stats.vehicleTotal %> vehicles</p></div>
-  <div class="actions">
-    <a class="btn" href="/checks/plant/new">Plant check sheet</a>
-    <a class="btn" href="/checks/vehicle/new">Walk-around</a>
-    <a class="btn primary" href="/fuel/new">Log fuel</a>
-  </div>
 </div>
 <%- include('partials/pane-end') %>
 <div class="section-title"><h2>Plant</h2></div>
