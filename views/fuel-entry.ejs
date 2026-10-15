@@ -32,7 +32,7 @@
       <% if (entry.priced_at) { %><dt>Last saved</dt><dd><%= entry.priced_by_name %>, <%= ukDateTime(entry.priced_at) %></dd><% } %>
     </dl>
     <div class="field"><label for="admin_notes">Office notes</label><textarea id="admin_notes" name="admin_notes" style="min-height:60px"><%= entry.admin_notes || '' %></textarea></div>
-    <label class="check-row" style="margin-bottom:14px"><input type="checkbox" name="verified" value="1" <%= entry.verified ? 'checked' : '' %>> Receipt checked and price entered</label>
+    <label class="check-row" style="margin-bottom:14px"><input type="checkbox" name="verified" value="1" <%= entry.verified ? 'checked' : '' %> <%= entry.cost > 0 ? '' : 'disabled' %>> Receipt checked and price entered</label>
     <div class="form-actions">
       <button class="btn primary" type="submit" name="next" value="1">Save &amp; next receipt<% if (remaining) { %> (<%= remaining %> left)<% } %></button>
       <button class="btn" type="submit">Save</button>
@@ -44,7 +44,11 @@
     const cost = document.getElementById('cost'), litres = document.getElementById('litres'), out = document.getElementById('ppl-line');
     function upd() { const c = parseFloat(cost.value), l = parseFloat(litres.value); out.textContent = c > 0 && l > 0 ? '£' + (c / l).toFixed(3) + ' per litre' : ''; }
     cost.addEventListener('input', upd); litres.addEventListener('input', upd);
-    cost.addEventListener('input', function () { const v = document.querySelector('input[name=verified]'); if (cost.value && !v.dataset.touched) v.checked = true; });
+    cost.addEventListener('input', function () {
+      const v = document.querySelector('input[name=verified]');
+      v.disabled = !(parseFloat(cost.value) > 0);
+      if (v.disabled) v.checked = false; else if (!v.dataset.touched) v.checked = true;
+    });
     document.querySelector('input[name=verified]').addEventListener('change', function () { this.dataset.touched = '1'; });
   })();
 </script>

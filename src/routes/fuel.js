@@ -206,7 +206,7 @@ router.post('/fuel/:id', requireAdmin, async (req, res) => {
   const date = isValidDate(req.body.fill_date) ? req.body.fill_date : entry.fill_date;
   const verified = req.body.verified ? 1 : 0;
   const cardId = req.body.fuel_card_id === undefined ? entry.fuel_card_id : (Number(req.body.fuel_card_id) || null);
-  if (verified && cost == null) throw new UserError('Enter the price from the receipt before marking it as checked.');
+  if (verified && !(cost > 0)) throw new UserError('Enter the price from the receipt before marking it as checked.');
   await run(`UPDATE fuel_entries SET cost = ?, litres = ?, fuel_type = ?, fill_date = ?, verified = ?, fuel_card_id = ?, admin_notes = ?,
        priced_by = ?, priced_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') WHERE id = ?`,
     cost, litres, fuelType, date, verified, cardId, req.body.admin_notes === undefined ? entry.admin_notes : text(req.body.admin_notes), req.user.id, entry.id);

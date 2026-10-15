@@ -98,7 +98,7 @@
           <form class="price-form" method="post" action="/fuel/<%= e.id %>">
             <input type="hidden" name="return_to" value="dashboard"><input type="hidden" name="qs" value="<%= currentQs %>">
             <input type="number" name="cost" step="0.01" min="0" inputmode="decimal" value="<%= e.cost != null ? e.cost.toFixed(2) : '' %>" aria-label="Total price" placeholder="0.00">
-            <label class="check-row small" style="margin:0"><input type="checkbox" name="verified" value="1" <%= e.verified ? 'checked' : '' %>> Checked</label>
+            <label class="check-row small" style="margin:0"><input type="checkbox" name="verified" value="1" <%= e.verified ? 'checked' : '' %> <%= e.cost > 0 ? '' : 'disabled' %> title="Enter the total price first"> Checked</label>
             <button class="btn small" type="submit">Save</button>
           </form>
           <% if (e.cost != null) { %><div class="ppl">£<%= (e.cost / e.litres).toFixed(3) %> per litre</div><% } %>
@@ -115,5 +115,10 @@
     try { if (localStorage.getItem('fuelLogOpen') === '1') log.open = true; } catch (e) {}
     log.addEventListener('toggle', () => { try { localStorage.setItem('fuelLogOpen', log.open ? '1' : '0'); } catch (e) {} });
   })();
+  // A receipt can only be ticked as checked once its total price is entered.
+  document.querySelectorAll('.price-form').forEach((f) => {
+    const cost = f.querySelector('[name=cost]'), tick = f.querySelector('[name=verified]');
+    cost.addEventListener('input', () => { tick.disabled = !(parseFloat(cost.value) > 0); if (tick.disabled) tick.checked = false; });
+  });
 </script>
 <%- include('partials/footer') %>
