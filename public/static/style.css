@@ -476,3 +476,12 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 @media (max-width: 1100px) { .kpis-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .dash-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) { .todo li { grid-template-columns: 5px minmax(0, 1fr); } .todo li .btn { grid-column: 2; justify-self: start; } }
 .todo li[hidden] { display: none; }
+/* To do scrolls inside its card so the page stays short */
+.todo-scroll { max-height: 620px; overflow-y: auto; border-top: 1px solid var(--line); scrollbar-gutter: stable; }
+.todo-scroll::-webkit-scrollbar { width: 10px; }
+.todo-scroll::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; border: 2px solid #fff; }
+@media (max-width: 640px) { .todo-scroll { max-height: 70vh; } }
+/* Urgency stripe down the left of each to-do row */
+.todo li { grid-template-columns: minmax(0, 1fr) auto; padding-left: 17px; border-left: 5px solid var(--line-strong); }
+.todo li.lv-bad { border-left-color: var(--red); } .todo li.lv-warn { border-left-color: #e0a100; }
+@media (max-width: 640px) { .todo li { grid-template-columns: minmax(0, 1fr); } .todo li .btn { grid-column: 1; } }

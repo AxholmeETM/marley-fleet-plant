@@ -18,28 +18,26 @@
   <div class="card flush todo" id="todo">
     <h2>To do <span class="muted small">most urgent first</span></h2>
     <% if (!todo.length) { %><p class="empty">Nothing needs doing. Everything is in date. 👍</p><% } else {
-      // Each group shows its first few rows; "Show all" opens the rest.
-      let shown = 0;
-      let hiddenRows = 0;
-      for (const [when, label, limit] of [['now', 'Now', 15], ['soon', 'Coming up', 10]]) {
+      // The list scrolls inside the card; urgent items first, then a "Coming up" divider. %>
+    <div class="todo-scroll">
+    <% for (const [when, label] of [['now', ''], ['soon', 'Coming up']]) {
         const rows = todo.filter((t) => t.when === when);
-        if (!rows.length) continue; %>
-    <div class="todo-group"><%= label %></div>
+        if (!rows.length) continue;
+        if (label) { %><div class="todo-group"><%= label %></div><% } %>
     <ul>
-      <% rows.forEach((t, i) => { shown++; const more = i >= limit; if (more) hiddenRows++; %>
-      <li class="<%= more ? 'more-row' : '' %>" <%= more ? 'hidden' : '' %>>
-        <span class="todo-bar <%= t.level %>"></span>
+      <% for (const t of rows) { %>
+      <li class="lv-<%= t.level %>">
         <div class="todo-main">
           <a class="todo-title" href="<%= t.href %>"><% if (t.reg) { %><span class="reg sm"><%= t.reg %></span> <% } %><%= t.title %></a>
           <div class="todo-detail"><%= t.detail %></div>
         </div>
         <a class="btn small <%= t.primary ? 'primary' : '' %>" href="<%= t.href %>"><%= t.action %></a>
       </li>
-      <% }) %>
+      <% } %>
     </ul>
-    <% } if (hiddenRows) { %>
-    <p class="empty" style="padding-top:10px"><button class="linkbtn" type="button" id="todo-toggle" data-more="Show all <%= shown %>" data-less="Show fewer">Show all <%= shown %></button></p>
-    <% } } %>
+    <% } %>
+    </div>
+    <% } %>
   </div>
 
   <div class="dash-side">
@@ -73,15 +71,4 @@
     </div>
   </div>
 </div>
-<script>
-  (function () {
-    const b = document.getElementById('todo-toggle');
-    if (!b) return;
-    b.addEventListener('click', () => {
-      const open = b.textContent === b.dataset.more;
-      document.querySelectorAll('#todo .more-row').forEach((r) => { r.hidden = !open; });
-      b.textContent = open ? b.dataset.less : b.dataset.more;
-    });
-  })();
-</script>
 <%- include('partials/footer') %>
