@@ -77,7 +77,7 @@ router.post('/training/people/:id', async (req, res) => {
     rows.push({ c, expiry, note: text(req.body[`note_${c.id}`]), required: req.body[`required_${c.id}`] ? 1 : 0 });
   }
   await transaction(async () => {
-    await run('UPDATE users SET on_matrix = 1, training_note = ?, training_funded = ? WHERE id = ?', text(req.body.training_note), text(req.body.training_funded), p.id);
+    await run('UPDATE users SET on_matrix = 1, training_note = ?, training_funded = ? WHERE id = ?', text(req.body.training_note), ['Company', 'Personal'].includes(req.body.training_funded) ? req.body.training_funded : null, p.id);
     for (const r of rows) {
       if (!r.expiry && !r.note && !r.required) await run('DELETE FROM training_records WHERE user_id = ? AND course_id = ?', p.id, r.c.id);
       else {

@@ -596,3 +596,17 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tm-table th.tm-course.g1 { background: #e6f4ee; }
 .tm-table th.tm-course.g2 { background: #fdf1e3; }
 .tm-table .gstart { border-left: 3px solid #01024c; }
+/* One person's training: each group folds away; the header shows how many are held and any that need attention. */
+.field > span.label { display: block; font-weight: 500; font-size: .86rem; margin-bottom: 6px; color: var(--ink-2); }
+.tp-group { border: 1px solid var(--line); border-radius: 12px; margin-top: 14px; overflow: hidden; }
+.tp-group summary { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; list-style: none; border-left: 5px solid var(--g, #01024c); }
+.tp-group summary::-webkit-details-marker { display: none; }
+.tp-group.g0 { --g: #01024c; } .tp-group.g1 { --g: #0b6e4f; } .tp-group.g2 { --g: #b45309; }
+.tp-group .tp-name { font-weight: 600; font-size: 1.05rem; color: var(--g); min-width: 80px; }
+.tp-group .tp-sum { flex: 1; font-size: .86rem; color: var(--ink-2); }
+.tp-group .chev { width: 8px; height: 8px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform .15s; margin-top: -4px; }
+.tp-group[open] .chev { transform: rotate(-135deg); margin-top: 4px; }
+.tp-group[open] summary { border-bottom: 1px solid var(--line); }
+.tp-group .table-wrap { padding: 0 16px 8px; }
+.tp-group .table-wrap thead th { position: static; box-shadow: none; }
+.seg.funded input:checked + label { background: var(--navy); color: #fff; }

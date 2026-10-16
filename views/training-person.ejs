@@ -6,11 +6,15 @@
 <%- include('partials/pane-end') %>
 <form class="card" method="post" action="/training/people/<%= p.id %>">
   <div class="grid-2">
-    <div class="field"><label for="training_funded">Training paid for</label><input type="text" id="training_funded" name="training_funded" value="<%= p.training_funded || '' %>" maxlength="80" placeholder="e.g. Y, or CPCS"></div>
+    <div class="field"><span class="label">Training paid for</span>
+      <div class="seg funded" role="radiogroup" aria-label="Training paid for"><% for (const v of ['Company', 'Personal']) { %><input type="radio" id="funded_<%= v %>" name="training_funded" value="<%= v %>" <%= p.training_funded === v ? 'checked' : '' %>><label for="funded_<%= v %>"><%= v %></label><% } %></div></div>
     <div class="field"><label for="training_note">Note</label><input type="text" id="training_note" name="training_note" value="<%= p.training_note || '' %>" maxlength="200"></div>
   </div>
-  <% for (const g of GROUPS) { const list = courses.filter((c) => c.grp === g); if (!list.length) continue; %>
-  <h2><%= g %></h2>
+  <% for (const g of GROUPS) { const list = courses.filter((c) => c.grp === g); if (!list.length) continue;
+    const st = list.map((c) => recs.get(c.id)).filter((r) => r && r.status).map((r) => r.status.level);
+    const count = (l) => st.filter((x) => x === l).length; %>
+  <details class="tp-group g<%= GROUPS.indexOf(g) %>">
+  <summary><span class="tp-name"><%= g %></span><span class="tp-sum"><%= st.filter((x) => ['ok', 'soon', 'overdue'].includes(x)).length %> held<% if (count('soon')) { %> · <span class="pill soon"><%= count('soon') %> within 30 days</span><% } %><% if (count('overdue')) { %> · <span class="pill overdue"><%= count('overdue') %> expired</span><% } %></span><span class="chev" aria-hidden="true"></span></summary>
   <div class="table-wrap"><table class="tp-table">
     <thead><tr><th>Training</th><th>Expiry date</th><th>Note</th><th>Needed</th><th>Status</th></tr></thead>
     <tbody><% for (const c of list) { const r = recs.get(c.id) || {}; %>
@@ -23,6 +27,7 @@
       </tr>
     <% } %></tbody>
   </table></div>
+  </details>
   <% } %>
   <div class="actions" style="margin-top:16px"><button class="btn primary" type="submit">Save training</button></div>
 </form>

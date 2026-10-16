@@ -415,7 +415,7 @@ test('training matrix and view-only managers', async () => {
     [`expiry_${cscs.id}`]: status.addDays(status.isoDate(), 400),
     [`expiry_${smsts.id}`]: status.addDays(status.isoDate(), 10), [`note_${smsts.id}`]: 'Booked 19/10/26',
     [`expiry_${first.id}`]: status.addDays(status.isoDate(), -3),
-    [`required_${cscs.id + 1}`]: '1', training_funded: 'Y',
+    [`required_${cscs.id + 1}`]: '1', training_funded: 'Company',
   })).status, 302);
   const dash = (await admin('GET', '/training')).text;
   assert.match(dash, /Tess Trained/);
