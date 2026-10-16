@@ -5,7 +5,7 @@
     <div class="dlg-head"><h2>Edit saved address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
     <form method="post" id="place-form">
       <input type="hidden" name="back" value="<%= back %>">
-      <div class="field"><label for="pl-addr">Address</label><input id="pl-addr" name="address" type="text" required></div>
+      <div class="field"><label for="pl-addr">Address</label><div class="mi-addr-row"><input id="pl-addr" name="address" type="text" required><a class="btn" id="pl-map" target="_blank" rel="noopener">See location</a></div></div>
       <div class="field"><label>This is</label>
         <label class="radio"><input type="radio" name="kind" value="work"> A work address (site, yard, supplier)</label>
         <label class="radio"><input type="radio" name="kind" value="home"> Someone's home</label>
@@ -29,12 +29,14 @@
       document.getElementById('pl-user').required = kind === 'home';
     };
     form.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', sync));
+    document.getElementById('pl-addr').addEventListener('input', (e) => { document.getElementById('pl-map').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(e.target.value); });
     document.querySelectorAll('[data-place]').forEach((el) => el.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
       const pl = JSON.parse(el.dataset.place);
       form.action = '/mileage/addresses/' + pl.id;
       document.getElementById('pl-remove').formAction = '/mileage/addresses/' + pl.id + '/remove';
       document.getElementById('pl-addr').value = pl.address;
+      document.getElementById('pl-map').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(pl.address);
       document.getElementById('pl-label').value = pl.label || '';
       document.getElementById('pl-user').value = pl.user_id || '';
       form.querySelector(`input[name=kind][value=${pl.kind}]`).checked = true;

@@ -19,10 +19,10 @@
 <%- include('partials/pane-end') %>
 <div class="card flush">
   <div class="table-wrap"><table class="mi-trips">
-    <thead><tr><th>Start</th><th class="desc">From</th><th>End</th><th class="desc">To</th><th class="num">Miles</th><th class="num">Trip time</th><th class="num">Idle</th><th>Counts as</th></tr></thead>
+    <thead><tr><th>Start</th><th class="desc">From</th><th>End</th><th class="desc">To</th><th class="num">Miles</th><th class="num">Trip time</th><th class="num">Idle</th><th>Counts as</th><th>See trip</th></tr></thead>
     <% for (const d of days) { const dm = d.trips; %>
     <tbody>
-      <tr class="group"><th colspan="8"><%= new Date(d.date + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }) %>
+      <tr class="group"><th colspan="9"><%= new Date(d.date + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }) %>
         <span><%= M.fmtMiles(M.sum(dm, 'work')) %> work<% if (M.sum(dm, 'personal')) { %> · <%= M.fmtMiles(M.sum(dm, 'personal')) %> personal<% } %></span></th></tr>
       <% for (const t of dm) { %>
       <tr id="trip-<%= t.id %>" class="<%= t.use === 'personal' ? 'mi-row-personal' : '' %>">
@@ -40,6 +40,7 @@
             <% if (t.override) { %><button class="linkbtn small" type="submit" name="use" value="" title="Go back to how it was worked out (<%= t.auto %>)">Undo</button><% } %>
           </form><% } else { %><span class="pill <%= t.use === 'personal' ? 'soon' : 'ok' %>"><%= t.use === 'personal' ? 'Personal' : 'Work' %></span><% } %>
         </td>
+        <td class="nowrap"><% if (t.start_loc && t.end_loc) { %><a class="btn small" href="https://www.google.com/maps/dir/?api=1&origin=<%= encodeURIComponent(t.start_loc) %>&destination=<%= encodeURIComponent(t.end_loc) %>&travelmode=driving" target="_blank" rel="noopener" title="Open the route from start to end in Google Maps">See trip</a><% } %></td>
       </tr>
       <% } %>
     </tbody>
@@ -53,7 +54,7 @@
     <div class="dlg-head"><h2>Save address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
     <form method="post" action="/mileage/addresses">
       <input type="hidden" name="back" value="<%= back %>">
-      <div class="field"><label for="addr-text">Address</label><input id="addr-text" name="address" type="text" required></div>
+      <div class="field"><label for="addr-text">Address</label><div class="mi-addr-row"><input id="addr-text" name="address" type="text" required><a class="btn" id="addr-map" target="_blank" rel="noopener">See location</a></div></div>
       <div class="field"><label>This is</label>
         <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
         <% if (v.driver_id) { %><label class="radio"><input type="radio" name="kind" value="home"> <%= v.driver_name %>'s home</label><input type="hidden" name="user_id" value="<%= v.driver_id %>"><% } %>
@@ -69,7 +70,9 @@
   (() => {
     const dlg = document.getElementById('addr-dlg');
     document.querySelectorAll('.mi-add').forEach((b) => b.addEventListener('click', () => {
-      dlg.querySelector('#addr-text').value = b.dataset.addr; dlg.showModal();
+      dlg.querySelector('#addr-text').value = b.dataset.addr;
+      dlg.querySelector('#addr-map').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.dataset.addr);
+      dlg.showModal();
     }));
     dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
     dlg.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', () => { document.getElementById('addr-label-f').hidden = r.value === 'home' && r.checked; }));

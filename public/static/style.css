@@ -825,3 +825,11 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .mi-weekpick { align-items: flex-end; }
 .mi-weekpick .field select { min-width: 260px; }
 .btn[aria-disabled=true] { opacity: .45; cursor: default; pointer-events: none; }
+.mi-addr-row { display: flex; gap: 8px; }
+.mi-addr-row input { flex: 1; min-width: 0; }
+.mi-addr-row .btn { white-space: nowrap; }
+/* Each day of trips starts with a navy band and a gap above it, so days don't run together. */
+.mi-trips tbody + tbody tr.group th { border-top: 14px solid var(--bg, #fff); }
+.mi-trips tr.group th { background: var(--navy); color: #fff; font-size: .9rem; font-weight: 600; padding: 9px 12px; text-align: left; }
+.mi-trips tr.group th span { float: right; font-weight: 500; opacity: .85; }
+@media print { .mi-trips tr.group th { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }

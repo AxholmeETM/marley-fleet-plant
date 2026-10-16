@@ -573,6 +573,7 @@ test('mileage from a SoTrack trip list', async () => {
   assert.equal(v.trips[4].to, 'site');
   page = (await admin('GET', '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13')).text;
   assert.match(page, /Site\?/);
+  assert.match(page, /google\.com\/maps\/dir\/\?api=1&origin=/);
   assert.match(page, /Personal/);
   // The dashboard: top 5 personal miles and idle time, and work against personal miles per driver.
   const dash = (await admin('GET', '/mileage?from=2026-10-12&to=2026-10-13')).text;
