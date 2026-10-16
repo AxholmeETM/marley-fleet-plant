@@ -839,3 +839,12 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .btn.mi-kind.stop { background: #e3f4ef; color: #1d6b55; }
 /* Trips: the Home / Site / Stop / Unknown tag sits on its own line above the address, so it stands out. */
 .mi-trips td .mi-tag { display: table; margin: 0 0 5px; font-size: .76rem; padding: 2px 9px; border-radius: 6px; }
+/* Key under the trips: tag meanings on the left, how to use the page on the right. */
+.mi-key { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 14px; font-size: .86rem; color: var(--ink-2); }
+@media (max-width: 800px) { .mi-key { grid-template-columns: 1fr; } }
+.mi-key h3 { font-size: .9rem; margin: 0 0 10px; color: var(--ink); }
+.mi-key dl { display: grid; grid-template-columns: max-content 1fr; gap: 8px 12px; margin: 0; align-items: center; }
+.mi-key dt .mi-tag { margin: 0; font-size: .76rem; padding: 2px 9px; border-radius: 6px; }
+.mi-key dd { margin: 0; }
+.mi-key ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+@media print { .mi-key { display: none; } }

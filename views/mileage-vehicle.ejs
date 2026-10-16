@@ -47,7 +47,27 @@
     <% } %>
   </table></div>
 </div>
-<p class="small muted"><span class="mi-tag home">Home</span>, <span class="mi-tag work">Site</span>, <span class="mi-tag stop">Stop</span> and <span class="mi-tag unknown">Unknown</span> mark saved addresses; a Stop (fuel, lunch, a supplier) counts as the rest of its journey. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click a tag to change or remove that saved address. Click <strong>+</strong> next to any other address to save it as a site, an allowed stop, a home or an unknown address. Click Work or Personal on a trip to change it; Undo puts it back.</p>
+<div class="card mi-key">
+  <div>
+    <h3>What the tags mean</h3>
+    <dl>
+      <dt><span class="mi-tag home">Home</span></dt><dd>The driver's home.</dd>
+      <dt><span class="mi-tag work">Site</span></dt><dd>A site. A journey that reaches one counts as work.</dd>
+      <dt><span class="mi-tag stop">Stop</span></dt><dd>Fuel, lunch or a supplier. Counts as the rest of its journey.</dd>
+      <dt><span class="mi-tag unknown">Unknown</span></dt><dd>Not sure yet. Counts as personal until you ask the driver.</dd>
+      <dt><span class="mi-tag site">Site?</span></dt><dd>A weekday stop of 3 hours or more that isn't saved yet, so taken as a site.</dd>
+    </dl>
+  </div>
+  <div>
+    <h3>How to use this page</h3>
+    <ul>
+      <li>Click a tag to change or remove that saved address.</li>
+      <li>Click <strong>+</strong> next to any other address to save it as a site, a stop, a home or unknown.</li>
+      <li>Click Work or Personal on a trip to change just that trip; Undo puts it back.</li>
+      <li>See trip opens the route in Google Maps.</li>
+    </ul>
+  </div>
+</div>
 <%- include('partials/mileage-add-dlg') %>
 <%- include('partials/mileage-place-dlg') %>
 <%- include('partials/footer') %>
