@@ -2,7 +2,7 @@ const express = require('express');
 const { all, get } = require('../db');
 const { listPlant, listVehicles, listDefects } = require('../queries');
 const { isoDate, addMonths, addDays, ukDate } = require('../status');
-const { INSPECTION_TYPES } = require('../categories');
+const { INSPECTION_TYPES, CATEGORY } = require('../categories');
 const fuelCards = require('./fuel-cards');
 const { isAdmin, isSiteManager, plantFor } = require('../auth');
 
@@ -147,6 +147,8 @@ router.get('/', async (req, res) => {
     todo, months, manager, myCards, myVehicles: manager ? vehicles : [], projects: req.user.projects || [],
     stats: {
       plantTotal: plant.length,
+      // Split the same way as the Plant and Equipment pages.
+      plantOnly: plant.filter((p) => (CATEGORY[p.category] || CATEGORY.misc).section === 'plant').length,
       vehicleTotal: vehicles.length,
       unsafe: defects.filter((d) => d.severity === 'unsafe').length,
       overdue: todo.filter((t) => t.tab === 'overdue').reduce((n, t) => n + t.count, 0),
