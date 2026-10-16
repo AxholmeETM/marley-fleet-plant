@@ -463,7 +463,7 @@ test('training matrix and view-only managers', async () => {
   // The CSCS card type is saved, shown on the matrix, and anything else is ignored.
   await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'red_trainee', [`expiry_${cscs.id}`]: '2030-01-31' });
   assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, 'red_trainee');
-  assert.match((await admin('GET', '/training/matrix')).text, /cscs cscs-red/);
+  assert.match((await admin('GET', '/training/matrix')).text, /carded card-red/);
   assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /can't be renewed/);
   // NPORS and CPCS card colours are kept on each training, so one person can be Blue on one machine and Red on another.
   const [n1, n2] = await all("SELECT id FROM training_courses WHERE grp = 'NPORS' AND active = 1 ORDER BY sort LIMIT 2");

@@ -696,3 +696,11 @@ table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .pill.et-manager { background: #efe8fb; color: #5b3a9e; }
 .pill.et-admin { background: #e8e9f5; color: #01024c; }
 .pill.et-none { background: var(--grey-bg); color: var(--muted); }
+/* The card colour held for that training: a bar down the left of the date chip. */
+.chip.carded { padding-left: 12px; position: relative; max-width: 84px; min-width: 76px; }
+.chip.carded::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; border-radius: 6px 0 0 6px; }
+.chip.card-red::before { background: #d22b2b; } .chip.card-blue::before { background: #1f5fd1; } .chip.card-green::before { background: #2e9e4a; }
+.chip.card-gold::before { background: #d4a12a; } .chip.card-black::before { background: #1b1b1f; } .chip.card-grey::before { background: #8e9099; }
+.chip.card-white::before { background: #fff; box-shadow: inset 0 0 0 1px #b8bac4; }
+.chip.card-partner::before { background: linear-gradient(180deg, #1f5fd1 50%, #2e9e4a 50%); }
+.chip.card-traditional::before { background: repeating-linear-gradient(45deg, #8a8fa3 0 3px, #c9ccd8 3px 6px); }
