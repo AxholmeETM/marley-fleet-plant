@@ -23,7 +23,8 @@
             ['/mileage', 'Mileage'],
             ['/users', 'Employees'],
             ...(canEdit ? [['/training', 'Training Matrix']] : []),
-            { label: 'Admin', items: [['/projects', 'Projects'], ['/reports', 'Reports']] }]
+            ['/projects', 'Projects'],
+            ['/reports', 'Reports']]
           : user.employee_type === 'site_manager'
             ? [['/', 'Dashboard', ['/calendar']], ['/plant', 'Plant'], ['/equipment', 'Equipment'], ['/checks/plant/new', 'Plant check'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']]
             : [['/', 'Home'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']];
