@@ -10,8 +10,6 @@
 <div class="page-head">
   <div><h1>Mileage <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1></div>
   <div class="actions">
-    <a class="btn" href="/mileage?<%= prevQs %>" title="The <%= Math.round((Date.parse(p.to) - Date.parse(p.from)) / 86400000) + 1 %> days before">‹ Previous</a>
-    <a class="btn" href="/mileage?<%= nextQs %>">Next ›</a>
     <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
     <% if (canEdit) { %>
     <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
@@ -20,15 +18,14 @@
     <% } %>
   </div>
 </div>
-<form class="filters" method="get">
-  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= p.from %>"></div>
-  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= p.to %>"></div>
-  <% if (uploads.length) { %><div class="field"><label for="upl">Uploaded files</label>
-    <select id="upl" onchange="if (this.value) { const [f, t] = this.value.split('|'); this.form.from.value = f; this.form.to.value = t; this.form.submit(); }">
-      <option value="">Choose…</option>
-      <% for (const u of uploads) { %><option value="<%= u.date_from %>|<%= u.date_to %>"><%= ukDate(u.date_from) %> to <%= ukDate(u.date_to) %> (<%= u.trips %> trips)</option><% } %>
-    </select></div><% } %>
-  <button class="btn" type="submit">Show</button>
+<form class="filters mi-weekpick" method="get">
+  <% if (prevQs) { %><a class="btn" href="/mileage?<%= prevQs %>">‹ Previous</a><% } else { %><span class="btn" aria-disabled="true">‹ Previous</span><% } %>
+  <div class="field"><label for="upl">Uploaded files</label>
+    <select id="upl" onchange="const [f, t] = this.value.split('|'); location.href = '/mileage?from=' + f + '&to=' + t;">
+      <% if (!weeks.some((w) => w.date_from === p.from && w.date_to === p.to)) { %><option value="" selected><%= weeks.length ? 'Choose…' : 'No files uploaded yet' %></option><% } %>
+      <% for (const w of weeks) { %><option value="<%= w.date_from %>|<%= w.date_to %>" <%= w.date_from === p.from && w.date_to === p.to ? 'selected' : '' %>><%= ukDate(w.date_from) %> to <%= ukDate(w.date_to) %></option><% } %>
+    </select></div>
+  <% if (nextQs) { %><a class="btn" href="/mileage?<%= nextQs %>">Next ›</a><% } else { %><span class="btn" aria-disabled="true">Next ›</span><% } %>
 </form>
 <%- include('partials/pane-end') %>
 <% if (!vehicles.length) { %>
@@ -42,7 +39,7 @@
 </div>
 <div class="mi-dash">
   <div class="card">
-    <h2>Top 10 personal miles</h2>
+    <h2>Top 5 personal miles</h2>
     <% if (!topPersonal.length) { %><p class="empty">No personal miles for these dates.</p><% } else { %>
     <ol class="mi-rank">
       <% topPersonal.forEach((v, i) => { %>
@@ -58,7 +55,7 @@
     </ol><% } %>
   </div>
   <div class="card">
-    <h2>Top 10 idle time</h2>
+    <h2>Top 5 idle time</h2>
     <% if (!topIdle.length) { %><p class="empty">No idle time for these dates.</p><% } else { %>
     <ol class="mi-rank">
       <% topIdle.forEach((v, i) => { %>

@@ -574,10 +574,10 @@ test('mileage from a SoTrack trip list', async () => {
   page = (await admin('GET', '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13')).text;
   assert.match(page, /Site\?/);
   assert.match(page, /Personal/);
-  // The dashboard: top 10 personal miles and idle time, and work against personal miles per driver.
+  // The dashboard: top 5 personal miles and idle time, and work against personal miles per driver.
   const dash = (await admin('GET', '/mileage?from=2026-10-12&to=2026-10-13')).text;
-  assert.match(dash, /Top 10 personal miles/);
-  assert.match(dash, /Top 10 idle time/);
+  assert.match(dash, /Top 5 personal miles/);
+  assert.match(dash, /Top 5 idle time/);
   assert.match(dash, /Work and personal miles by driver/);
   assert.match(dash, /Personal 7\.0 mi/);
   // Tick a driver off for the week; the dashboard counts it.

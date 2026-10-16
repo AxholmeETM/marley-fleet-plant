@@ -822,3 +822,6 @@ a.mi-tile { color: inherit; } a.mi-tile:hover { text-decoration: none; border-co
 button.mi-tag { border: 0; cursor: pointer; font-family: inherit; line-height: inherit; }
 button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .mi-places form { display: inline; }
+.mi-weekpick { align-items: flex-end; }
+.mi-weekpick .field select { min-width: 260px; }
+.btn[aria-disabled=true] { opacity: .45; cursor: default; pointer-events: none; }
