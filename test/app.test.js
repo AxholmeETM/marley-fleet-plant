@@ -466,7 +466,7 @@ test('training matrix and view-only managers', async () => {
   assert.match((await admin('GET', '/training/matrix')).text, /cscs cscs-red/);
   assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /can't be renewed/);
   // NPORS and CPCS card colours are kept on each training, so one person can be Blue on one machine and Red on another.
-  const [n1, n2] = await all("SELECT id FROM training_courses WHERE grp = 'NPORS' ORDER BY sort LIMIT 2");
+  const [n1, n2] = await all("SELECT id FROM training_courses WHERE grp = 'NPORS' AND active = 1 ORDER BY sort LIMIT 2");
   const cp1 = await get("SELECT id FROM training_courses WHERE grp = 'CPCS' ORDER BY sort LIMIT 1");
   await admin('POST', `/training/people/${tess.id}`, { [`expiry_${n1.id}`]: '2030-01-31', [`card_${n1.id}`]: 'blue', [`expiry_${n2.id}`]: '2028-01-31', [`card_${n2.id}`]: 'red', [`card_${cp1.id}`]: 'gold' });
   assert.deepEqual((await all('SELECT course_id, card FROM training_records WHERE user_id = ? AND card IS NOT NULL ORDER BY card', tess.id)).map((r) => ({ ...r })), [{ course_id: n1.id, card: 'blue' }, { course_id: n2.id, card: 'red' }]);
