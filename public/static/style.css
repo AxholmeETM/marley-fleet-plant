@@ -707,3 +707,21 @@ table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .report-pick { display: flex; flex-direction: column; gap: 10px; }
 .report-pick select { width: 100%; }
 .report-sub { font-weight: 500; color: var(--ink); }
+.report-attach { margin-top: 22px; break-before: page; }
+.report-attach h2 { font-size: 1rem; margin: 0 0 10px; padding-bottom: 6px; border-bottom: 1.5px solid var(--line-strong); }
+.report-attach h2 span { color: var(--muted); font-weight: 500; }
+.report-pdfs { list-style: none; padding: 0; margin: 0 0 12px; font-size: .8rem; }
+.report-pdfs li { padding: 4px 0; } .report-pdfs span { color: var(--muted); }
+.report-imgs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.report-imgs figure { margin: 0; break-inside: avoid; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.report-imgs img { display: block; width: 100%; max-height: 300px; object-fit: contain; background: #f6f7fb; border-radius: 4px; }
+.report-imgs figcaption { margin-top: 6px; font-size: .72rem; color: var(--muted); }
+.report-imgs figcaption strong { color: var(--ink); }
+.report-next { margin-top: 24px; }
+@media print { .report-next { break-before: page; margin-top: 0; } }
+.pick-list { max-height: 210px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 10px; padding: 4px 0; }
+.pick-list label { display: flex; align-items: center; gap: 8px; padding: 5px 12px; font-size: .86rem; cursor: pointer; }
+.pick-list label:hover { background: #f3f4fa; }
+.pick-list label[hidden] { display: none; }
+.pick-list .pick-all { font-weight: 600; border-bottom: 1px solid var(--line); }
+.pick-count { margin: 0; }

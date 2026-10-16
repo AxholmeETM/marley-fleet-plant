@@ -6,6 +6,7 @@ const { ukDate, fmtHours } = require('../status');
 const { decorate: decorateCard } = require('./fuel-cards');
 const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES, userLabel, CSCS_CARDS, cscsLabel, recordCard } = require('../categories');
 const { cellStatus } = require('./training');
+const { listDocs, DOC_KINDS } = require('../documents');
 
 const router = express.Router();
 router.use('/reports', requireAdmin);
@@ -47,11 +48,13 @@ async function plantReport(section) {
 // Everyone on the Training Matrix, for the Training report's employee picker.
 const matrixPeople = () => all('SELECT id, name, role, employee_type FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR on_matrix = 1) ORDER BY name');
 
-// One person's training (or everyone's), from the Training Matrix: what they hold, what is due or expired, and what they need.
+// The Training report: for each chosen person, their training from the Training Matrix (what they hold, what is due or
+// expired, what they need) and copies of their cards, each person on their own pages. "Everyone" is one summary table.
 async function trainingReport({ query }) {
-  const everyone = query.person === 'all';
+  const everyone = [].concat(query.person || []).includes('all');
+  const ids = [...new Set([].concat(query.person || []).map(Number).filter(Boolean))];
   const people = everyone ? await all('SELECT * FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR on_matrix = 1) ORDER BY name')
-    : [await get('SELECT * FROM users WHERE id = ?', Number(query.person))].filter(Boolean);
+    : ids.length ? await all(`SELECT * FROM users WHERE id IN (${ids.map(() => '?').join(', ')}) ORDER BY name`, ...ids) : [];
   const courses = await all('SELECT * FROM training_courses WHERE active = 1 ORDER BY sort, id');
   const recs = people.length ? await all(`SELECT * FROM training_records WHERE user_id IN (${people.map(() => '?').join(', ')})`, ...people.map((p) => p.id)) : [];
   const recOf = new Map(recs.map((r) => [`${r.user_id}:${r.course_id}`, r]));
@@ -60,23 +63,29 @@ async function trainingReport({ query }) {
     const r = recOf.get(`${p.id}:${c.id}`);
     const s = cellStatus(r);
     if (!s) return null;
-    const card = c.key === 'cscs' ? (CSCS_CARDS[p.cscs_card] ? cscsLabel(p.cscs_card) : '—') : (recordCard(c.grp, r.card) ? `${recordCard(c.grp, r.card).label} · ${recordCard(c.grp, r.card).name}` : '—');
+    const rc = recordCard(c.grp, r.card);
+    const card = c.key === 'cscs' ? (CSCS_CARDS[p.cscs_card] ? cscsLabel(p.cscs_card) : '—') : (rc ? `${rc.label} · ${rc.name}` : '—');
     return [...(withGroup ? [c.grp] : []), c.name, c.code || '—', card, r.expiry ? ukDate(r.expiry) : '—',
       pill(LEVEL[s.level], s.level === 'ok' ? 'In date' : s.level === 'soon' ? 'Due soon' : s.level === 'overdue' ? 'Expired' : s.level === 'needed' ? 'Needed' : 'Note'), r.note || '—'];
   }).filter(Boolean);
-  if (!everyone) {
-    const p = people[0];
-    if (!p) return { title: 'Training report', count: 'Choose an employee', columns: ['Training'], widths: [100], groups: [] };
+  if (everyone) {
+    const groups = people.map((p) => ({ label: `${p.name} · ${userLabel(p)}`, rows: rowsFor(p, courses, true) })).filter((g) => g.rows.length);
+    return { title: 'Training report – everyone', count: `${people.length} people`,
+      columns: ['Group', 'Training', 'Code', 'Card', 'Expiry', 'Status', 'Note'], widths: [8, 28, 11, 20, 9, 9, 15], groups };
+  }
+  if (!people.length) return { title: 'Training report', count: 'Choose who to include', columns: ['Training'], widths: [100], groups: [] };
+  const sections = [];
+  for (const p of people) {
     const groups = ['General', 'NPORS', 'CPCS'].map((g) => ({ label: g, rows: rowsFor(p, courses.filter((c) => c.grp === g), false) })).filter((g) => g.rows.length);
     const held = groups.flatMap((g) => g.rows).filter((r) => r[4].pill && ['ok', 'soon'].includes(r[4].pill.level)).length;
-    return {
+    // Their uploaded card copies and certificates go after their table: photos printed in full, PDFs listed by name.
+    const attachments = (await listDocs('person', p.id)).map((d) => ({ id: d.id, name: d.name, kind: DOC_KINDS.person[d.kind] || d.kind, date: ukDate(d.created_at), image: !/\.pdf$/i.test(d.file) }));
+    sections.push({
       title: `Training report – ${p.name}`, sub: [userLabel(p), p.job_title, p.employee_no ? `Employee ID ${p.employee_no}` : '', p.training_funded ? `Training paid for: ${p.training_funded}` : ''].filter(Boolean).join(' · '),
-      count: `${held} held`, columns: ['Training', 'Code', 'Card', 'Expiry', 'Status', 'Note'], widths: [30, 12, 22, 10, 10, 16], groups,
-    };
+      count: `${held} held`, columns: ['Training', 'Code', 'Card', 'Expiry', 'Status', 'Note'], widths: [30, 12, 22, 10, 10, 16], groups, attachments,
+    });
   }
-  const groups = people.map((p) => ({ label: `${p.name} · ${userLabel(p)}`, rows: rowsFor(p, courses, true) })).filter((g) => g.rows.length);
-  return { title: 'Training report – everyone', count: `${people.length} people`,
-    columns: ['Group', 'Training', 'Code', 'Card', 'Expiry', 'Status', 'Note'], widths: [8, 28, 11, 20, 9, 9, 15], groups };
+  return sections.length === 1 ? sections[0] : { title: `Training report – ${sections.length} people`, sections };
 }
 
 const REPORTS = {
@@ -129,11 +138,6 @@ const REPORTS = {
         columns: ['Employee ID', 'Name', 'Type', 'Job role', 'Phone', 'Email', 'Vehicles', 'Fuel cards', 'Status'], widths: [8, 13, 11, 11, 10, 15, 11, 13, 8], groups };
     },
   },
-  training: {
-    label: 'Training', adminOnly: true, picker: true,
-    blurb: 'One employee\'s training from the Training Matrix: what they hold with expiry dates and card colours, what is due or expired, and what they need. Or everyone at once.',
-    build: trainingReport,
-  },
   projects: {
     label: 'Projects', blurb: 'Every project number with its site, status and the plant and equipment booked to it.',
     async build() {
@@ -144,6 +148,11 @@ const REPORTS = {
         columns: ['Project No.', 'Project / site', 'Status', 'Items', 'Plant & equipment on this project'], widths: [11, 22, 8, 6, 53],
         groups: [{ rows: projects.map((p) => [p.code, p.name || '—', pill(p.active ? 'ok' : 'none', p.active ? 'Open' : 'Closed'), String(p.items), p.assets || '—']) }] };
     },
+  },
+  training: {
+    label: 'Training', adminOnly: true, picker: true,
+    blurb: 'One employee\'s training from the Training Matrix: what they hold with expiry dates and card colours, what is due or expired, what they need, and copies of their cards. Or everyone at once.',
+    build: trainingReport,
   },
 };
 

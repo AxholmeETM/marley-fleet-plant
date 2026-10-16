@@ -10,7 +10,12 @@
     <p class="muted"><%= r.blurb %></p>
     <% if (r.picker) { %>
     <form class="report-pick" method="get" action="/reports/<%= key %>" target="_blank">
-      <select name="person" required aria-label="Employee"><option value="">Choose an employee…</option><option value="all">Everyone</option><% for (const p of people) { %><option value="<%= p.id %>"><%= p.name %></option><% } %></select>
+      <input type="search" class="pick-filter" placeholder="Find a name" aria-label="Find a name">
+      <div class="pick-list" role="group" aria-label="Employees to include">
+        <label class="pick-all"><input type="checkbox" name="person" value="all"> Everyone (one summary table)</label>
+        <% for (const p of people) { %><label><input type="checkbox" name="person" value="<%= p.id %>"> <%= p.name %></label><% } %>
+      </div>
+      <p class="hint pick-count">Tick one or more people. Each gets their own pages with copies of their cards.</p>
       <div class="actions"><button class="btn primary" type="submit" name="print" value="1">Save as PDF</button><button class="btn" type="submit">View</button></div>
     </form>
     <% } else { %>
@@ -19,4 +24,25 @@
   </div>
   <% } %>
 </div>
+<script>
+  document.querySelectorAll('.report-pick').forEach((f) => {
+    const boxes = [...f.querySelectorAll('input[name=person]')];
+    const all = boxes.find((b) => b.value === 'all');
+    const count = f.querySelector('.pick-count');
+    const update = () => {
+      const n = boxes.filter((b) => b.checked && b !== all).length;
+      count.textContent = all.checked ? 'Everyone, as one summary table.' : n ? `${n} ${n === 1 ? 'person' : 'people'} chosen.` : 'Tick one or more people. Each gets their own pages with copies of their cards.';
+    };
+    f.addEventListener('change', (e) => {
+      if (e.target === all && all.checked) boxes.forEach((b) => { if (b !== all) b.checked = false; });
+      else if (e.target.name === 'person' && e.target.checked) all.checked = false;
+      update();
+    });
+    f.querySelector('.pick-filter').addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      boxes.forEach((b) => { if (b !== all) b.parentElement.hidden = q && !b.parentElement.textContent.toLowerCase().includes(q); });
+    });
+    f.addEventListener('submit', (e) => { if (!boxes.some((b) => b.checked)) { e.preventDefault(); count.textContent = 'Tick at least one person first.'; } });
+  });
+</script>
 <%- include('partials/footer') %>

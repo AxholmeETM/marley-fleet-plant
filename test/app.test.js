@@ -485,15 +485,19 @@ test('training matrix and view-only managers', async () => {
   assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, null);
   assert.doesNotMatch((await admin('GET', `/training/people/${tess.id}`)).text, /Take off the matrix|name="training_note"/);
   // Training report: pick an employee (or everyone) and print. Admin users only, like the matrix.
-  assert.match((await admin('GET', '/reports')).text, /Choose an employee/);
+  assert.match((await admin('GET', '/reports')).text, /Employees to include/);
   await admin('POST', `/training/people/${tess.id}/courses/${n1.id}`, { expiry: '2030-01-31', card: 'blue', back: '/training/matrix' });
   let rep = (await admin('GET', `/reports/training?person=${tess.id}`)).text;
   assert.match(rep, /Training report – Tess/);
   assert.match(rep, /<td>N204 \/ C204<\/td>/);
   assert.match(rep, /Blue · Competent Operator/);
   assert.match((await admin('GET', '/reports/training?person=all')).text, /Training report – everyone/);
+  // Several people: each on their own pages.
+  const two = (await admin('GET', `/reports/training?person=${tess.id}&person=${(await get("SELECT id FROM users WHERE id <> ? AND employee_type IS NOT NULL ORDER BY id LIMIT 1", tess.id)).id}`)).text;
+  assert.match(two, /Training report – 2 people/);
+  assert.equal((two.match(/class="report( report-next)?"/g) || []).length, 2);
   assert.equal((await mia('GET', `/reports/training?person=${tess.id}`)).status, 404);
-  assert.doesNotMatch((await mia('GET', '/reports')).text, /Choose an employee/);
+  assert.doesNotMatch((await mia('GET', '/reports')).text, /Employees to include/);
 });
 
 test('employee documents: copies of cards', async () => {
@@ -514,6 +518,8 @@ test('employee documents: copies of cards', async () => {
   assert.equal(doc.kind, 'cscs');
   assert.match((await admin('GET', `/training/people/${dave.id}`)).text, /cscs-front\.png/);
   assert.match((await admin('GET', `/users/${dave.id}`)).text, /cscs-front\.png/);
+  // The card copy prints at the end of their Training report.
+  assert.match((await admin('GET', `/reports/training?person=${dave.id}`)).text, new RegExp(`<img src="/documents/${doc.id}"`));
   // The employee sees and adds their own from My account, but nobody else's.
   const d = client();
   await d('POST', '/login', { email: 'dave@test.local', password: 'driverpass1' });

@@ -12,19 +12,20 @@
   <a class="btn" href="/reports">Back to reports</a>
   <button class="btn primary" type="button" onclick="window.print()">Save as PDF</button>
 </div>
-<div class="report">
+<% (report.sections || [report]).forEach((rp, i) => { %>
+<div class="report<%= i ? ' report-next' : '' %>">
   <header class="report-head">
     <div class="logo-tile"><img src="/static/logo.png" alt="Marley"></div>
-    <div><h1><%= report.title %></h1><% if (report.sub) { %><p class="report-sub"><%= report.sub %></p><% } %><p>Marley Construction Ltd</p></div>
-    <div class="report-meta"><strong><%= report.count %></strong><br>Run <%= ukDate(today) %> by <%= user.name %></div>
+    <div><h1><%= rp.title %></h1><% if (rp.sub) { %><p class="report-sub"><%= rp.sub %></p><% } %><p>Marley Construction Ltd</p></div>
+    <div class="report-meta"><strong><%= rp.count %></strong><br>Run <%= ukDate(today) %> by <%= user.name %></div>
   </header>
   <table class="report-table">
-    <colgroup><% for (const w of report.widths) { %><col style="width:<%= w %>%"><% } %></colgroup>
-    <thead><tr><% for (const c of report.columns) { %><th><%= c %></th><% } %></tr></thead>
-    <% if (!report.groups.length) { %><tbody><tr><td colspan="<%= report.columns.length %>">Nothing to report.</td></tr></tbody><% } %>
-    <% for (const g of report.groups) { %>
+    <colgroup><% for (const w of rp.widths) { %><col style="width:<%= w %>%"><% } %></colgroup>
+    <thead><tr><% for (const c of rp.columns) { %><th><%= c %></th><% } %></tr></thead>
+    <% if (!rp.groups.length) { %><tbody><tr><td colspan="<%= rp.columns.length %>">Nothing to rp.</td></tr></tbody><% } %>
+    <% for (const g of rp.groups) { %>
     <tbody>
-      <% if (g.label) { %><tr class="group"><th colspan="<%= report.columns.length %>"><%= g.label %> <span><%= g.rows.length %></span></th></tr><% } %>
+      <% if (g.label) { %><tr class="group"><th colspan="<%= rp.columns.length %>"><%= g.label %> <span><%= g.rows.length %></span></th></tr><% } %>
       <% for (const row of g.rows) { %><tr><% for (const cell of row) { %><td><%
         if (cell && cell.pill) { %><span class="pill <%= cell.pill.level %>"><%= cell.pill.text %></span><% if (cell.sub) { %><div class="sub"><%= cell.sub %></div><% } %><% }
         else if (cell && cell.reg) { %><span class="reg"><%= cell.reg %></span><% }
@@ -32,7 +33,15 @@
     </tbody>
     <% } %>
   </table>
+  <% if (rp.attachments && rp.attachments.length) { const imgs = rp.attachments.filter((a) => a.image); const pdfs = rp.attachments.filter((a) => !a.image); %>
+  <section class="report-attach">
+    <h2>Attachments <span><%= rp.attachments.length %></span></h2>
+    <% if (pdfs.length) { %><ul class="report-pdfs"><% for (const a of pdfs) { %><li><a href="/documents/<%= a.id %>" target="_blank" rel="noopener"><%= a.name %></a> <span><%= a.kind %> · PDF, added <%= a.date %> (print it separately)</span></li><% } %></ul><% } %>
+    <div class="report-imgs"><% for (const a of imgs) { %><figure><img src="/documents/<%= a.id %>" alt="<%= a.name %>"><figcaption><strong><%= a.kind %></strong> · <%= a.name %> · added <%= a.date %></figcaption></figure><% } %></div>
+  </section>
+  <% } %>
 </div>
+<% }) %>
 <% if (autoPrint) { %><script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script><% } %>
 </body>
 </html>
