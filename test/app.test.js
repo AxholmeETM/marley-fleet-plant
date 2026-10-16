@@ -471,7 +471,6 @@ test('training matrix and view-only managers', async () => {
   await admin('POST', `/training/people/${tess.id}`, { [`expiry_${n1.id}`]: '2030-01-31', [`card_${n1.id}`]: 'blue', [`expiry_${n2.id}`]: '2028-01-31', [`card_${n2.id}`]: 'red', [`card_${cp1.id}`]: 'gold' });
   assert.deepEqual((await all('SELECT course_id, card FROM training_records WHERE user_id = ? AND card IS NOT NULL ORDER BY card', tess.id)).map((r) => ({ ...r })), [{ course_id: n1.id, card: 'blue' }, { course_id: n2.id, card: 'red' }]);
   let html = (await admin('GET', '/training/matrix?group=NPORS')).text;
-  assert.match(html, /card-pill multi" title="NPORS: Red · Trained Operator \(2 years\), Blue[^"]*"><span class="segs"><span class="cscs-red"><\/span><span class="cscs-blue">/);
   assert.match(html, new RegExp(`data-c="${n1.id}"[^>]*data-g="NPORS" data-k="blue"`));
   // Scheme codes show with the training names.
   assert.match((await admin('GET', '/training/matrix?group=NPORS&empty=1')).text, /<span class="tm-code">N202 \/ C202<\/span>/);

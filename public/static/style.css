@@ -605,7 +605,7 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tm-table thead tr.tm-heads th { top: 34px; }
 .tm-table .tm-name { position: sticky; left: 0; z-index: 2; width: 230px; min-width: 230px; max-width: 230px; text-align: left; padding: 7px 14px; font-weight: 400; }
 .tm-table .tm-cards { position: sticky; left: 230px; z-index: 2; width: 150px; min-width: 150px; padding: 6px 8px; text-align: left; white-space: nowrap; }
-.tm-table .tm-sum { position: sticky; left: 380px; z-index: 2; width: 132px; min-width: 132px; padding: 6px 10px; text-align: left; border-right: 1px solid var(--line-strong); }
+.tm-table .tm-sum { position: sticky; left: 230px; z-index: 2; width: 132px; min-width: 132px; padding: 6px 10px; text-align: left; border-right: 1px solid var(--line-strong); }
 .tm-table thead .tm-name, .tm-table thead .tm-cards, .tm-table thead .tm-sum { z-index: 5; vertical-align: bottom; color: var(--ink-2); font-size: .74rem; font-weight: 500; padding-bottom: 10px; }
 .tm-table tbody .tm-name a { display: block; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tm-table tbody .tm-name a:hover { color: var(--accent); }
