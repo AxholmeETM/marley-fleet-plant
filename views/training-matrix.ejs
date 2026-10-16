@@ -1,0 +1,42 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Training Matrix</h1><p class="muted" style="margin:0">Expiry dates for each person. <span class="tm-key"><span class="tm ok">In date</span> <span class="tm soon">Within 30 days</span> <span class="tm overdue">Expired</span> <span class="tm needed">Needed</span> <span class="tm note">Note</span></span></p></div>
+</div>
+<form class="filters" method="get">
+  <div class="field"><label for="q">Search</label><input type="search" id="q" name="q" value="<%= q %>" placeholder="Name or note"></div>
+  <div class="field"><label for="group">Training</label>
+    <select id="group" name="group"><option value="">All</option><% for (const g of GROUPS) { %><option <%= grp === g ? 'selected' : '' %>><%= g %></option><% } %></select></div>
+  <button class="btn" type="submit">Show</button>
+  <a class="btn" href="<%= path %>">Reset</a>
+</form>
+<%- include('partials/pane-end') %>
+<div class="card flush">
+  <% if (!people.length) { %><p class="empty"><%= q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet. Add someone below.' %></p><% } else { %>
+  <div class="tm-wrap"><table class="tm-table">
+    <thead>
+      <tr><th class="tm-name" rowspan="2">Employee</th><% for (const g of GROUPS) { const n = courses.filter((c) => c.grp === g).length; if (n) { %><th class="tm-grp" colspan="<%= n %>"><%= g %></th><% } } %></tr>
+      <tr><% for (const c of courses) { %><th class="tm-course"><span><%= c.name %></span></th><% } %></tr>
+    </thead>
+    <tbody><% for (const p of people) { %>
+      <tr>
+        <th class="tm-name" scope="row"><a href="/training/people/<%= p.id %>"><%= p.name %></a><% if (p.training_note) { %><small><%= p.training_note %></small><% } %></th>
+        <% for (const c of courses) { const r = cell(p, c); const s = r && r.status; %><td class="<%= s ? 'tm ' + s.level : '' %>"<% if (s) { %> title="<%= c.name %>: <%= s.text %><%= r.note && r.expiry ? ' · ' + r.note : '' %>"<% } %>><%= s ? s.short : '' %></td><% } %>
+      </tr>
+    <% } %></tbody>
+  </table></div><% } %>
+</div>
+<div class="grid-2">
+  <form class="card" method="post" action="/training/people">
+    <h2>Add someone to the matrix</h2>
+    <div class="field"><label for="user_id">Employee</label>
+      <select id="user_id" name="user_id" required><option value="">Choose…</option><% for (const o of others) { %><option value="<%= o.id %>"><%= o.name %></option><% } %></select></div>
+    <button class="btn primary" type="submit">Add</button>
+  </form>
+  <form class="card" method="post" action="/training/courses">
+    <h2>Add a training course</h2>
+    <div class="field"><label for="name">Course name</label><input type="text" id="name" name="name" required maxlength="80"></div>
+    <div class="field"><label for="grp">Group</label><select id="grp" name="grp"><% for (const g of GROUPS) { %><option><%= g %></option><% } %></select></div>
+    <button class="btn primary" type="submit">Add course</button>
+  </form>
+</div>
+<%- include('partials/footer') %>

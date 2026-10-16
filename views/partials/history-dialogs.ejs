@@ -15,7 +15,7 @@
       <% if (d.status === 'resolved') { %><dt>Fixed</dt><dd><%= ukDate(d.resolved_at) %><%= d.resolved_by_name ? ' by ' + d.resolved_by_name : '' %></dd><dt>What was done</dt><dd style="white-space:pre-wrap"><%= d.resolution || '—' %></dd><% } %>
     </dl>
     <%- docList(ds) %>
-    <% if (isAdmin && d.status === 'open') { %>
+    <% if (canEdit && d.status === 'open') { %>
     <form method="post" action="/defects/<%= d.id %>/resolve" enctype="multipart/form-data">
       <input type="hidden" name="back" value="<%= back %>">
       <div class="form-grid">
@@ -25,7 +25,7 @@
       <div class="field"><label for="resdocs-<%= d.id %>">Documents <span class="hint">(optional: invoice, photos or PDFs)</span></label><input id="resdocs-<%= d.id %>" name="docs" type="file" accept="image/*,application/pdf" multiple></div>
       <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Mark as resolved</button></div>
     </form>
-    <% } else if (isAdmin) { %>
+    <% } else if (canEdit) { %>
     <form method="post" action="/defects/<%= d.id %>/reopen"><input type="hidden" name="back" value="<%= back %>">
       <div class="form-actions"><button class="btn" type="button" data-close>Close</button><button class="btn" type="submit">Reopen defect</button></div></form>
     <% } else { %><div class="form-actions"><button class="btn" type="button" data-close>Close</button></div><% } %>
@@ -45,7 +45,7 @@
       <% if (r.notes) { %><dt>Notes</dt><dd style="white-space:pre-wrap"><%= r.notes %></dd><% } %>
     </dl>
     <%- docList(ds) %>
-    <% if (r.planned && isAdmin) { %>
+    <% if (r.planned && canEdit) { %>
     <form method="post" action="<%= assetType === 'plant' ? '/plant/' : '/vehicles/' %><%= item.id %>/records/<%= r.id %>/done">
       <div class="form-grid">
         <div class="field"><label for="donedate-<%= r.id %>">Date done</label><input id="donedate-<%= r.id %>" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
@@ -55,7 +55,7 @@
       <div class="form-actions"><button class="btn dark" type="submit">Mark as done</button></div>
     </form>
     <% } %>
-    <% if (isAdmin) { %>
+    <% if (canEdit) { %>
     <form method="post" action="/documents" enctype="multipart/form-data">
       <input type="hidden" name="asset" value="<%= assetType %>:<%= item.id %>"><input type="hidden" name="record" value="<%= r.id %>"><input type="hidden" name="kind" value="<%= r.kind %>">
       <div class="field"><label for="recdocs-<%= r.id %>">Add documents</label><input id="recdocs-<%= r.id %>" name="docs" type="file" accept="image/*,application/pdf" multiple required></div>

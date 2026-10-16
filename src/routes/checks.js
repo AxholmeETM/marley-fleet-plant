@@ -2,7 +2,7 @@ const express = require('express');
 const { all, get, run, transaction } = require('../db');
 const { listProjects, listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
 const { VEHICLE_ITEMS, PLANT_ITEMS, RESULTS } = require('../checklists');
-const { requireAdmin, requirePlantAccess, isAdmin, canUsePlant, plantFor, canUseVehicle, UserError, numberField, text } = require('../auth');
+const { requireAdmin, requirePlantAccess, isAdmin, canViewAll, canUsePlant, plantFor, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isoDate, isValidDate, addDays, ukDate } = require('../status');
 
 const router = express.Router();
@@ -142,13 +142,13 @@ router.get('/checks/:type/:id', async (req, res) => {
       JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
   }
   // Admins see every check, site managers every plant check, everyone else only their own.
-  const allowed = check && (isAdmin(req.user) || check.user_id === req.user.id || (type === 'plant' && canUsePlant(req.user, await get('SELECT job_ref FROM plant WHERE id = ?', check.plant_id))));
+  const allowed = check && (canViewAll(req.user) || check.user_id === req.user.id || (type === 'plant' && canUsePlant(req.user, await get('SELECT job_ref FROM plant WHERE id = ?', check.plant_id))));
   if (!allowed) {
     return res.status(404).render('error', { title: 'Not found', message: 'Check not found.' });
   }
   const defect = await get('SELECT * FROM defects WHERE asset_type = ? AND check_id = ?', type, check.id);
   const title = type === 'vehicle' ? 'Walk-around check' : 'Plant check sheet';
-  const crumbs = isAdmin(req.user) ? [['Plant', '/plant'], ['Site Checks', `/checks?type=${type}`], [`${title} · ${ukDate(check.check_date)}`]] : [['Home', '/'], [title]];
+  const crumbs = canViewAll(req.user) ? [['Plant', '/plant'], ['Site Checks', `/checks?type=${type}`], [`${title} · ${ukDate(check.check_date)}`]] : [['Home', '/'], [title]];
   res.render('check-view', { title, crumbs, type, check, results: JSON.parse(check.results), defect });
 });
 

@@ -28,6 +28,18 @@ document.querySelectorAll('form.filters').forEach((form) => {
   const q = form.querySelector('input[type=search]');
   if (q && q.value && new URLSearchParams(location.search).has(q.name)) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 });
+<% if (isManager) { %>
+// Managers can look at everything but not change it: forms are shown read-only and add or edit links are hidden.
+document.querySelectorAll('form[method="post"]:not(.keep)').forEach((form) => {
+  form.querySelectorAll('input, select, textarea').forEach((el) => { el.disabled = true; });
+  form.querySelectorAll('button[type="submit"], input[type="file"]').forEach((el) => { (el.closest('.field') || el).style.display = 'none'; });
+  if (!form.querySelector('input:not([type="hidden"]):not([type="file"]), select, textarea')) form.style.display = 'none';
+  if (form.matches('.assign-add, .filters')) form.style.display = 'none';
+});
+document.querySelectorAll('a[href$="/new"], a[href*="/new?"], a[href$="/edit"], [data-open="record-dlg"]').forEach((el) => {
+  if (!el.closest('.side-nav')) el.style.display = 'none';
+});
+<% } %>
 </script>
 </body>
 </html>

@@ -3,7 +3,7 @@ const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listVehicles, getVehicle, listDefects, listDrivers, syncCardVehicles } = require('../queries');
 const { planRepair, repairDone } = require('../planned');
 const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
-const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
+const { requireAdmin, isAdmin, canViewAll, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
 const { OWNERS, VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, FUEL_CARD_STATUSES } = require('../categories');
 
@@ -105,7 +105,7 @@ router.get('/vehicles/:id', async (req, res) => {
   const defects = await listDefects({ status: 'all', assetType: 'vehicle', assetId: item.id, limit: 50 });
   const cards = await all('SELECT * FROM fuel_cards WHERE vehicle_id = ? ORDER BY status, provider', item.id);
   const documents = await listDocs('vehicle', item.id);
-  const crumbs = isAdmin(req.user) ? [['Fleet', '/vehicles'], [VEHICLE_CATEGORIES[item.category] || 'Vehicles', `/vehicles?category=${item.category}`], [item.reg]] : [['Home', '/'], [item.reg]];
+  const crumbs = canViewAll(req.user) ? [['Fleet', '/vehicles'], [VEHICLE_CATEGORIES[item.category] || 'Vehicles', `/vehicles?category=${item.category}`], [item.reg]] : [['Home', '/'], [item.reg]];
   res.render('vehicle-view', { title: item.reg, crumbs, item, checks, records, defects, cards, documents, DOC_KINDS, addMonths, addDays, ...LOOKUPS });
 });
 

@@ -4,7 +4,7 @@ const { listPlant, listVehicles, listDefects } = require('../queries');
 const { isoDate, addMonths, addDays, ukDate } = require('../status');
 const { INSPECTION_TYPES, CATEGORY } = require('../categories');
 const fuelCards = require('./fuel-cards');
-const { isAdmin, isSiteManager, plantFor } = require('../auth');
+const { canViewAll: isAdmin, isSiteManager, plantFor } = require('../auth');
 
 const router = express.Router();
 
@@ -20,7 +20,7 @@ const VEHICLE_ACTIONS = { mot: ['Update MOT', 'mot'], tax: ['Update tax', 'tax']
 const listNames = (names) => names.slice(0, 6).join(', ') + (names.length > 6 ? ` and ${names.length - 6} more` : '');
 
 // Site managers get the same list for their own plant and vehicles, with links they can use (the office does the rest).
-async function todoList(plant, vehicles, defects, receipts, { admin = true } = {}) {
+async function todoList(plant, vehicles, defects, receipts, { admin = true, edit = admin } = {}) {
   const items = [];
   const push = (when, level, rank, item) => items.push({ when, level, rank, ...item });
   const assetHref = (d) => `/${d.asset_type === 'plant' ? 'plant' : 'vehicles'}/${d.asset_id}`;
@@ -31,7 +31,7 @@ async function todoList(plant, vehicles, defects, receipts, { admin = true } = {
     push(when, d.severity === 'unsafe' ? 'bad' : 'warn', d.severity === 'unsafe' ? 0 : 1, {
       title: reg ? rest.join(' – ') : String(d.asset_name || '').replace(' – ', ' · '), reg,
       detail: `${d.severity === 'unsafe' ? 'Unsafe' : d.severity === 'major' ? 'Major defect' : 'Minor defect'}: ${d.description} · reported${d.reported_by_name ? ' by ' + d.reported_by_name : ''} ${ukDate(d.reported_at)}`,
-      href: `${assetHref(d)}#def-${d.id}`, action: admin ? 'Resolve' : 'View', primary: d.severity !== 'minor', defect: true,
+      href: `${assetHref(d)}#def-${d.id}`, action: edit ? 'Resolve' : 'View', primary: d.severity !== 'minor', defect: true,
     });
   }
   const due = (st, title, detail, href, action, extra = {}) => {
@@ -44,10 +44,10 @@ async function todoList(plant, vehicles, defects, receipts, { admin = true } = {
     const title = `${p.plant_no} · ${p.description}`;
     const where = p.job_ref ? ` · Project ${p.job_ref}` : '';
     // Only the office records services and tests; site managers get a link to the item.
-    due(p.service, title, p.service.text + where, admin ? `/plant/${p.id}#record-service` : `/plant/${p.id}`, admin ? 'Record service' : 'View');
+    due(p.service, title, p.service.text + where, edit ? `/plant/${p.id}#record-service` : `/plant/${p.id}`, edit ? 'Record service' : 'View');
     // Never inspected: rolled up into one line, as a new register can have dozens of these.
     if (p.loler.level === 'overdue' && !p.loler.due) noInspection.push(p.plant_no);
-    else due(p.loler, title, `${INSPECTION_TYPES[p.inspection_type] || 'LOLER'}: ${p.loler.text}${where}`, admin ? `/plant/${p.id}#record-loler` : `/plant/${p.id}`, admin ? 'Record test' : 'View');
+    else due(p.loler, title, `${INSPECTION_TYPES[p.inspection_type] || 'LOLER'}: ${p.loler.text}${where}`, edit ? `/plant/${p.id}#record-loler` : `/plant/${p.id}`, edit ? 'Record test' : 'View');
     if (p.check.level === 'overdue') checksOver.push(p.plant_no);
     else if (p.check.level === 'soon') checksSoon.push(p.plant_no);
   }
@@ -57,12 +57,12 @@ async function todoList(plant, vehicles, defects, receipts, { admin = true } = {
     const who = v.driver_display ? ` · ${v.driver_display}` : '';
     for (const key of ['mot', 'tax', 'service']) {
       const [action, kind] = VEHICLE_ACTIONS[key];
-      due(v[key], title, `${key === 'mot' ? 'MOT' : key === 'tax' ? 'Road tax' : 'Service'}: ${v[key].text}${who}`, admin ? `/vehicles/${v.id}#record-${kind}` : `/vehicles/${v.id}`, admin ? action : 'View', { reg: v.reg });
+      due(v[key], title, `${key === 'mot' ? 'MOT' : key === 'tax' ? 'Road tax' : 'Service'}: ${v[key].text}${who}`, edit ? `/vehicles/${v.id}#record-${kind}` : `/vehicles/${v.id}`, edit ? action : 'View', { reg: v.reg });
     }
     if (v.walkaround.level === 'overdue') walkMissing.push(v.reg);
   }
   for (const c of (admin ? await all(`${fuelCards.CARD_SQL} WHERE c.status = 'active' AND c.expiry IS NOT NULL`) : []).map(fuelCards.decorate)) {
-    due(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card`, `Expiry: ${c.expiryStatus.text}${c.holder_display ? ' · ' + c.holder_display : ''}`, `/fuel-cards/${c.id}/edit`, 'Update card');
+    due(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card`, `Expiry: ${c.expiryStatus.text}${c.holder_display ? ' · ' + c.holder_display : ''}`, edit ? `/fuel-cards/${c.id}/edit` : '/fuel-cards', edit ? 'Update card' : 'View');
   }
   if (noInspection.length) push('now', 'bad', 2.5, { count: noInspection.length, title: `${noInspection.length} item${noInspection.length === 1 ? '' : 's'} with no inspection recorded`, detail: listNames(noInspection), href: '/plant?filter=attention', action: 'View' });
   if (checksOver.length) push('now', 'warn', 4, { count: checksOver.length, title: `${checksOver.length} plant check sheet${checksOver.length === 1 ? '' : 's'} overdue`, detail: listNames(checksOver), href: admin ? '/checks?type=plant' : '/checks/plant/new', action: admin ? 'View' : 'Do checks' });
@@ -91,7 +91,7 @@ async function calendarEvents(plant, vehicles, user) {
   }
   const cards = await all(`${fuelCards.CARD_SQL} WHERE c.status = 'active' AND c.expiry IS NOT NULL ${admin ? '' : 'AND c.user_id = ?'}`, ...(admin ? [] : [user.id]));
   for (const c of cards.map(fuelCards.decorate)) {
-    add(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card${c.holder_display ? ' · ' + c.holder_display : ''}`, 'Card expires', admin ? `/fuel-cards/${c.id}/edit` : '/');
+    add(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card${c.holder_display ? ' · ' + c.holder_display : ''}`, 'Card expires', user.role === 'admin' ? `/fuel-cards/${c.id}/edit` : admin ? '/fuel-cards' : '/');
   }
   // Planned repairs stay on the calendar until they are marked as done.
   const repairs = await all(`SELECT r.id, r.asset_type, r.asset_id, r.record_date, r.notes, p.plant_no, p.description, v.reg, v.make, v.model
@@ -125,7 +125,7 @@ router.get('/', async (req, res) => {
   const { plant, vehicles, defects } = await scope(req.user);
   const receipts = manager ? { n: 0, cost: 0 } : await get(`SELECT COUNT(*) AS n, MIN(fill_date) AS oldest, COUNT(*) FILTER (WHERE cost IS NULL OR cost = 0) AS unpriced, COALESCE(SUM(cost), 0) AS cost
     FROM fuel_entries WHERE verified = 0`);
-  const todo = await todoList(plant, vehicles, defects, receipts, { admin: !manager });
+  const todo = await todoList(plant, vehicles, defects, receipts, { admin: !manager, edit: req.user.role === 'admin' });
   // A site manager's own fuel cards, shown beside their vehicle.
   const myCards = manager ? (await all(`${fuelCards.CARD_SQL} WHERE c.user_id = ? AND c.status = 'active' ORDER BY c.provider, c.card_ref`, req.user.id)).map(fuelCards.decorate) : [];
   // Litres per month for the last 6 months (diesel and unleaded; AdBlue is separate).

@@ -73,13 +73,21 @@ async function createApp() {
       req.user.projects = (await all('SELECT code FROM projects WHERE manager_id = ?', req.user.id)).map((p) => p.code);
     }
     res.locals.user = req.user;
-    res.locals.isAdmin = !!(req.user && req.user.role === 'admin');
+    // Managers see the admin menus and pages read-only: isAdmin shows the pages, canEdit the buttons and forms.
+    const manager = !!(req.user && req.user.role === 'driver' && req.user.employee_type === 'manager');
+    res.locals.canEdit = !!(req.user && req.user.role === 'admin');
+    res.locals.isAdmin = res.locals.canEdit || manager;
+    res.locals.isManager = manager;
     res.locals.flash = req.session.flash || null;
     if (req.session.flash) req.session.flash = null;
     res.locals.path = req.path;
     res.locals.today = status.isoDate();
     Object.assign(res.locals, { escapeHtml, ukDate: status.ukDate, ukDateTime: status.ukDateTime, money, num, fmtHours: status.fmtHours, FUEL_LABELS, SEVERITY_LABELS, pill, userLabel });
     req.flash = (type, msg) => { req.session.flash = { type, msg }; };
+    // Managers can't change anything except their own password.
+    if (manager && !['GET', 'HEAD'].includes(req.method) && !['/logout', '/account/password'].includes(req.path)) {
+      return res.status(403).render('error', { title: 'View only', message: 'Managers can view everything but not make changes.' });
+    }
     next();
   });
 
@@ -102,6 +110,7 @@ async function createApp() {
   app.use(require('./routes/users'));
   app.use(require('./routes/projects'));
   app.use(require('./routes/reports'));
+  app.use(require('./routes/training'));
   app.use(require('./routes/admin'));
 
   app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'That page does not exist.' }));

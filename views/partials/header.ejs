@@ -20,6 +20,7 @@
             { label: 'Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
             { label: 'Fuel', items: [['/fuel', 'Fuel Logs'], ['/fuel-cards', 'Fuel Cards']] },
             ['/users', 'Employees'],
+            ...(canEdit ? [['/training', 'Training Matrix']] : []),
             { label: 'Admin', items: [['/projects', 'Projects'], ['/reports', 'Reports']] }]
           : user.employee_type === 'site_manager'
             ? [['/', 'Dashboard', ['/calendar']], ['/plant', 'Plant'], ['/equipment', 'Equipment'], ['/checks/plant/new', 'Plant check'], ['/checks/vehicle/new', 'Walk-around'], ['/fuel/new', 'Log fuel'], ['/defects/new', 'Report defect']]
@@ -51,7 +52,7 @@
     </script>
     <div class="side-user">
       <a href="/account" class="who"><%= user.name %></a>
-      <form method="post" action="/logout"><button class="linkbtn" type="submit">Sign out</button></form>
+      <form method="post" action="/logout" class="keep"><button class="linkbtn" type="submit">Sign out</button></form>
     </div>
 </aside>
 <div class="content">
@@ -62,6 +63,7 @@
     '/': [['/', 'Dashboard', (p) => p === '/'], ['/calendar', 'Calendar', (p) => p === '/calendar']],
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
     '/fuel': [['/fuel', 'Summary', (p) => p === '/fuel'], ['/fuel/log', 'Fuel log and receipts', (p) => p === '/fuel/log']],
+    '/training': [['/training', 'Dashboard', (p) => p === '/training'], ['/training/matrix', 'Training Matrix', (p) => p === '/training/matrix']],
   };
   const subnav = !crumbs && current && (isAdmin ? SUBNAV[current[0]] : user.employee_type === 'site_manager' && current[0] === '/' && SUBNAV['/']);
   if (crumbs) { %>

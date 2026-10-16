@@ -1,4 +1,4 @@
-<% const docType = item.plant_no ? 'plant' : 'vehicle'; const docKinds = DOC_KINDS[docType]; const canAddDocs = isAdmin; %>
+<% const docType = item.plant_no ? 'plant' : 'vehicle'; const docKinds = DOC_KINDS[docType]; const canAddDocs = canEdit; %>
 <details class="card docs" id="documents">
   <summary><h2>Documents</h2><span class="count"><%= documents.length %></span></summary>
   <% if (!documents.length) { %><p class="empty">No documents yet. Attach them when you add a record, or upload one below.</p><% } else { %>

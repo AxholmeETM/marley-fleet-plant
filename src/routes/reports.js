@@ -1,7 +1,7 @@
 const express = require('express');
 const { all } = require('../db');
 const { listPlant, listVehicles } = require('../queries');
-const { requireAdmin } = require('../auth');
+const { requireAdmin, isAdmin } = require('../auth');
 const { ukDate, fmtHours } = require('../status');
 const { decorate: decorateCard } = require('./fuel-cards');
 const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES, userLabel } = require('../categories');
@@ -60,12 +60,13 @@ const REPORTS = {
   },
   'fuel-cards': {
     label: 'Fuel Cards', blurb: 'All fuel cards by company, with the employee, vehicle, expiry and status. Shows the full card numbers, never PINs.',
-    async build() {
+    // Full card numbers are for admins; managers see the last four digits.
+    async build({ full }) {
       const cards = (await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
         ORDER BY c.provider, c.status <> 'active', CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`)).map(decorateCard);
       const groups = [...new Set(cards.map((c) => c.provider))].map((p) => ({ label: p, rows: cards.filter((c) => c.provider === p).map((c) => {
         const exp = c.expiry ? c.expiryStatus : null;
-        return [c.card_ref ? '#' + c.card_ref : '—', c.card_number ? c.card_number.replace(/(.{4})(?=.)/g, '$1 ') : c.last4 ? '•••• ' + c.last4 : '—', c.user_name || c.holder || '—', c.reg ? { reg: c.reg } : '—', c.card_type || '—',
+        return [c.card_ref ? '#' + c.card_ref : '—', full && c.card_number ? c.card_number.replace(/(.{4})(?=.)/g, '$1 ') : c.last4 ? '•••• ' + c.last4 : '—', c.user_name || c.holder || '—', c.reg ? { reg: c.reg } : '—', c.card_type || '—',
           c.expiry ? `${c.expiry.slice(5, 7)}/${c.expiry.slice(0, 4)}` : '—',
           c.status !== 'active' ? pill('none', FUEL_CARD_STATUSES[c.status] || c.status) : exp && exp.level === 'overdue' ? pill('overdue', 'Expired') : exp && exp.level === 'soon' ? pill('soon', 'Expiring') : pill('ok', 'Active')];
       }) }));
@@ -110,7 +111,7 @@ router.get('/reports', (req, res) => res.render('reports', { title: 'Reports', R
 router.get('/reports/:key', async (req, res) => {
   const def = Object.hasOwn(REPORTS, req.params.key) ? REPORTS[req.params.key] : null;
   if (!def) return res.status(404).render('error', { title: 'Not found', message: 'Report not found.' });
-  res.render('report', { report: await def.build(), autoPrint: req.query.print === '1' });
+  res.render('report', { report: await def.build({ full: isAdmin(req.user) }), autoPrint: req.query.print === '1' });
 });
 
 module.exports = router;

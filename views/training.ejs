@@ -1,0 +1,36 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Training Matrix</h1><p class="muted" style="margin:0">Training that runs out in the next 30 days, what has expired, and what is still needed.</p></div>
+  <div class="actions"><a class="btn primary" href="/training/matrix">Open the matrix</a></div>
+</div>
+<div class="kpis kpis-4">
+  <a class="kpi <%= soon.length ? 'warn' : 'good' %>" href="?show=soon"><div class="label">Expiring in 30 days</div><div class="value"><%= soon.length %></div></a>
+  <a class="kpi <%= expired.length ? 'bad' : 'good' %>" href="?show=expired"><div class="label">Expired</div><div class="value"><%= expired.length %></div></a>
+  <a class="kpi <%= needed.length ? 'warn' : 'good' %>" href="?show=needed"><div class="label">Needed, not held</div><div class="value"><%= needed.length %></div></a>
+  <a class="kpi plain" href="/training/matrix"><div class="label">People on the matrix</div><div class="value"><%= people.length %></div></a>
+</div>
+<nav class="tabs"><% for (const [k, l, n] of [['soon', 'Expiring in 30 days', soon.length], ['expired', 'Expired', expired.length], ['needed', 'Needed', needed.length], ['notes', 'Notes and funding', notes.length]]) { %><a href="?show=<%= k %>" class="<%= show === k ? 'active' : '' %>"><%= l %> (<%= n %>)</a><% } %></nav>
+<%- include('partials/pane-end') %>
+<div class="card flush">
+<% if (show === 'notes') { %>
+  <% if (!notes.length) { %><p class="empty">No training notes yet.</p><% } else { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Employee</th><th>Training paid for</th><th>Note</th></tr></thead>
+    <tbody><% for (const p of notes) { %><tr><td><a href="/training/people/<%= p.id %>"><%= p.name %></a></td><td><%= p.training_funded || '—' %></td><td><%= p.training_note || '—' %></td></tr><% } %></tbody>
+  </table></div><% } %>
+<% } else { const list = show === 'expired' ? expired : show === 'needed' ? needed : soon; %>
+  <% if (!list.length) { %><p class="empty"><%= show === 'soon' ? 'Nothing runs out in the next 30 days.' : show === 'expired' ? 'Nothing has expired.' : 'Nothing is marked as needed.' %></p><% } else { %>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Employee</th><th>Training</th><th>Group</th><th><%= show === 'needed' ? 'Note' : 'Expiry' %></th></tr></thead>
+    <tbody><% for (const x of list) { %>
+      <tr>
+        <td><a href="/training/people/<%= x.p.id %>"><%= x.p.name %></a><% if (x.p.job_title) { %> <span class="muted"><%= x.p.job_title %></span><% } %></td>
+        <td><%= x.c.name %></td>
+        <td><%= x.c.grp %></td>
+        <td><% if (show === 'needed') { %><%= x.r.note || '—' %><% } else { %><%- pill({ level: x.s.level, text: x.s.text }) %><% if (x.r.note) { %> <span class="muted"><%= x.r.note %></span><% } %><% } %></td>
+      </tr>
+    <% } %></tbody>
+  </table></div><% } %>
+<% } %>
+</div>
+<%- include('partials/footer') %>

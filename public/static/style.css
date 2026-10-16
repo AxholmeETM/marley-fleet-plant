@@ -564,3 +564,26 @@ tr.clickable { cursor: pointer; }
 @media (max-width: 1100px) { .kpis-4.kpis-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .form-section { font-size: 1rem; margin: 24px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
 dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink); margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+/* Training Matrix: a wide grid with the names held on the left and the course names turned upright. */
+.tm-wrap { overflow: auto; max-height: calc(100vh - var(--pane-h, 0px) - 40px); }
+.tm-table { border-collapse: separate; border-spacing: 0; font-size: .78rem; width: max-content; }
+.tm-table th, .tm-table td { padding: 4px 6px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; white-space: nowrap; }
+.tm-table thead th { position: sticky; top: 0; background: var(--card); z-index: 2; }
+.tm-table thead tr:nth-child(2) th { top: 29px; }
+.tm-table th.tm-grp { font-weight: 600; color: var(--navy); background: var(--accent-soft); }
+.tm-table th.tm-course { height: 150px; vertical-align: bottom; padding: 6px 2px; min-width: 64px; }
+.tm-table th.tm-course span { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 500; white-space: normal; max-height: 140px; display: inline-block; text-align: left; }
+.tm-table .tm-name { position: sticky; left: 0; z-index: 1; background: var(--card); text-align: left; min-width: 180px; max-width: 220px; white-space: normal; font-weight: 500; }
+.tm-table thead .tm-name { z-index: 3; }
+.tm-table .tm-name small { display: block; font-weight: 400; color: var(--ink-2); font-size: .72rem; }
+.tm.ok { background: var(--green-bg); color: var(--green); }
+.tm.soon { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
+.tm.overdue { background: var(--red-bg); color: var(--red); font-weight: 600; }
+.tm.needed { background: var(--grey-bg); color: var(--ink-2); font-style: italic; }
+.tm.note { background: var(--accent-soft); color: var(--navy); }
+.tm-key { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 6px; }
+.tm-key .tm { padding: 1px 8px; border-radius: 6px; font-size: .74rem; }
+.tp-table input[type=date] { min-width: 150px; }
+.tp-table td:nth-child(1) { min-width: 180px; }
+@media (max-width: 700px) { .tm-table .tm-name { min-width: 120px; max-width: 140px; } .tm-table .tm-name small { display: none; } .tm-table th.tm-grp { text-align: left; } }

@@ -3,9 +3,9 @@
 <div class="page-head">
   <div><h1><%= item.plant_no %> <span class="muted" style="font-weight:400">– <%= item.description %></span></h1></div>
   <div class="actions">
-    <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
+    <% if (item.weekly_checks && (canEdit || !isAdmin)) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
     <% if (!isAdmin) { %><a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a><% } %>
-    <% if (isAdmin) { %><button class="btn" type="button" data-open="record-dlg">Add record</button>
+    <% if (canEdit) { %><button class="btn" type="button" data-open="record-dlg">Add record</button>
     <a class="btn primary" href="/plant/<%= item.id %>/edit">Edit Details</a><% } %>
   </div>
 </div>
@@ -74,7 +74,7 @@
     </div>
   </div>
 </div>
-<% if (isAdmin) { %>
+<% if (canEdit) { %>
 <dialog id="record-dlg" class="dlg">
   <form class="card" method="post" action="/plant/<%= item.id %>/records" enctype="multipart/form-data">
     <div class="dlg-head"><h2>Add a record</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>

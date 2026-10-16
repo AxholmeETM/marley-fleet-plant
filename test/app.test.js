@@ -396,3 +396,51 @@ test('admin and driver flows', async () => {
   assert.equal((await admin('GET', '/export/fuel.csv')).status, 404);
   await run('DELETE FROM fuel_entries');
 });
+
+test('training matrix and view-only managers', async () => {
+  const admin = client();
+  await admin('POST', '/login', { email: 'admin@test.local', password: 'adminpass1' });
+  await admin('POST', '/users', { name: 'Mia Manager', email: 'mia@test.local', password: 'managerpass1', role: 'driver', employee_type: 'manager', job_title: 'Contracts Manager' });
+  await admin('POST', '/users', { name: 'Tess Trained', role: 'driver', employee_type: 'worker', job_title: 'Groundworker' });
+  const tess = await get("SELECT id FROM users WHERE name = 'Tess Trained'");
+  const cscs = await get("SELECT id FROM training_courses WHERE key = 'cscs'");
+  const smsts = await get("SELECT id FROM training_courses WHERE key = 'smsts'");
+  const first = await get("SELECT id FROM training_courses WHERE key = 'first_aid'");
+  assert.ok(cscs && smsts && first);
+
+  // Admin adds Tess and records her training: one in date, one due within 30 days, one expired, one needed.
+  assert.equal((await admin('POST', '/training/people', { user_id: tess.id })).location, `/training/people/${tess.id}`);
+  assert.equal((await admin('POST', `/training/people/${tess.id}`, { [`expiry_${cscs.id}`]: '2026-02-31' })).status, 400);
+  assert.equal((await admin('POST', `/training/people/${tess.id}`, {
+    [`expiry_${cscs.id}`]: status.addDays(status.isoDate(), 400),
+    [`expiry_${smsts.id}`]: status.addDays(status.isoDate(), 10), [`note_${smsts.id}`]: 'Booked 19/10/26',
+    [`expiry_${first.id}`]: status.addDays(status.isoDate(), -3),
+    [`required_${cscs.id + 1}`]: '1', training_funded: 'Y',
+  })).status, 302);
+  const dash = (await admin('GET', '/training')).text;
+  assert.match(dash, /Tess Trained/);
+  assert.match(dash, /SMSTS/);
+  assert.match((await admin('GET', '/training?show=expired')).text, /First Aid/i);
+  assert.match((await admin('GET', '/training?show=needed')).text, /Tess Trained/);
+  const matrix = (await admin('GET', '/training/matrix')).text;
+  assert.match(matrix, /tm soon/);
+  assert.match(matrix, /tm overdue/);
+  assert.match(matrix, /tm needed/);
+  assert.equal((await admin('POST', '/training/courses', { name: 'Hand Arm Vibration', grp: 'General' })).status, 302);
+  assert.match((await admin('GET', '/training/matrix?group=General')).text, /Hand Arm Vibration/);
+
+  // Managers see everything read-only, apart from the Training Matrix and full card numbers.
+  const mia = client();
+  assert.equal((await mia('POST', '/login', { email: 'mia@test.local', password: 'managerpass1' })).location, '/');
+  for (const url of ['/', '/plant', '/vehicles', '/fuel', '/fuel/log', '/fuel-cards', '/users', '/projects', '/reports']) assert.equal((await mia('GET', url)).status, 200, url);
+  assert.equal((await mia('GET', '/training')).status, 403);
+  assert.equal((await mia('GET', '/training/matrix')).status, 403);
+  assert.equal((await mia('GET', '/users/new')).status, 403);
+  assert.equal((await mia('POST', '/projects', { code: 'M99-001', name: 'X' })).status, 403);
+  assert.equal((await mia('POST', `/training/people/${tess.id}/remove`, {})).status, 403);
+  assert.doesNotMatch((await mia('GET', '/')).text, /href="\/training"/);
+  assert.match((await admin('GET', '/')).text, /href="\/training"/);
+
+  await admin('POST', `/training/people/${tess.id}/remove`, {});
+  assert.equal((await get('SELECT on_matrix FROM users WHERE id = ?', tess.id)).on_matrix, 0);
+});

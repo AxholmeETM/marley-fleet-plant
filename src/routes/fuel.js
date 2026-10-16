@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const { all, get, run } = require('../db');
 const storage = require('../storage');
 const { listVehicles, getVehicle } = require('../queries');
-const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
+const { requireAdmin, isAdmin, canViewAll, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isoDate, isValidDate, addMonths, ukDate } = require('../status');
 const { CARD_SQL, decorate: decorateCard } = require('./fuel-cards');
 
@@ -80,7 +80,7 @@ router.post('/fuel', upload.single('receipt'), async (req, res) => {
 router.get('/receipts/:file', async (req, res) => {
   const name = path.basename(req.params.file);
   const entry = await get('SELECT user_id, driver_id FROM fuel_entries WHERE receipt_file = ?', name);
-  if (!entry || (req.user.role !== 'admin' && entry.user_id !== req.user.id && entry.driver_id !== req.user.id)) {
+  if (!entry || (!canViewAll(req.user) && entry.user_id !== req.user.id && entry.driver_id !== req.user.id)) {
     return res.status(404).render('error', { title: 'Not found', message: 'Receipt not found.' });
   }
   const file = await storage.read(name);

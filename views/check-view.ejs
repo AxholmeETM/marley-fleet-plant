@@ -30,7 +30,7 @@
       <h2>Defect reported <span class="pill <%= defect.severity %>"><%= SEVERITY_LABELS[defect.severity] %></span></h2>
       <p><%= defect.description %></p>
       <% if (defect.status === 'resolved') { %><p class="pill ok">Resolved <%= ukDate(defect.resolved_at) %></p><p><%= defect.resolution %></p>
-      <% } else if (isAdmin) { %>
+      <% } else if (canEdit) { %>
         <form method="post" action="/defects/<%= defect.id %>/resolve">
           <input type="hidden" name="back" value="/checks/<%= type %>/<%= check.id %>">
           <div class="field"><label for="resolution">Mark as fixed</label><input id="resolution" name="resolution" type="text" placeholder="What was done?" required></div>

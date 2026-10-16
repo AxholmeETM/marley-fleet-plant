@@ -2,7 +2,7 @@
 <div class="page-head">
   <div><h1><span class="reg"><%= item.reg %></span> <span style="font-weight:400"><%= [item.make, item.model].filter(Boolean).join(' ') %></span></h1></div>
   <div class="actions">
-    <% if (isAdmin) { %><button class="btn" type="button" data-open="record-dlg">Add record</button><a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit Details</a><% } else { %><a class="btn" href="/defects/new?asset=vehicle:<%= item.id %>">Report defect</a><% } %>
+    <% if (canEdit) { %><button class="btn" type="button" data-open="record-dlg">Add record</button><a class="btn primary" href="/vehicles/<%= item.id %>/edit">Edit Details</a><% } else if (!isAdmin) { %><a class="btn" href="/defects/new?asset=vehicle:<%= item.id %>">Report defect</a><% } %>
   </div>
 </div>
 <%- include('partials/pane-end') %>
@@ -36,8 +36,8 @@
         <dt>Tracked</dt><dd><%= TRACKED[item.tracked] || 'Not known' %></dd>
         <dt>Driver app account</dt><dd><%= item.driver_name || 'None – walk-arounds not expected' %></dd>
         <% if (isAdmin) { %><dt>Purchased</dt><dd><%= ukDate(item.purchase_date) %><%= item.purchase_price != null ? ' · ' + money(item.purchase_price) : '' %></dd><% } %>
-        <dt>Fuel cards</dt><dd><% if (!cards.length) { %>None linked<% if (isAdmin) { %> · <a href="/fuel-cards/new?vehicle=<%= item.id %>">Add</a><% } %><% } else { for (const c of cards) { const label = `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''}${c.last4 ? ' ••' + c.last4 : ''}`; %>
-          <div><% if (isAdmin) { %><a href="/fuel-cards/<%= c.id %>/edit"><%= label %></a><% } else { %><%= label %><% } %> <span class="pill <%= c.status === 'active' ? 'ok' : 'none' %>"><%= FUEL_CARD_STATUSES[c.status] %></span></div>
+        <dt>Fuel cards</dt><dd><% if (!cards.length) { %>None linked<% if (canEdit) { %> · <a href="/fuel-cards/new?vehicle=<%= item.id %>">Add</a><% } %><% } else { for (const c of cards) { const label = `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''}${c.last4 ? ' ••' + c.last4 : ''}`; %>
+          <div><% if (canEdit) { %><a href="/fuel-cards/<%= c.id %>/edit"><%= label %></a><% } else { %><%= label %><% } %> <span class="pill <%= c.status === 'active' ? 'ok' : 'none' %>"><%= FUEL_CARD_STATUSES[c.status] %></span></div>
         <% } } %></dd>
       </dl>
       <% if (item.notes) { %><p style="white-space:pre-wrap;margin:12px 0 0"><%= item.notes %></p><% } %>
@@ -68,7 +68,7 @@
     </div>
   </div>
 </div>
-<% if (isAdmin) { %>
+<% if (canEdit) { %>
 <dialog id="record-dlg" class="dlg">
   <form class="card" method="post" action="/vehicles/<%= item.id %>/records" enctype="multipart/form-data">
     <div class="dlg-head"><h2>Add a record</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
