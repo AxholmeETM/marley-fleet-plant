@@ -520,6 +520,15 @@ test('employee documents: copies of cards', async () => {
   assert.match((await admin('GET', `/users/${dave.id}`)).text, /cscs-front\.png/);
   // The card copy prints at the end of their Training report.
   assert.match((await admin('GET', `/reports/training?person=${dave.id}`)).text, new RegExp(`<img src="/documents/${doc.id}"`));
+  // A PDF certificate is drawn into the report too, page by page.
+  const cert = new FormData();
+  cert.append('asset', `person:${dave.id}`); cert.append('kind', 'certificate'); cert.append('back', `/training/people/${dave.id}`);
+  cert.append('docs', new Blob([Buffer.from('%PDF-1.4')], { type: 'application/pdf' }), 'npors-cert.pdf');
+  assert.equal((await admin('POST', '/documents', cert)).status, 302);
+  const certDoc = await get("SELECT id FROM documents WHERE asset_type = 'person' AND asset_id = ? AND kind = 'certificate'", dave.id);
+  const rep = (await admin('GET', `/reports/training?person=${dave.id}`)).text;
+  assert.match(rep, new RegExp(`data-pdf="/documents/${certDoc.id}"`));
+  assert.match(rep, /\/static\/pdfjs\/pdf\.min\.js/);
   // The employee sees and adds their own from My account, but nobody else's.
   const d = client();
   await d('POST', '/login', { email: 'dave@test.local', password: 'driverpass1' });

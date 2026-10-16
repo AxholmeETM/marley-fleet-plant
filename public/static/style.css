@@ -717,6 +717,12 @@ table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .report-imgs img { display: block; width: 100%; max-height: 300px; object-fit: contain; background: #f6f7fb; border-radius: 4px; }
 .report-imgs figcaption { margin-top: 6px; font-size: .72rem; color: var(--muted); }
 .report-imgs figcaption strong { color: var(--ink); }
+.report-pdf { margin: 14px 0 0; border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
+.report-pdf figcaption { margin-bottom: 8px; font-size: .72rem; color: var(--muted); }
+.report-pdf figcaption strong { color: var(--ink); }
+.report-pdf-pages img { display: block; width: 100%; max-width: 720px; margin: 0 auto 10px; border: 1px solid var(--line); break-inside: avoid; }
+.report-pdf-wait { font-size: .8rem; color: var(--muted); margin: 0; }
+@media print { .report-pdf { border: 0; padding: 0; break-before: page; } .report-pdf-pages img { max-height: 170mm; width: auto; max-width: 100%; border: 0; } }
 .report-next { margin-top: 24px; }
 @media print { .report-next { break-before: page; margin-top: 0; } }
 .pick-list { max-height: 210px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 10px; padding: 4px 0; }

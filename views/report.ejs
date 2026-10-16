@@ -10,7 +10,7 @@
 <body class="report-page">
 <div class="report-bar no-print">
   <a class="btn" href="/reports">Back to reports</a>
-  <button class="btn primary" type="button" onclick="window.print()">Save as PDF</button>
+  <button class="btn primary" type="button" onclick="printReport()">Save as PDF</button>
 </div>
 <% (report.sections || [report]).forEach((rp, i) => { %>
 <div class="report<%= i ? ' report-next' : '' %>">
@@ -22,7 +22,7 @@
   <table class="report-table">
     <colgroup><% for (const w of rp.widths) { %><col style="width:<%= w %>%"><% } %></colgroup>
     <thead><tr><% for (const c of rp.columns) { %><th><%= c %></th><% } %></tr></thead>
-    <% if (!rp.groups.length) { %><tbody><tr><td colspan="<%= rp.columns.length %>">Nothing to rp.</td></tr></tbody><% } %>
+    <% if (!rp.groups.length) { %><tbody><tr><td colspan="<%= rp.columns.length %>">Nothing to report.</td></tr></tbody><% } %>
     <% for (const g of rp.groups) { %>
     <tbody>
       <% if (g.label) { %><tr class="group"><th colspan="<%= rp.columns.length %>"><%= g.label %> <span><%= g.rows.length %></span></th></tr><% } %>
@@ -36,12 +36,41 @@
   <% if (rp.attachments && rp.attachments.length) { const imgs = rp.attachments.filter((a) => a.image); const pdfs = rp.attachments.filter((a) => !a.image); %>
   <section class="report-attach">
     <h2>Attachments <span><%= rp.attachments.length %></span></h2>
-    <% if (pdfs.length) { %><ul class="report-pdfs"><% for (const a of pdfs) { %><li><a href="/documents/<%= a.id %>" target="_blank" rel="noopener"><%= a.name %></a> <span><%= a.kind %> · PDF, added <%= a.date %> (print it separately)</span></li><% } %></ul><% } %>
     <div class="report-imgs"><% for (const a of imgs) { %><figure><img src="/documents/<%= a.id %>" alt="<%= a.name %>"><figcaption><strong><%= a.kind %></strong> · <%= a.name %> · added <%= a.date %></figcaption></figure><% } %></div>
+    <% for (const a of pdfs) { %><figure class="report-pdf" data-pdf="/documents/<%= a.id %>"><figcaption><strong><%= a.kind %></strong> · <a href="/documents/<%= a.id %>" target="_blank" rel="noopener"><%= a.name %></a> · PDF, added <%= a.date %></figcaption><div class="report-pdf-pages"><p class="report-pdf-wait">Loading PDF…</p></div></figure><% } %>
   </section>
   <% } %>
 </div>
 <% }) %>
-<% if (autoPrint) { %><script>window.addEventListener('load', () => setTimeout(() => window.print(), 300));</script><% } %>
+<% if ((report.sections || [report]).some((rp) => (rp.attachments || []).some((a) => !a.image))) { %>
+<script src="/static/pdfjs/pdf.min.js"></script>
+<% } %>
+<script>
+// PDF attachments are drawn page by page as pictures so they print with the report.
+const pdfsReady = (async () => {
+  const figs = document.querySelectorAll('.report-pdf');
+  if (!figs.length) return;
+  if (!window.pdfjsLib) { figs.forEach((f) => { f.querySelector('.report-pdf-wait').textContent = 'This PDF could not be shown here. Open it from the link to print it.'; }); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = '/static/pdfjs/pdf.worker.min.js';
+  for (const fig of figs) {
+    const box = fig.querySelector('.report-pdf-pages');
+    try {
+      const pdf = await pdfjsLib.getDocument(fig.dataset.pdf).promise;
+      box.innerHTML = '';
+      for (let n = 1; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const view = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        canvas.width = view.width; canvas.height = view.height;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: view }).promise;
+        const img = new Image(); img.src = canvas.toDataURL('image/jpeg', 0.85); img.alt = 'Page ' + n;
+        box.appendChild(img);
+      }
+    } catch (e) { box.querySelector('.report-pdf-wait').textContent = 'This PDF could not be shown here. Open it from the link to print it.'; }
+  }
+})();
+function printReport() { pdfsReady.finally(() => window.print()); }
+<% if (autoPrint) { %>window.addEventListener('load', () => setTimeout(printReport, 300));<% } %>
+</script>
 </body>
 </html>
