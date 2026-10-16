@@ -12,7 +12,7 @@
   <div class="actions">
     <a class="btn" href="/mileage?<%= prevQs %>" title="The <%= Math.round((Date.parse(p.to) - Date.parse(p.from)) / 86400000) + 1 %> days before">‹ Previous</a>
     <a class="btn" href="/mileage?<%= nextQs %>">Next ›</a>
-    <a class="btn" href="/mileage/addresses">Home and work addresses</a>
+    <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
     <% if (canEdit) { %>
     <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
       <label class="btn primary">Upload SoTrack file<input type="file" name="file" accept=".xlsx" required hidden onchange="this.form.submit()"></label>
@@ -38,7 +38,7 @@
   <div class="card mi-tile"><span>Work miles</span><strong><%= M.fmtMiles(totals.work) %></strong></div>
   <div class="card mi-tile personal"><span>Personal miles</span><strong><%= M.fmtMiles(totals.personal) %></strong><em><%= share %>% of all miles</em></div>
   <div class="card mi-tile"><span>Idle time</span><strong><%= M.fmtSecs(totals.idle) %></strong></div>
-  <div class="card mi-tile"><span>Drivers with personal miles</span><strong><%= byDriver.filter((v) => v.personal > 0).length %></strong><em>of <%= vehicles.length %> vehicles</em></div>
+  <a class="card mi-tile" href="/mileage/drivers?<%= qs %>"><span>Drivers checked</span><strong><%= totals.checked %> of <%= vehicles.length %></strong><em><%= totals.checked === vehicles.length ? 'All done' : (vehicles.length - totals.checked) + ' still to check' %></em></a>
 </div>
 <div class="mi-dash">
   <div class="card">

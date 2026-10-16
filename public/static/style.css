@@ -798,3 +798,21 @@ i.idle { background: #7a86a8; }
 @media (max-width: 600px) { .mi-stack-row { grid-template-columns: 110px 1fr; } .mi-rank a { grid-template-columns: 18px 1fr 1fr 60px; } }
 .mi-stack-row:hover, .mi-rank a:hover { text-decoration: none; }
 @media (max-width: 600px) { .mi-rank-name small { display: none; } }
+/* Mileage checks and unsaved addresses */
+th.mi-chk-h, td.mi-chk, th.mi-chk { width: 70px; text-align: center; }
+.mi-check { margin: 0; display: inline; }
+.mi-check label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: .86rem; }
+.mi-check input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--green); cursor: pointer; }
+tr.mi-done td { background: #f6fbf7; }
+.mi-check-ro { color: var(--green); font-weight: 600; }
+.mi-check-box { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px; background: var(--grey-bg); }
+.mi-check-box.done { background: var(--green-bg); color: var(--green); }
+a.mi-tile { color: inherit; } a.mi-tile:hover { text-decoration: none; border-color: var(--line-strong); }
+.mi-unsaved { margin-bottom: 14px; }
+.mi-unsaved h2 { font-size: 1.05rem; margin: 0; }
+.mi-unsaved .pick-filter { margin: 4px 0 10px; max-width: 340px; }
+.mi-unsaved-list { max-height: 480px; overflow: auto; }
+.mi-quick { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
+.mi-quick select { padding: 4px 6px; font-size: .8rem; }
+.table-wrap.mi-unsaved-list thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
+.mi-quick select { min-width: 140px; max-width: 180px; }

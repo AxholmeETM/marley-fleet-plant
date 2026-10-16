@@ -580,6 +580,17 @@ test('mileage from a SoTrack trip list', async () => {
   assert.match(dash, /Top 10 idle time/);
   assert.match(dash, /Work and personal miles by driver/);
   assert.match(dash, /Personal 7\.0 mi/);
+  // Tick a driver off for the week; the dashboard counts it.
+  await admin('POST', '/mileage/check', { reg: 'YX21KPL', from: '2026-10-12', to: '2026-10-13', checked: '1', back: '/mileage/drivers?from=2026-10-12&to=2026-10-13' });
+  assert.match((await admin('GET', '/mileage/drivers?from=2026-10-12&to=2026-10-13')).text, /<strong>1 of 2<\/strong> checked/);
+  assert.match((await admin('GET', '/mileage?from=2026-10-12&to=2026-10-13')).text, /1 still to check/);
+  await admin('POST', '/mileage/check', { reg: 'YX21KPL', from: '2026-10-12', to: '2026-10-13', checked: '' });
+  assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_checks')).n, 0);
+  // Addresses not saved yet are listed, most likely sites first, and can be saved from there.
+  const addrPage = (await admin('GET', '/mileage/addresses?from=2026-10-12&to=2026-10-13')).text;
+  assert.match(addrPage, /Not saved yet/);
+  assert.match(addrPage, /Site Road, Rossington/);
+  assert.doesNotMatch(addrPage.split('Not saved yet')[1].split('Work addresses')[0], /Yard Lane/);
   // Change a trip by hand, then undo it.
   const shop = await get("SELECT id FROM mileage_trips WHERE end_loc LIKE 'Shop Road%'");
   await admin('POST', `/mileage/trips/${shop.id}`, { use: 'work', back: '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13' });

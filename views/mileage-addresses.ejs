@@ -4,6 +4,35 @@
   <p class="muted" style="margin:0">A trip matches an address with the same postcode, or the same street in the same postcode area, as SoTrack gives it.</p></div>
 </div>
 <%- include('partials/pane-end') %>
+<div class="card mi-unsaved">
+  <div class="mi-chart-head"><h2>Not saved yet <span class="count"><%= unsaved.length %></span></h2><span class="muted small">From the trips <%= ukDate(p.from) %> to <%= ukDate(p.to) %> · <a href="/mileage?<%= qs %>">change dates on the dashboard</a></span></div>
+  <p class="muted small">Every address these trips started or ended at that isn't a saved home or work address. <span class="mi-tag site">Site?</span> means a vehicle stopped there 3 hours or more on a weekday, so it's probably a site.</p>
+  <% if (!unsaved.length) { %><p class="empty">Every address in these trips is saved.</p><% } else { %>
+  <input type="search" class="pick-filter" id="un-filter" placeholder="Find an address or driver" aria-label="Find an address or driver">
+  <div class="table-wrap mi-unsaved-list"><table>
+    <thead><tr><th class="desc">Address</th><th class="num">Visits</th><th>Drivers</th><th>Last seen</th><% if (canEdit) { %><th>Save as</th><% } %></tr></thead>
+    <tbody><% for (const a of unsaved) { %>
+      <tr>
+        <td><% if (a.site) { %><span class="mi-tag site">Site?</span><% } %><%= a.address %></td>
+        <td class="num"><%= a.visits %></td>
+        <td class="small"><%= a.drivers.map((d) => d.name).join(', ') || '—' %></td>
+        <td class="nowrap small"><%= ukDate(a.last) %></td>
+        <% if (canEdit) { %><td class="nowrap"><form method="post" action="/mileage/addresses" class="mi-quick">
+          <input type="hidden" name="address" value="<%= a.address %>"><input type="hidden" name="back" value="<%= back %>">
+          <button class="btn small" type="submit" name="kind" value="work">Work</button>
+          <% if (a.drivers.length) { %><select name="user_id" aria-label="Whose home"><% for (const d of a.drivers) { %><option value="<%= d.id %>"><%= d.name %></option><% } %></select><button class="btn small" type="submit" name="kind" value="home">Home</button><% } %>
+        </form></td><% } %>
+      </tr>
+    <% } %></tbody>
+  </table></div>
+  <script>
+    document.getElementById('un-filter').addEventListener('input', (e) => {
+      const q = e.target.value.trim().toLowerCase();
+      document.querySelectorAll('.mi-unsaved-list tbody tr').forEach((tr) => { tr.hidden = q && !tr.textContent.toLowerCase().includes(q); });
+    });
+  </script>
+  <% } %>
+</div>
 <% const works = places.filter((x) => x.kind === 'work'); const homes = places.filter((x) => x.kind === 'home'); %>
 <div class="mi-cols">
   <div class="card">
@@ -11,10 +40,10 @@
     <p class="muted small">Sites, the yard and suppliers. A journey that reaches one of these is work.</p>
     <% if (works.length) { %><table class="mi-places"><tbody><% for (const w of works) { %>
       <tr><td><% if (w.label) { %><strong><%= w.label %></strong><br><% } %><%= w.address %></td>
-        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= w.id %>/remove"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= w.id %>/remove"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
     <% } %></tbody></table><% } else { %><p class="empty">None yet.</p><% } %>
     <% if (canEdit) { %><form method="post" action="/mileage/addresses" class="mi-add-form">
-      <input type="hidden" name="kind" value="work"><input type="hidden" name="back" value="/mileage/addresses">
+      <input type="hidden" name="kind" value="work"><input type="hidden" name="back" value="<%= back %>">
       <div class="field"><label for="w-label">Name <span class="hint">(optional)</span></label><input id="w-label" name="label" type="text" placeholder="e.g. Yard, Hatfield"></div>
       <div class="field"><label for="w-addr">Address with postcode</label><input id="w-addr" name="address" type="text" required placeholder="e.g. Near to A614, South Yorkshire, DN7 6NS"></div>
       <button class="btn primary" type="submit">Add work address</button>
@@ -25,10 +54,10 @@
     <p class="muted small">Where each driver lives. A journey that starts or ends at home without reaching a work address is personal.</p>
     <% if (homes.length) { %><table class="mi-places"><tbody><% for (const h of homes) { %>
       <tr><td><strong><%= h.user_name || '—' %></strong><br><%= h.address %></td>
-        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= h.id %>/remove"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= h.id %>/remove"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
     <% } %></tbody></table><% } else { %><p class="empty">None yet.</p><% } %>
     <% if (canEdit) { %><form method="post" action="/mileage/addresses" class="mi-add-form">
-      <input type="hidden" name="kind" value="home"><input type="hidden" name="back" value="/mileage/addresses">
+      <input type="hidden" name="kind" value="home"><input type="hidden" name="back" value="<%= back %>">
       <div class="field"><label for="h-user">Employee</label><select id="h-user" name="user_id" required><option value="">Choose…</option><% for (const u of people) { %><option value="<%= u.id %>"><%= u.name %></option><% } %></select></div>
       <div class="field"><label for="h-addr">Home address with postcode</label><input id="h-addr" name="address" type="text" required placeholder="e.g. Bosworth Close, Hatfield, DN7 6AP"></div>
       <button class="btn primary" type="submit">Add home address</button>

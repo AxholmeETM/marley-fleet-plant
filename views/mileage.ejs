@@ -1,8 +1,8 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1>Mileage by driver <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1></div>
+  <div><h1>Mileage by driver <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1><% if (vehicles.length) { %><p class="muted" style="margin:0"><strong><%= totals.checked %> of <%= vehicles.length %></strong> checked<%= totals.checked === vehicles.length ? '. All done for these dates.' : '' %></p><% } %></div>
   <div class="actions">
-    <a class="btn" href="/mileage/addresses">Home and work addresses</a>
+    <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
     <% if (vehicles.length) { %><a class="btn" href="/reports/mileage?<%= qs %>&print=1" target="_blank" rel="noopener">Print</a><% } %>
     <% if (canEdit) { %>
     <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
@@ -40,9 +40,10 @@
 </div>
 <div class="card flush">
   <div class="table-wrap"><table>
-    <thead><tr><th>Driver / vehicle</th><th>Reg</th><th class="num">Trips</th><th class="num">Work miles</th><th class="num">Personal miles</th><th class="num">Total</th><th class="num">Idle time</th><th></th></tr></thead>
+    <thead><tr><th class="mi-chk-h" title="Ticked once this driver's trips have been checked">Checked</th><th>Driver / vehicle</th><th>Reg</th><th class="num">Trips</th><th class="num">Work miles</th><th class="num">Personal miles</th><th class="num">Total</th><th class="num">Idle time</th><th></th></tr></thead>
     <tbody><% for (const v of vehicles) { const href = '/mileage/' + v.reg + '?' + qs; %>
-      <tr class="clickable" onclick="location.href='<%= href %>'">
+      <tr class="clickable<%= v.checked ? ' mi-done' : '' %>" onclick="location.href='<%= href %>'">
+        <td class="mi-chk" onclick="event.stopPropagation()"><%- include('partials/mileage-check', { v, back: '/mileage/drivers?' + qs }) %></td>
         <td><a href="<%= href %>"><strong><%= v.driver_name || (v.notOnFleet ? v.device : 'No driver') %></strong></a><% if (v.sotrackName && v.driver_name && v.sotrackName.toLowerCase().replace(/\s+/g, ' ') !== v.driver_name.toLowerCase()) { %><div class="small muted">SoTrack says <%= v.sotrackName %></div><% } else if (!v.driver_name && !v.notOnFleet) { %><div class="small muted">SoTrack says <%= v.sotrackName %></div><% } %></td>
         <td class="nowrap"><span class="reg"><%= v.regText %></span></td>
         <td class="num"><%= v.trips.length %></td>
@@ -53,7 +54,7 @@
         <td class="nowrap"><% if (v.notOnFleet) { %><span class="pill none">Not on Fleet</span> <% } %><% if (v.needsHome) { %><span class="pill soon">Home address needed</span> <% } %><% if (!v.driver_id && !v.notOnFleet) { %><span class="pill none">All work</span> <% } %><% if (v.changed) { %><span class="pill none"><%= v.changed %> changed</span><% } %></td>
       </tr>
     <% } %></tbody>
-    <tfoot><tr><th colspan="2">Total</th><th class="num"><%= totals.trips %></th><th class="num"><%= M.fmtMiles(totals.work) %></th><th class="num"><%= M.fmtMiles(totals.personal) %></th><th class="num"><%= M.fmtMiles(totals.work + totals.personal) %></th><th></th><th></th></tr></tfoot>
+    <tfoot><tr><th class="mi-chk"><%= totals.checked %>/<%= vehicles.length %></th><th colspan="2">Total</th><th class="num"><%= totals.trips %></th><th class="num"><%= M.fmtMiles(totals.work) %></th><th class="num"><%= M.fmtMiles(totals.personal) %></th><th class="num"><%= M.fmtMiles(totals.work + totals.personal) %></th><th></th><th></th></tr></tfoot>
   </table></div>
 </div>
 <p class="small muted">A journey runs from leaving home to getting back home (or to a stop of 4 hours or more). If none of its trips starts or ends at a work address, its miles count as personal. A weekday stop of 3 hours or more away from home counts as a site until you save it. Vehicles with no driver count as work. Open a driver to check their trips, change any trip, or save an address.</p>

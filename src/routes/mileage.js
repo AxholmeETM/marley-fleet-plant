@@ -34,6 +34,8 @@ async function mileageFor(p, reg) {
   ...[p.from, addDays(p.to, 1), ...(reg ? [reg] : [])]);
   const places = await listPlaces();
   const works = places.filter((x) => x.kind === 'work');
+  const checks = new Map((await all(`SELECT c.reg, c.checked_at, u.name AS by_name FROM mileage_checks c LEFT JOIN users u ON u.id = c.user_id
+    WHERE c.date_from = ? AND c.date_to = ?`, p.from, p.to)).map((c) => [c.reg, c]));
   const byReg = new Map();
   for (const t of trips) {
     if (!byReg.has(t.reg)) byReg.set(t.reg, []);
@@ -47,6 +49,7 @@ async function mileageFor(p, reg) {
       reg: r, regText: last.fleet_reg || M.fmtReg(r), device: last.device, vehicle_id: last.vehicle_id, driver_id: last.driver_id, driver_name: last.driver_name,
       trips: out, work: M.sum(out, 'work'), personal: M.sum(out, 'personal'), total: M.sum(out),
       idle: out.reduce((n, t) => n + (t.idle_secs || 0), 0), changed: out.filter((t) => t.override).length,
+      checked: checks.get(r) || null,
       sotrackName: last.device.split(/\s*-\s*/)[0].trim(),
       notOnFleet: !last.vehicle_id, needsHome: !!last.driver_id && !homes.length,
     };
@@ -59,7 +62,7 @@ async function summary(q) {
   const p = await period(q);
   const { vehicles } = await mileageFor(p);
   const trips = vehicles.flatMap((v) => v.trips);
-  const totals = { work: M.sum(trips, 'work'), personal: M.sum(trips, 'personal'), trips: trips.length, idle: vehicles.reduce((n, v) => n + v.idle, 0) };
+  const totals = { work: M.sum(trips, 'work'), personal: M.sum(trips, 'personal'), trips: trips.length, idle: vehicles.reduce((n, v) => n + v.idle, 0), checked: vehicles.filter((v) => v.checked).length };
   const uploads = await all('SELECT * FROM mileage_uploads ORDER BY id DESC LIMIT 12');
   return { p, qs: qs(p), vehicles, totals, uploads, M };
 }
@@ -114,9 +117,46 @@ router.post('/mileage/upload', upload, async (req, res) => {
 });
 
 // Home and work addresses.
+// Addresses from the trips that aren't saved as a home or work address yet, most visited first.
+function unsavedAddresses(vehicles) {
+  const seen = new Map();
+  const note = (loc, where, v, t) => {
+    if (!loc || (where && where !== 'site')) return;
+    const k = M.addressKey(loc);
+    const key = k.postcode ? `${k.postcode}|${k.street}` : loc.toUpperCase();
+    if (!seen.has(key)) seen.set(key, { address: loc, visits: 0, site: false, drivers: new Map(), last: '' });
+    const a = seen.get(key);
+    a.visits += 1;
+    a.site ||= where === 'site';
+    if (v.driver_id) a.drivers.set(v.driver_id, v.driver_name);
+    if (t.started_at > a.last) a.last = t.started_at;
+  };
+  for (const v of vehicles) for (const t of v.trips) { note(t.start_loc, t.from, v, t); note(t.end_loc, t.to, v, t); }
+  return [...seen.values()].map((a) => ({ ...a, drivers: [...a.drivers].map(([id, name]) => ({ id, name })) }))
+    .sort((a, b) => (b.site - a.site) || (b.visits - a.visits));
+}
+
 router.get('/mileage/addresses', async (req, res) => {
   const people = await all("SELECT id, name FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR EXISTS (SELECT 1 FROM vehicles v WHERE v.driver_id = users.id)) ORDER BY name");
-  res.render('mileage-addresses', { title: 'Home and work addresses', crumbs: [['Mileage', '/mileage'], ['Addresses']], navActive: '/mileage', places: await listPlaces(), people });
+  const p = await period(req.query);
+  const { vehicles, places } = await mileageFor(p);
+  res.render('mileage-addresses', {
+    title: 'Home and work addresses', crumbs: [['Mileage', '/mileage'], ['Addresses']], navActive: '/mileage',
+    places, people, p, qs: qs(p), unsaved: unsavedAddresses(vehicles), back: `/mileage/addresses?${qs(p)}`,
+  });
+});
+
+// Tick a driver's trips for the period as checked, or untick them.
+router.post('/mileage/check', async (req, res) => {
+  const reg = M.normReg(req.body.reg);
+  const p = { from: req.body.from, to: req.body.to };
+  if (!reg || !isValidDate(p.from) || !isValidDate(p.to)) throw new UserError('Please choose the vehicle and dates to tick off.');
+  if (req.body.checked === '1') {
+    await run('INSERT INTO mileage_checks (reg, date_from, date_to, user_id) VALUES (?, ?, ?, ?) ON CONFLICT (reg, date_from, date_to) DO NOTHING', reg, p.from, p.to, req.user.id);
+  } else {
+    await run('DELETE FROM mileage_checks WHERE reg = ? AND date_from = ? AND date_to = ?', reg, p.from, p.to);
+  }
+  res.redirect(backTo(req.body.back));
 });
 
 const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');

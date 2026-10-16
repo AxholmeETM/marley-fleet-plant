@@ -1,0 +1,6 @@
+<% /* A driver's "checked" tick for the dates on screen. Needs v (with .checked), p, back. */ %>
+<% if (canEdit) { %><form method="post" action="/mileage/check" class="mi-check">
+  <input type="hidden" name="reg" value="<%= v.reg %>"><input type="hidden" name="from" value="<%= p.from %>"><input type="hidden" name="to" value="<%= p.to %>"><input type="hidden" name="back" value="<%= back %>">
+  <input type="hidden" name="checked" value="<%= v.checked ? '' : '1' %>">
+  <label title="<%= v.checked ? 'Checked by ' + (v.checked.by_name || 'someone') + ' on ' + ukDate(v.checked.checked_at) + '. Click to untick.' : 'Tick once you have checked these trips' %>"><input type="checkbox" <%= v.checked ? 'checked' : '' %> onchange="this.form.submit()" aria-label="Checked"><% if (typeof showLabel !== 'undefined' && showLabel) { %> <%= v.checked ? 'Checked by ' + (v.checked.by_name || 'someone') + ' on ' + ukDate(v.checked.checked_at) : 'Mark as checked' %><% } %></label>
+</form><% } else { %><span class="mi-check-ro" title="<%= v.checked ? 'Checked by ' + (v.checked.by_name || 'someone') + ' on ' + ukDate(v.checked.checked_at) : 'Not checked yet' %>"><%= v.checked ? '✓' : '—' %></span><% } %>
