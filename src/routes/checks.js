@@ -84,6 +84,7 @@ router.post('/checks/plant', requirePlantAccess, async (req, res) => {
   const hours = numberField(req.body.reading, 'Running hours');
   if (hours == null && plant.tracks_hours) throw new UserError('Please enter the running hours from the hour meter.');
   const jobRef = text(req.body.job_ref) || plant.job_ref;
+  if (text(req.body.job_ref) && jobRef !== plant.job_ref && !await get('SELECT code FROM projects WHERE code = ? AND active = 1', jobRef)) throw new UserError('Please choose a project from the list.');
   const defectItems = results.filter((r) => r.result === 'defect');
   const details = text(req.body.defect_details);
   if (defectItems.length && !details) throw new UserError('Please describe the defects you found.');

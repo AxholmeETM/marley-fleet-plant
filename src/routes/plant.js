@@ -169,7 +169,7 @@ router.post('/plant/:id/records', docUpload, async (req, res) => {
   if (!item) throw new UserError('Plant not found.', 404);
   const kind = ['service', 'loler', 'thorough', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
-  if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
+  if (!isValidDate(date) || date > isoDate()) throw new UserError('Please enter a valid date, today or earlier.');
   const docs = { assetType: 'plant', assetId: item.id, kind, userId: req.user.id };
   if (kind === 'defect') {
     const description = text(req.body.notes);
@@ -191,9 +191,11 @@ router.post('/plant/:id/records', docUpload, async (req, res) => {
     const recordId = (await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('plant', ?, ?, ?, ?, ?, ?, ?, ?)`,
       item.id, kind, date, hours, nextDue, text(req.body.done_by), [certNo && `Cert ${certNo}`, text(req.body.notes)].filter(Boolean).join(' · ') || null, req.user.id)).lastInsertRowid;
     if (kind === 'service') {
-      await run('UPDATE plant SET last_service_date = ?, last_service_hours = ?, running_hours = GREATEST(running_hours, COALESCE(?::double precision, 0)) WHERE id = ?', date, hours, hours, item.id);
+      // Backdated paperwork goes into the history without pulling the machine's service or inspection dates backwards.
+      await run('UPDATE plant SET running_hours = GREATEST(running_hours, COALESCE(?::double precision, 0)) WHERE id = ?', hours, item.id);
+      await run('UPDATE plant SET last_service_date = ?, last_service_hours = ? WHERE id = ? AND (last_service_date IS NULL OR last_service_date <= ?)', date, hours, item.id, date);
     } else if (inspection) {
-      await run('UPDATE plant SET last_loler_date = ?, inspection_due = ?, cert_no = COALESCE(?, cert_no) WHERE id = ?', date, nextDue, certNo, item.id);
+      await run('UPDATE plant SET last_loler_date = ?, inspection_due = ?, cert_no = COALESCE(?, cert_no) WHERE id = ? AND (last_loler_date IS NULL OR last_loler_date <= ?)', date, nextDue, certNo, item.id, date);
     } else if (hours != null) {
       await run('UPDATE plant SET running_hours = GREATEST(running_hours, ?) WHERE id = ?', hours, item.id);
     }

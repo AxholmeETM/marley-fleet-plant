@@ -6,7 +6,8 @@ const { listVehicles, syncCardVehicles } = require('../queries');
 // and Fuel cards always agree. The previous driver's cards are moved off it.
 async function cardFollows(c) {
   if (!c.user_id) return;
-  const v = c.vehicle_id && await get('SELECT id, driver_id FROM vehicles WHERE id = ?', c.vehicle_id);
+  // A cancelled or lost card never takes a vehicle from its driver.
+  const v = c.status === 'active' && c.vehicle_id && await get('SELECT id, driver_id FROM vehicles WHERE id = ?', c.vehicle_id);
   if (v && v.driver_id !== c.user_id) {
     await run('UPDATE vehicles SET driver_id = ?, user_name = NULL WHERE id = ?', c.user_id, v.id);
     await syncCardVehicles(v.driver_id);
@@ -75,7 +76,7 @@ async function readCard(body) {
 router.get('/fuel-cards', async (req, res) => {
   // Status filter: All, or one status (Active by default).
   const show = req.query.show === 'all' || FUEL_CARD_STATUSES[req.query.show] ? req.query.show : 'active';
-  const all_ = (await all(`${CARD_SQL} ${show === 'all' ? '' : 'WHERE c.status = ?'} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`, ...(show === 'all' ? [] : [show]))).map(decorate);
+  const all_ = (await all(`${CARD_SQL} ${show === 'all' ? '' : 'WHERE c.status = ?'} ORDER BY c.provider, c.status, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`, ...(show === 'all' ? [] : [show]))).map(decorate);
   // Filters: fuel company and the name on the card (or the person it's linked to).
   const nameOf = (c) => c.user_name || c.holder || '';
   const sorted = (xs) => [...new Set(xs.filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -108,6 +109,7 @@ router.get('/fuel-cards/:id/edit', async (req, res) => {
 });
 
 router.post('/fuel-cards/:id', async (req, res) => {
+  if (!await get('SELECT id FROM fuel_cards WHERE id = ?', Number(req.params.id))) throw new UserError('Fuel card not found.', 404);
   const c = await readCard(req.body);
   await run(`UPDATE fuel_cards SET ${Object.keys(c).map((k) => `${k} = ?`).join(', ')} WHERE id = ?`, ...Object.values(c), Number(req.params.id));
   await cardFollows(c);

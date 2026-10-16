@@ -103,6 +103,10 @@ async function createApp() {
   app.use((req, res) => res.status(404).render('error', { title: 'Not found', message: 'That page does not exist.' }));
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
+    // Bad ids or numbers in the address or a form (e.g. /plant/abc) are the visitor's mistake, not a crash.
+    if (['22P02', '22003', '22007', '22008'].includes(err.code)) {
+      return res.status(req.method === 'GET' ? 404 : 400).render('error', { title: 'Not found', message: req.method === 'GET' ? 'That page does not exist.' : 'Some of the details entered were not valid. Please go back and check the form.' });
+    }
     if (!err.expose && err.code !== 'LIMIT_FILE_SIZE') console.error(err);
     const message = err.code === 'LIMIT_FILE_SIZE' ? 'That file is too large (15 MB maximum).' : (err.expose ? err.message : 'Something went wrong.');
     res.status(err.status || 500).render('error', { title: 'Error', message });

@@ -28,10 +28,11 @@ class UserError extends Error {
 }
 
 // Parse a positive number from a form field; returns null for blank.
-function numberField(value, label, { integer = false, min = 0 } = {}) {
+function numberField(value, label, { integer = false, min = 0, max = 99999999 } = {}) {
   if (value == null || String(value).trim() === '') return null;
   const n = Number(String(value).replace(/,/g, ''));
   if (!Number.isFinite(n) || n < min) throw new UserError(`${label} must be a number${min === 0 ? ' of 0 or more' : ''}.`);
+  if (n > max) throw new UserError(`${label} looks too large. Please check it.`);
   return integer ? Math.round(n) : n;
 }
 

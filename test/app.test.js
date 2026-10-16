@@ -201,12 +201,16 @@ test('admin and driver flows', async () => {
   assert.equal((await driver('GET', '/plant')).status, 403);
   assert.equal((await driver('GET', '/fuel')).status, 403);
   assert.equal((await driver('GET', '/fuel-cards')).status, 403);
-  // Dave's own two cards are listed under "My fuel cards"; the spare card is under "Other fuel cards".
+  // Dave only sees his own two cards; other people's cards and the spare are hidden and refused.
   const fuelForm = (await driver('GET', '/fuel/new')).text;
   assert.doesNotMatch(fuelForm, /7064056072235900127|7064 0560/);
   const mine = fuelForm.split('label="My fuel cards"')[1].split('</optgroup>')[0];
   assert.equal((mine.match(/<option value="\d+"/g) || []).length, 2);
-  assert.match(fuelForm, /<option value="\d+"[^>]*>FastFuels #Spare/);
+  assert.doesNotMatch(fuelForm, /FastFuels #Spare/);
+  const spare = (await get("SELECT id FROM fuel_cards WHERE card_ref = 'Spare'")).id;
+  assert.equal((await driver('POST', '/fuel', { vehicle_id: vehicle.id, fuel_type: 'diesel', litres: '10', fuel_card_id: spare })).status, 403);
+  assert.equal((await admin('GET', '/vehicles/abc')).status, 404);
+  assert.equal(status.isValidDate('2026-02-31'), false);
 
   const missing = await driver('POST', '/checks/vehicle', { asset_id: vehicle.id, check_date: status.isoDate() });
   assert.equal(missing.status, 400);
@@ -239,6 +243,8 @@ test('admin and driver flows', async () => {
   assert.equal((await manager('GET', `/vehicles/${vehicle.id}`)).status, 403);
   assert.equal((await manager('GET', '/users')).status, 403);
 
+  assert.equal((await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'NOPE', ...checklist(PLANT_ITEMS, -1) })).status, 400);
+  await admin('POST', '/projects', { code: 'J200', name: 'Test site', active: '1' });
   await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'J200', ...checklist(PLANT_ITEMS, -1) });
   const updated = await get('SELECT running_hours, job_ref FROM plant WHERE id = ?', plant.id);
   assert.equal(updated.running_hours, 1004.5);
@@ -286,6 +292,10 @@ test('admin and driver flows', async () => {
   // Recording a service resets the plant service due point.
   await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: status.isoDate(), reading: '1004.5' });
   assert.equal((await get('SELECT last_service_hours FROM plant WHERE id = ?', plant.id)).last_service_hours, 1004.5);
+  // Backdated paperwork is kept in the history but doesn't roll the machine's service back; future dates are refused.
+  await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: '2024-01-10', reading: '500' });
+  assert.equal((await get('SELECT last_service_hours FROM plant WHERE id = ?', plant.id)).last_service_hours, 1004.5);
+  assert.equal((await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: '2099-01-01' })).status, 400);
   assert.match((await admin('GET', `/plant/${plant.id}`)).text, /1,500 hr service/);
   await admin('POST', `/plant/${sling.id}/records`, { kind: 'loler', record_date: status.isoDate(), cert_no: 'C123' });
   assert.equal((await get('SELECT cert_no FROM plant WHERE id = ?', sling.id)).cert_no, 'C123');

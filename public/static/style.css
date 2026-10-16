@@ -157,9 +157,9 @@ tbody tr { transition: background .12s; }
 tbody tr:hover { background: var(--hover); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .empty { padding: 22px; color: var(--muted); }
-dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; margin: 0; }
+dl.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 20px; margin: 0; }
 dl.facts dt { color: var(--muted); }
-dl.facts dd { margin: 0; }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }
 
 /* Status pills */
 .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: .78rem; font-weight: 500; white-space: nowrap; }
@@ -297,7 +297,7 @@ legend + * { clear: both; }
 .login h1 { font-size: 1.6rem; }
 
 @media (max-width: 900px) {
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
   .layout { flex-direction: column; }
   .sidebar { position: sticky; z-index: 50; height: auto; width: auto; flex-direction: row; align-items: center; gap: 12px; padding: 10px 16px; overflow: visible; }
   .side-nav { flex-direction: row; overflow-x: auto; scrollbar-width: none; }
@@ -547,3 +547,4 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 .cal-page .cal-ev { font-size: .74rem; }
 .cal-page .wk-col { min-height: 360px; }
 .cal-page .wk-ev { font-size: .78rem; }
+@media screen and (max-width: 640px) { .report { overflow-x: auto; } }

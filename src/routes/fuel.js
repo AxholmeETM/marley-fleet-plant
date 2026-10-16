@@ -34,7 +34,8 @@ router.get('/fuel/new', async (req, res) => {
   const vehicles = await listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id });
   const mine = vehicles.filter((v) => v.driver_id === req.user.id);
   const selected = vehicles.find((v) => v.id === Number(req.query.vehicle)) || mine[0] || null;
-  const cards = (await all(`${CARD_SQL} WHERE c.status = 'active' ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorateCard);
+  // Admins can pick any active card; everyone else only their own cards and the cards on their vehicles.
+  const cards = (await all(`${CARD_SQL} WHERE c.status = 'active' ${isAdmin(req.user) ? '' : 'AND (c.user_id = ? OR c.vehicle_id IN (SELECT id FROM vehicles WHERE driver_id = ?))'} ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`, ...(isAdmin(req.user) ? [] : [req.user.id, req.user.id]))).map(decorateCard);
   // The cards assigned to this person are shown first; any other active card can still be picked.
   const myCards = cards.filter((c) => c.user_id === req.user.id);
   const otherCards = cards.filter((c) => c.user_id !== req.user.id);
@@ -52,10 +53,13 @@ router.post('/fuel', upload.single('receipt'), async (req, res) => {
     if (!isValidDate(date) || date > isoDate()) throw new UserError('Date must be today or earlier.');
     const litres = numberField(req.body.litres, 'Litres');
     if (!litres) throw new UserError('Please enter how many litres you put in.');
-    if (!req.file) throw new UserError('Please attach a photo of the receipt.');
-    const mileage = numberField(req.body.mileage, 'Mileage', { integer: true });
     const card = Number(req.body.fuel_card_id) ? await get("SELECT id, user_id FROM fuel_cards WHERE id = ? AND status = 'active'", Number(req.body.fuel_card_id)) : null;
     if (Number(req.body.fuel_card_id) && !card) throw new UserError('That fuel card is no longer active. Please choose another.');
+    if (card && !isAdmin(req.user) && card.user_id !== req.user.id && !(await get('SELECT 1 FROM fuel_cards c JOIN vehicles v ON v.id = c.vehicle_id WHERE c.id = ? AND v.driver_id = ?', card.id, req.user.id))) {
+      throw new UserError('That fuel card is not assigned to you.', 403);
+    }
+    if (!req.file) throw new UserError('Please attach a photo of the receipt.');
+    const mileage = numberField(req.body.mileage, 'Mileage', { integer: true });
     const fileName = `receipt-${Date.now()}-${crypto.randomBytes(6).toString('hex')}${MIME_EXT[req.file.mimetype]}`;
     await storage.save(fileName, req.file.buffer);
     saved = fileName;
@@ -205,7 +209,8 @@ router.post('/fuel/:id', requireAdmin, async (req, res) => {
   const litres = req.body.litres === undefined ? entry.litres : numberField(req.body.litres, 'Litres');
   if (!litres) throw new UserError('Litres must be more than 0.');
   const fuelType = FUEL_TYPES.includes(req.body.fuel_type) ? req.body.fuel_type : entry.fuel_type;
-  const date = isValidDate(req.body.fill_date) ? req.body.fill_date : entry.fill_date;
+  const date = req.body.fill_date === undefined || req.body.fill_date === '' ? entry.fill_date : req.body.fill_date;
+  if (!isValidDate(date) || date > isoDate()) throw new UserError('Date must be today or earlier.');
   const verified = req.body.verified ? 1 : 0;
   const cardId = req.body.fuel_card_id === undefined ? entry.fuel_card_id : (Number(req.body.fuel_card_id) || null);
   if (verified && !(cost > 0)) throw new UserError('Enter the price from the receipt before marking it as checked.');

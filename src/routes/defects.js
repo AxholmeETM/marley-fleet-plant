@@ -50,6 +50,7 @@ router.post('/defects', docUpload, async (req, res) => {
 router.post('/defects/:id/resolve', requireAdmin, docUpload, async (req, res) => {
   const defect = await get('SELECT * FROM defects WHERE id = ?', Number(req.params.id));
   if (!defect) throw new UserError('Defect not found.', 404);
+  if (defect.status !== 'open') throw new UserError('That defect has already been resolved.');
   const resolution = text(req.body.resolution);
   if (!resolution) throw new UserError('Please say what was done to fix the defect.');
   // Date resolved: today unless another date is given (not in the future, not before it was reported).
@@ -76,7 +77,9 @@ router.post('/defects/:id/documents', requireAdmin, docUpload, async (req, res) 
 });
 
 router.post('/defects/:id/reopen', requireAdmin, async (req, res) => {
-  await run(`UPDATE defects SET status = 'open', resolved_by = NULL, resolved_at = NULL WHERE id = ?`, Number(req.params.id));
+  const defect = await get('SELECT id FROM defects WHERE id = ?', Number(req.params.id));
+  if (!defect) throw new UserError('Defect not found.', 404);
+  await run(`UPDATE defects SET status = 'open', resolution = NULL, resolved_by = NULL, resolved_at = NULL WHERE id = ?`, defect.id);
   req.flash('success', 'Defect reopened.');
   res.redirect(req.body.back && req.body.back.startsWith('/') && !req.body.back.startsWith('//') ? req.body.back : '/defects');
 });

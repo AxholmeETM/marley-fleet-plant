@@ -60,8 +60,9 @@ async function listDefects({ status = 'open', assetType = null, assetId = null, 
     LIMIT ?`, ...params);
 }
 
-async function listDrivers() {
-  return await all("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name");
+// Active people, plus the vehicle's current driver even if they have since left, so saving the form keeps them.
+async function listDrivers(keepId = null) {
+  return await all("SELECT id, name, role FROM users WHERE active = 1 OR id = ? ORDER BY name", keepId);
 }
 
 // Project numbers offered in the drop-downs; keeps a code already on an item even if it has since been closed.

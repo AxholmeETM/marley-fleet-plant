@@ -62,7 +62,7 @@ const REPORTS = {
     label: 'Fuel Cards', blurb: 'All fuel cards by company, with the employee, vehicle, expiry and status. Shows the full card numbers, never PINs.',
     async build() {
       const cards = (await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
-        ORDER BY c.provider, c.status <> 'active', CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`)).map(decorateCard);
+        ORDER BY c.provider, c.status <> 'active', CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`)).map(decorateCard);
       const groups = [...new Set(cards.map((c) => c.provider))].map((p) => ({ label: p, rows: cards.filter((c) => c.provider === p).map((c) => {
         const exp = c.expiry ? c.expiryStatus : null;
         return [c.card_ref ? '#' + c.card_ref : '—', c.card_number ? c.card_number.replace(/(.{4})(?=.)/g, '$1 ') : c.last4 ? '•••• ' + c.last4 : '—', c.user_name || c.holder || '—', c.reg ? { reg: c.reg } : '—', c.card_type || '—',
@@ -108,7 +108,7 @@ const REPORTS = {
 router.get('/reports', (req, res) => res.render('reports', { title: 'Reports', REPORTS }));
 
 router.get('/reports/:key', async (req, res) => {
-  const def = REPORTS[req.params.key];
+  const def = Object.hasOwn(REPORTS, req.params.key) ? REPORTS[req.params.key] : null;
   if (!def) return res.status(404).render('error', { title: 'Not found', message: 'Report not found.' });
   res.render('report', { report: await def.build(), autoPrint: req.query.print === '1' });
 });

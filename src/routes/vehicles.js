@@ -111,7 +111,7 @@ router.get('/vehicles/:id', async (req, res) => {
 router.get('/vehicles/:id/edit', async (req, res) => {
   const item = await get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Vehicle not found.' });
-  res.render('vehicle-form', { title: `Edit ${item.reg}`, crumbs: [['Fleet', '/vehicles'], [item.reg, `/vehicles/${item.id}`], ['Edit']], item, drivers: await listDrivers(), ...LOOKUPS });
+  res.render('vehicle-form', { title: `Edit ${item.reg}`, crumbs: [['Fleet', '/vehicles'], [item.reg, `/vehicles/${item.id}`], ['Edit']], item, drivers: await listDrivers(item.driver_id), ...LOOKUPS });
 });
 
 router.post('/vehicles/:id', async (req, res) => {
@@ -136,7 +136,7 @@ router.post('/vehicles/:id/records', docUpload, async (req, res) => {
   if (!item) throw new UserError('Vehicle not found.', 404);
   const kind = ['service', 'mot', 'tax', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
-  if (!isValidDate(date)) throw new UserError('Please enter a valid date.');
+  if (!isValidDate(date) || date > isoDate()) throw new UserError('Please enter a valid date, today or earlier.');
   const docs = { assetType: 'vehicle', assetId: item.id, kind, userId: req.user.id };
   if (kind === 'defect') {
     const description = text(req.body.notes);
@@ -158,9 +158,10 @@ router.post('/vehicles/:id/records', docUpload, async (req, res) => {
     const recordId = (await run(`INSERT INTO service_records (asset_type, asset_id, kind, record_date, reading, next_due, done_by, notes, user_id) VALUES ('vehicle', ?, ?, ?, ?, ?, ?, ?, ?)`,
       item.id, kind, date, mileage, nextDue, text(req.body.done_by), text(req.body.notes), req.user.id)).lastInsertRowid;
     await saveDocs(req.files, { ...docs, recordId });
-    if (kind === 'service') await run('UPDATE vehicles SET last_service_date = ? WHERE id = ?', date, item.id);
-    if (kind === 'mot') await run('UPDATE vehicles SET mot_due = ? WHERE id = ?', nextDue, item.id);
-    if (kind === 'tax') await run('UPDATE vehicles SET tax_due = ? WHERE id = ?', nextDue, item.id);
+    // Backdated paperwork goes into the history without pulling the vehicle's dates backwards.
+    if (kind === 'service') await run('UPDATE vehicles SET last_service_date = ? WHERE id = ? AND (last_service_date IS NULL OR last_service_date <= ?)', date, item.id, date);
+    if (kind === 'mot') await run('UPDATE vehicles SET mot_due = ? WHERE id = ? AND (mot_due IS NULL OR mot_due <= ?)', nextDue, item.id, nextDue);
+    if (kind === 'tax') await run('UPDATE vehicles SET tax_due = ? WHERE id = ? AND (tax_due IS NULL OR tax_due <= ?)', nextDue, item.id, nextDue);
     if (mileage != null) await run('UPDATE vehicles SET mileage = GREATEST(COALESCE(mileage, 0), ?) WHERE id = ?', mileage, item.id);
   });
   req.flash('success', { service: 'Service recorded.', mot: 'MOT recorded.', tax: 'Tax renewal recorded.', repair: 'Repair recorded.' }[kind]);

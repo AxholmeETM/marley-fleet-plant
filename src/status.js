@@ -20,7 +20,7 @@ function parseDate(s) {
 }
 
 function isValidDate(s) {
-  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parseDate(s).getTime());
+  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && isoDate(parseDate(s)) === s;
 }
 
 function addMonths(s, months) {

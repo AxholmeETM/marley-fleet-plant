@@ -115,7 +115,7 @@ router.get('/users/:id', async (req, res) => {
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Employee not found.' });
   const vehicles = await listVehicles();
   const cards = await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
-    ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::int END, c.card_ref`);
+    ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`);
   res.render('user-view', {
     title: item.name, crumbs: [['Employees', '/users'], [item.name]], item, EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
     myVehicles: vehicles.filter((v) => v.driver_id === item.id), otherVehicles: vehicles.filter((v) => v.driver_id !== item.id && v.active),
