@@ -244,6 +244,11 @@ test('admin and driver flows', async () => {
   const slingId = (await get("SELECT id FROM plant WHERE description = '2 leg chain sling'")).id;
   await admin('POST', '/projects/J100/plant', { plant_id: slingId });
   assert.equal((await get('SELECT job_ref FROM plant WHERE id = ?', slingId)).job_ref, 'J100');
+  // For plant they add check sheets and report defects; services, tests, repairs and documents are for the office.
+  assert.equal((await manager('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: status.isoDate() })).status, 403);
+  assert.equal((await manager('POST', `/plant/${plant.id}/records`, { kind: 'planned', record_date: '2099-01-01', notes: 'x' })).status, 403);
+  assert.doesNotMatch((await manager('GET', `/plant/${plant.id}`)).text, /Add record/);
+  assert.equal((await manager('POST', '/defects', { asset: `plant:${plant.id}`, description: 'Cracked mirror' })).status, 302);
   const mDash = (await manager('GET', '/')).text;
   assert.match(mDash, /To do/);
   assert.match(mDash, /My vehicle and fuel card/);

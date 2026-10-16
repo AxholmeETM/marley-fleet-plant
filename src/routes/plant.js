@@ -166,7 +166,7 @@ router.post('/plant/:id', requireAdmin, async (req, res) => {
   res.redirect(`/plant/${id}`);
 });
 
-router.post('/plant/:id/records', docUpload, async (req, res) => {
+router.post('/plant/:id/records', requireAdmin, docUpload, async (req, res) => {
   const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Plant not found.', 404);
   if (!canUsePlant(req.user, item)) throw new UserError('That item is not on one of your projects.', 403);
@@ -209,7 +209,7 @@ router.post('/plant/:id/records', docUpload, async (req, res) => {
   res.redirect(`/plant/${item.id}`);
 });
 
-router.post('/plant/:id/records/:rid/done', async (req, res) => {
+router.post('/plant/:id/records/:rid/done', requireAdmin, async (req, res) => {
   if (!canUsePlant(req.user, await get('SELECT id, job_ref FROM plant WHERE id = ?', Number(req.params.id)))) throw new UserError('That item is not on one of your projects.', 403);
   await repairDone(req, 'plant', Number(req.params.id), Number(req.params.rid));
   res.redirect(`/plant/${Number(req.params.id)}#history`);

@@ -45,7 +45,7 @@
       <% if (r.notes) { %><dt>Notes</dt><dd style="white-space:pre-wrap"><%= r.notes %></dd><% } %>
     </dl>
     <%- docList(ds) %>
-    <% if (r.planned && (isAdmin || assetType === 'plant')) { %>
+    <% if (r.planned && isAdmin) { %>
     <form method="post" action="<%= assetType === 'plant' ? '/plant/' : '/vehicles/' %><%= item.id %>/records/<%= r.id %>/done">
       <div class="form-grid">
         <div class="field"><label for="donedate-<%= r.id %>">Date done</label><input id="donedate-<%= r.id %>" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
@@ -55,7 +55,7 @@
       <div class="form-actions"><button class="btn dark" type="submit">Mark as done</button></div>
     </form>
     <% } %>
-    <% if (isAdmin || assetType === 'plant') { %>
+    <% if (isAdmin) { %>
     <form method="post" action="/documents" enctype="multipart/form-data">
       <input type="hidden" name="asset" value="<%= assetType %>:<%= item.id %>"><input type="hidden" name="record" value="<%= r.id %>"><input type="hidden" name="kind" value="<%= r.kind %>">
       <div class="field"><label for="recdocs-<%= r.id %>">Add documents</label><input id="recdocs-<%= r.id %>" name="docs" type="file" accept="image/*,application/pdf" multiple required></div>

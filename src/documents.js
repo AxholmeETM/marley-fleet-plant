@@ -75,7 +75,7 @@ router.post('/documents', upload, async (req, res) => {
   const [assetType, idStr] = String(req.body.asset || '').split(':');
   const assetId = Number(idStr);
   if (!DOC_KINDS[assetType] || !(await canSeeAsset(req.user, assetType, assetId))) throw new UserError('Plant or vehicle not found.', 404);
-  if (assetType === 'vehicle' && !isAdmin(req.user)) throw new UserError('Only the office can add vehicle documents.', 403);
+  if (!isAdmin(req.user)) throw new UserError('Only the office can add documents.', 403);
   if (!req.files || !req.files.length) throw new UserError('Please choose a file to upload.');
   const kind = DOC_KINDS[assetType][req.body.kind] ? req.body.kind : 'other';
   // Documents added from a History pop-up belong to that service record.

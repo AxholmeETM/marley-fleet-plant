@@ -4,8 +4,9 @@
   <div><h1><%= item.plant_no %> <span class="muted" style="font-weight:400">– <%= item.description %></span></h1></div>
   <div class="actions">
     <% if (item.weekly_checks) { %><a class="btn" href="/checks/plant/new?plant=<%= item.id %>">New check sheet</a><% } %>
-    <button class="btn" type="button" data-open="record-dlg">Add record</button>
-    <% if (isAdmin) { %><a class="btn primary" href="/plant/<%= item.id %>/edit">Edit Details</a><% } %>
+    <% if (!isAdmin) { %><a class="btn" href="/defects/new?asset=plant:<%= item.id %>">Report defect</a><% } %>
+    <% if (isAdmin) { %><button class="btn" type="button" data-open="record-dlg">Add record</button>
+    <a class="btn primary" href="/plant/<%= item.id %>/edit">Edit Details</a><% } %>
   </div>
 </div>
 <%- include('partials/pane-end') %>
@@ -73,6 +74,7 @@
     </div>
   </div>
 </div>
+<% if (isAdmin) { %>
 <dialog id="record-dlg" class="dlg">
   <form class="card" method="post" action="/plant/<%= item.id %>/records" enctype="multipart/form-data">
     <div class="dlg-head"><h2>Add a record</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
@@ -97,6 +99,7 @@
     <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn dark" type="submit">Save record</button></div>
   </form>
 </dialog>
+<% } %>
 <script>
   (function () {
     const kind = document.getElementById('kind');
@@ -112,6 +115,8 @@
       notes.placeholder = defect ? 'Describe the defect' : planned ? 'e.g. Replace track tensioner' : 'Work done, parts, invoice no.';
       document.getElementById('rnotes-label').textContent = defect ? 'What is wrong?' : planned ? 'What is the repair?' : 'Notes';
     }
+    // Only the office adds records; everyone else just sees the history.
+    if (kind) {
     kind.addEventListener('change', upd); upd();
     const dlg = document.getElementById('record-dlg');
     document.querySelectorAll('[data-open="record-dlg"]').forEach((b) => b.addEventListener('click', () => dlg.showModal()));
@@ -120,6 +125,7 @@
     if (want && kind.querySelector(`option[value="${want}"]`)) { kind.value = want; kind.dispatchEvent(new Event('change')); dlg.showModal(); }
     dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
     dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+    }
     const rows = document.querySelectorAll('#history tr[data-type]'), none = document.querySelector('.tl-none');
     function filter(t) {
       current = t;

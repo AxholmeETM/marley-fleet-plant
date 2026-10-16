@@ -43,10 +43,11 @@ async function todoList(plant, vehicles, defects, receipts, { admin = true } = {
   for (const p of plant) {
     const title = `${p.plant_no} · ${p.description}`;
     const where = p.job_ref ? ` · Project ${p.job_ref}` : '';
-    due(p.service, title, p.service.text + where, `/plant/${p.id}#record-service`, 'Record service');
+    // Only the office records services and tests; site managers get a link to the item.
+    due(p.service, title, p.service.text + where, admin ? `/plant/${p.id}#record-service` : `/plant/${p.id}`, admin ? 'Record service' : 'View');
     // Never inspected: rolled up into one line, as a new register can have dozens of these.
     if (p.loler.level === 'overdue' && !p.loler.due) noInspection.push(p.plant_no);
-    else due(p.loler, title, `${INSPECTION_TYPES[p.inspection_type] || 'LOLER'}: ${p.loler.text}${where}`, `/plant/${p.id}#record-loler`, 'Record test');
+    else due(p.loler, title, `${INSPECTION_TYPES[p.inspection_type] || 'LOLER'}: ${p.loler.text}${where}`, admin ? `/plant/${p.id}#record-loler` : `/plant/${p.id}`, admin ? 'Record test' : 'View');
     if (p.check.level === 'overdue') checksOver.push(p.plant_no);
     else if (p.check.level === 'soon') checksSoon.push(p.plant_no);
   }
