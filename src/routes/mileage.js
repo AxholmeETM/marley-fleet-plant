@@ -174,9 +174,12 @@ router.get('/mileage/addresses', async (req, res) => {
   const people = await listPeople();
   const p = await period(req.query);
   const { vehicles, places } = await mileageFor(p);
+  const unsaved = unsavedAddresses(vehicles);
+  // One list at a time: what still needs sorting, then the saved work, home and unknown addresses.
+  const show = ['sort', 'work', 'home', 'unknown'].includes(req.query.show) ? req.query.show : unsaved.length ? 'sort' : 'work';
   res.render('mileage-addresses', {
     title: 'Addresses', navActive: '/mileage',
-    places, people, p, qs: qs(p), unsaved: unsavedAddresses(vehicles), back: `/mileage/addresses?${qs(p)}`,
+    places, people, p, qs: qs(p), unsaved, show, back: `/mileage/addresses?${qs(p)}&show=${show}`,
   });
 });
 

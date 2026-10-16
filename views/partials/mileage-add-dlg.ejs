@@ -1,0 +1,48 @@
+<% /* Save a new home, work or unknown address. Opened by any element with data-add (JSON: address, kind, user_id). Needs people, back. */ %>
+<% if (canEdit) { %>
+<dialog id="add-dlg" class="dlg">
+  <div class="card">
+    <div class="dlg-head"><h2>Save address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <form method="post" action="/mileage/addresses" id="add-form">
+      <input type="hidden" name="back" value="<%= back %>">
+      <div class="field"><label for="add-addr">Address with postcode</label><div class="mi-addr-row"><input id="add-addr" name="address" type="text" required placeholder="e.g. Bosworth Close, Hatfield, DN7 6AP"><a class="btn" id="add-map" target="_blank" rel="noopener">See location</a></div></div>
+      <div class="field"><label>This is</label>
+        <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
+        <label class="radio"><input type="radio" name="kind" value="home"> Someone's home</label>
+        <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (counts as personal; ask the driver)</label>
+      </div>
+      <div class="field" id="add-user-f" hidden><label for="add-user">Whose home</label><select id="add-user" name="user_id"><option value="">Choose…</option><% for (const u of people) { %><option value="<%= u.id %>"><%= u.name %></option><% } %></select></div>
+      <div class="field" id="add-label-f"><label for="add-label">Name or note <span class="hint">(optional, e.g. Rossington site, or ask Andy)</span></label><input id="add-label" name="label" type="text"></div>
+      <p class="hint">Trips match on the postcode, or the same street in the same postcode area.</p>
+      <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save address</button></div>
+    </form>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const dlg = document.getElementById('add-dlg');
+    const form = document.getElementById('add-form');
+    const addr = document.getElementById('add-addr');
+    const map = () => { document.getElementById('add-map').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(addr.value); };
+    const sync = () => {
+      const home = form.querySelector('input[name=kind]:checked').value === 'home';
+      document.getElementById('add-user-f').hidden = !home;
+      document.getElementById('add-label-f').hidden = home;
+      document.getElementById('add-user').required = home;
+    };
+    form.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', sync));
+    addr.addEventListener('input', map);
+    document.querySelectorAll('[data-add]').forEach((el) => el.addEventListener('click', (e) => {
+      e.preventDefault();
+      const a = JSON.parse(el.dataset.add || '{}');
+      form.reset();
+      addr.value = a.address || '';
+      document.getElementById('add-user').value = a.user_id || '';
+      form.querySelector(`input[name=kind][value=${a.kind || 'work'}]`).checked = true;
+      map(); sync(); dlg.showModal();
+      if (!a.address) addr.focus();
+    }));
+    dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
+  })();
+</script>
+<% } %>

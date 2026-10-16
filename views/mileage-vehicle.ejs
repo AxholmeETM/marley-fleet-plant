@@ -5,7 +5,7 @@
     const tag = place && canEdit
       ? `<button type="button" class="mi-tag ${place.kind} mi-edit" title="Change or remove this saved address" data-place="${escapeHtml(JSON.stringify({ id: place.id, kind: place.kind, user_id: place.user_id, label: place.label, address: place.address }))}">${TAGS[place.kind]}</button>`
       : where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: counts as personal">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
-    const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-addr="${escapeHtml(text)}" title="Save this address">+</button>` : '';
+    const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-add="${escapeHtml(JSON.stringify({ address: text, user_id: v.driver_id }))}" title="Save this address">+</button>` : '';
     return tag + escapeHtml(text || '—') + add;
   };
 %>
@@ -47,43 +47,7 @@
     <% } %>
   </table></div>
 </div>
-<p class="small muted"><span class="mi-tag home">Home</span> and <span class="mi-tag work">Work</span> mark saved addresses. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click a tag to change or remove that saved address. Click <strong>+</strong> next to any other address to save it as a work address<%= v.driver_id ? ' or as ' + v.driver_name + "'s home" : '' %>. Click Work or Personal on a trip to change it; Undo puts it back.</p>
-<% if (canEdit) { %>
-<dialog id="addr-dlg" class="dlg">
-  <div class="card">
-    <div class="dlg-head"><h2>Save address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
-    <form method="post" action="/mileage/addresses">
-      <input type="hidden" name="back" value="<%= back %>">
-      <div class="field"><label for="addr-text">Address</label><div class="mi-addr-row"><input id="addr-text" name="address" type="text" required><a class="btn" id="addr-map" target="_blank" rel="noopener">See location</a></div></div>
-      <div class="field"><label>This is</label>
-        <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
-        <label class="radio"><input type="radio" name="kind" value="home"> Someone's home</label>
-        <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (counts as personal; ask the driver)</label>
-      </div>
-      <div class="field" id="addr-user-f" hidden><label for="addr-user">Whose home</label><select id="addr-user" name="user_id"><option value="">Choose…</option><% for (const u of people) { %><option value="<%= u.id %>" <%= u.id === v.driver_id ? 'selected' : '' %>><%= u.name %></option><% } %></select></div>
-      <div class="field" id="addr-label-f"><label for="addr-label">Name or note <span class="hint">(optional, e.g. Rossington site, or ask Andy)</span></label><input id="addr-label" name="label" type="text"></div>
-      <p class="hint">Trips match on the postcode, or the same street in the same postcode area.</p>
-      <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save address</button></div>
-    </form>
-  </div>
-</dialog>
-<script>
-  (() => {
-    const dlg = document.getElementById('addr-dlg');
-    document.querySelectorAll('.mi-add').forEach((b) => b.addEventListener('click', () => {
-      dlg.querySelector('#addr-text').value = b.dataset.addr;
-      dlg.querySelector('#addr-map').href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(b.dataset.addr);
-      dlg.showModal();
-    }));
-    dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
-    dlg.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', () => {
-      const home = dlg.querySelector('input[name=kind]:checked').value === 'home';
-      document.getElementById('addr-label-f').hidden = home;
-      document.getElementById('addr-user-f').hidden = !home;
-      document.getElementById('addr-user').required = home;
-    }));
-  })();
-</script>
-<% } %>
+<p class="small muted"><span class="mi-tag home">Home</span> and <span class="mi-tag work">Work</span> mark saved addresses. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click a tag to change or remove that saved address. Click <strong>+</strong> next to any other address to save it as a work address, a home or an unknown address. Click Work or Personal on a trip to change it; Undo puts it back.</p>
+<%- include('partials/mileage-add-dlg') %>
 <%- include('partials/mileage-place-dlg') %>
 <%- include('partials/footer') %>

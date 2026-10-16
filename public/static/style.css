@@ -749,13 +749,6 @@ table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .mi-trips tr.mi-row-personal td { background: #fffaf1; }
 .mi-use { display: inline-flex; gap: 8px; align-items: center; margin: 0; }
 .mi-use button.pill { border: 0; cursor: pointer; font: inherit; font-size: .78rem; }
-.mi-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-@media (max-width: 900px) { .mi-cols { grid-template-columns: 1fr; } }
-.mi-cols h2 { font-size: 1.05rem; margin: 0 0 4px; }
-.mi-places { width: 100%; margin: 8px 0 14px; }
-.mi-places td { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .86rem; vertical-align: top; }
-.mi-add-form { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
-.mi-add-form .btn { justify-self: start; }
 label.radio { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 4px 0; }
 .report-dates { display: flex; gap: 10px; } .report-dates .field { flex: 1; }
 tfoot th { border-top: 1.5px solid var(--line-strong); text-align: left; font-weight: 600; }
@@ -808,20 +801,12 @@ tr.mi-done td { background: #f6fbf7; }
 .mi-check-box { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 999px; background: var(--grey-bg); }
 .mi-check-box.done { background: var(--green-bg); color: var(--green); }
 a.mi-tile { color: inherit; } a.mi-tile:hover { text-decoration: none; border-color: var(--line-strong); }
-.mi-unsaved { margin-bottom: 14px; }
-.mi-unsaved h2 { font-size: 1.05rem; margin: 0; }
-.mi-unsaved .pick-filter { margin: 4px 0 10px; max-width: 340px; }
-.mi-unsaved-list { max-height: 480px; overflow: auto; }
 .mi-quick { display: inline-flex; gap: 6px; align-items: center; margin: 0; }
 .mi-quick select { padding: 4px 6px; font-size: .8rem; }
-.table-wrap.mi-unsaved-list thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
 .mi-quick select { min-width: 140px; max-width: 180px; }
 .mi-tag.unknown { background: #f3e8fb; color: #6b2f8f; }
-.mi-unknowns { margin-top: 14px; }
-.mi-unknowns h2 { font-size: 1.05rem; margin: 0 0 4px; }
 button.mi-tag { border: 0; cursor: pointer; font-family: inherit; line-height: inherit; }
 button.mi-tag:hover { outline: 1.5px solid currentColor; }
-.mi-places form { display: inline; }
 .mi-weekpick { align-items: flex-end; }
 .mi-weekpick .field select { min-width: 260px; }
 .btn[aria-disabled=true] { opacity: .45; cursor: default; pointer-events: none; }
@@ -833,3 +818,14 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .mi-trips tr.group th { background: var(--navy); color: #fff; font-size: .9rem; font-weight: 600; padding: 9px 12px; text-align: left; }
 .mi-trips tr.group th span { float: right; font-weight: 500; opacity: .85; }
 @media print { .mi-trips tr.group th { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+
+/* Addresses: one list at a time under tabs, with a search box. */
+.mi-addr-head { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.mi-addr-head .subnav { margin: 0; }
+.mi-addr-head .subnav .count { color: var(--muted); font-size: .78rem; margin-left: 3px; }
+.mi-addr-head .pick-filter { margin: 0; width: 280px; max-width: 100%; }
+.mi-addr-intro { margin: 10px 0 12px; }
+.mi-addr-table td.desc a { color: var(--ink); }
+.mi-addr-table td.desc a:hover { color: var(--navy); text-decoration: underline; }
+.mi-addr-table td { vertical-align: middle; }
+.mi-addr-table .mi-quick { justify-content: flex-end; }
