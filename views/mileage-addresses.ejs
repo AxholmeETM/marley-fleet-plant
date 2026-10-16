@@ -40,7 +40,7 @@
     <p class="muted small">Sites, the yard and suppliers. A journey that reaches one of these is work.</p>
     <% if (works.length) { %><table class="mi-places"><tbody><% for (const w of works) { %>
       <tr><td><% if (w.label) { %><strong><%= w.label %></strong><br><% } %><%= w.address %></td>
-        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= w.id %>/remove"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+        <td class="num"><% if (canEdit) { %><button class="linkbtn" type="button" data-place="<%= JSON.stringify({ id: w.id, kind: w.kind, user_id: w.user_id, label: w.label, address: w.address }) %>">Edit</button> <form method="post" action="/mileage/addresses/<%= w.id %>/remove"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
     <% } %></tbody></table><% } else { %><p class="empty">None yet.</p><% } %>
     <% if (canEdit) { %><form method="post" action="/mileage/addresses" class="mi-add-form">
       <input type="hidden" name="kind" value="work"><input type="hidden" name="back" value="<%= back %>">
@@ -54,7 +54,7 @@
     <p class="muted small">Where each driver lives. A journey that starts or ends at home without reaching a work address is personal.</p>
     <% if (homes.length) { %><table class="mi-places"><tbody><% for (const h of homes) { %>
       <tr><td><strong><%= h.user_name || '—' %></strong><br><%= h.address %></td>
-        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= h.id %>/remove"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+        <td class="num"><% if (canEdit) { %><button class="linkbtn" type="button" data-place="<%= JSON.stringify({ id: h.id, kind: h.kind, user_id: h.user_id, label: h.label, address: h.address }) %>">Edit</button> <form method="post" action="/mileage/addresses/<%= h.id %>/remove"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
     <% } %></tbody></table><% } else { %><p class="empty">None yet.</p><% } %>
     <% if (canEdit) { %><form method="post" action="/mileage/addresses" class="mi-add-form">
       <input type="hidden" name="kind" value="home"><input type="hidden" name="back" value="<%= back %>">
@@ -66,10 +66,11 @@
 </div>
 <div class="card mi-unknowns">
   <h2>Unknown addresses <span class="count"><%= unknowns.length %></span></h2>
-  <p class="muted small">Places nobody is sure about yet. Trips to them don't count as work, so ask the driver, then save the address as work or their home, or remove it.</p>
+  <p class="muted small">Places nobody is sure about yet. Trips to or from them count as personal miles until you ask the driver and change the address to work or their home.</p>
   <% if (unknowns.length) { %><table class="mi-places"><tbody><% for (const u of unknowns) { %>
     <tr><td><% if (u.label) { %><strong><%= u.label %></strong><br><% } %><%= u.address %></td>
-      <td class="num nowrap"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= u.id %>/remove" class="mi-quick"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+      <td class="num nowrap"><% if (canEdit) { %><button class="linkbtn" type="button" data-place="<%= JSON.stringify({ id: u.id, kind: u.kind, user_id: u.user_id, label: u.label, address: u.address }) %>">Edit</button> <form method="post" action="/mileage/addresses/<%= u.id %>/remove" class="mi-quick"><input type="hidden" name="back" value="<%= back %>"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
   <% } %></tbody></table><% } else { %><p class="empty">None.</p><% } %>
 </div>
+<%- include('partials/mileage-place-dlg') %>
 <%- include('partials/footer') %>

@@ -1,7 +1,10 @@
 <%- include('partials/header') %>
 <%
-  const loc = (where, text, t) => {
-    const tag = where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: ask the driver">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
+  const TAGS = { home: 'Home', work: 'Work', unknown: 'Unknown' };
+  const loc = (where, text, place) => {
+    const tag = place && canEdit
+      ? `<button type="button" class="mi-tag ${place.kind} mi-edit" title="Change or remove this saved address" data-place="${escapeHtml(JSON.stringify({ id: place.id, kind: place.kind, user_id: place.user_id, label: place.label, address: place.address }))}">${TAGS[place.kind]}</button>`
+      : where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: counts as personal">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
     const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-addr="${escapeHtml(text)}" title="Save this address">+</button>` : '';
     return tag + escapeHtml(text || '—') + add;
   };
@@ -24,9 +27,9 @@
       <% for (const t of dm) { %>
       <tr id="trip-<%= t.id %>" class="<%= t.use === 'personal' ? 'mi-row-personal' : '' %>">
         <td class="nowrap"><%= t.started_at.slice(11, 16) %></td>
-        <td><%- loc(t.from, t.start_loc, t) %></td>
+        <td><%- loc(t.from, t.start_loc, t.fromPlace) %></td>
         <td class="nowrap"><%= t.ended_at ? t.ended_at.slice(11, 16) : '—' %></td>
-        <td><%- loc(t.to, t.end_loc, t) %></td>
+        <td><%- loc(t.to, t.end_loc, t.toPlace) %></td>
         <td class="num"><%= M.fmtMiles(t.distance) %></td>
         <td class="num"><%= M.fmtSecs(t.trip_secs) %></td>
         <td class="num"><%= t.idle_secs ? M.fmtSecs(t.idle_secs) : '—' %></td>
@@ -43,7 +46,7 @@
     <% } %>
   </table></div>
 </div>
-<p class="small muted"><span class="mi-tag home">Home</span> and <span class="mi-tag work">Work</span> mark saved addresses. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click <strong>+</strong> next to any other address to save it as a work address<%= v.driver_id ? ' or as ' + v.driver_name + "'s home" : '' %>. Click Work or Personal on a trip to change it; Undo puts it back.</p>
+<p class="small muted"><span class="mi-tag home">Home</span> and <span class="mi-tag work">Work</span> mark saved addresses. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click a tag to change or remove that saved address. Click <strong>+</strong> next to any other address to save it as a work address<%= v.driver_id ? ' or as ' + v.driver_name + "'s home" : '' %>. Click Work or Personal on a trip to change it; Undo puts it back.</p>
 <% if (canEdit) { %>
 <dialog id="addr-dlg" class="dlg">
   <div class="card">
@@ -54,7 +57,7 @@
       <div class="field"><label>This is</label>
         <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
         <% if (v.driver_id) { %><label class="radio"><input type="radio" name="kind" value="home"> <%= v.driver_name %>'s home</label><input type="hidden" name="user_id" value="<%= v.driver_id %>"><% } %>
-        <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (not sure what it is, ask the driver)</label>
+        <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (counts as personal; ask the driver)</label>
       </div>
       <div class="field" id="addr-label-f"><label for="addr-label">Name or note <span class="hint">(optional, e.g. Rossington site, or ask Andy)</span></label><input id="addr-label" name="label" type="text"></div>
       <p class="hint">Trips match on the postcode, or the same street in the same postcode area.</p>
@@ -73,4 +76,5 @@
   })();
 </script>
 <% } %>
+<%- include('partials/mileage-place-dlg') %>
 <%- include('partials/footer') %>

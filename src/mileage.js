@@ -90,8 +90,11 @@ function classify(trips, { homes, works, unknowns = [] }) {
   const isHome = matcher(homes);
   const isWork = matcher(works);
   const isUnknown = matcher(unknowns);
-  const where = (loc) => (isHome(loc) ? 'home' : isWork(loc) ? 'work' : isUnknown(loc) ? 'unknown' : null);
-  const out = trips.map((t) => ({ ...t, from: where(t.start_loc), to: where(t.end_loc) }));
+  const placeOf = (loc) => isHome(loc) || isWork(loc) || isUnknown(loc) || null;
+  const out = trips.map((t) => {
+    const fromPlace = placeOf(t.start_loc); const toPlace = placeOf(t.end_loc);
+    return { ...t, fromPlace, toPlace, from: fromPlace ? fromPlace.kind : null, to: toPlace ? toPlace.kind : null };
+  });
   // A weekday stop of 3 hours or more that starts in the morning, away from home, is taken to be a site not saved yet.
   for (let i = 0; i < out.length - 1; i++) {
     const t = out[i]; const next = out[i + 1];
@@ -114,6 +117,8 @@ function classify(trips, { homes, works, unknowns = [] }) {
     if (t.to === 'home') { decide(j); j = []; }
   }
   decide(j);
+  // An address saved as unknown counts as personal (Ben, 16/10/2026): any trip to or from one.
+  for (const t of out) if (t.from === 'unknown' || t.to === 'unknown') t.auto = 'personal';
   for (const t of out) t.use = t.override || t.auto;
   return out;
 }

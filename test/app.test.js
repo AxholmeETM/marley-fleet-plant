@@ -599,6 +599,17 @@ test('mileage from a SoTrack trip list', async () => {
   assert.match((await admin('GET', '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13')).text, /mi-tag unknown/);
   ({ vehicles } = await mileageFor({ from: '2026-10-12', to: '2026-10-13' }));
   assert.equal(vehicles.find((x) => x.reg === 'YX21KPL').personal, 7);
+  // Unknown counts as personal even on a work journey; editing it to work makes those trips work.
+  const unk = await get("SELECT id FROM mileage_places WHERE kind = 'unknown'");
+  await admin('POST', `/mileage/addresses/${unk.id}`, { kind: 'unknown', address: 'Site Road, Rossington, DN4 4DD', label: 'Ask Dave' });
+  ({ vehicles } = await mileageFor({ from: '2026-10-12', to: '2026-10-13' }));
+  assert.equal(vehicles.find((x) => x.reg === 'YX21KPL').personal, 7 + 16 + 12 * 0);
+  await admin('POST', `/mileage/addresses/${unk.id}`, { kind: 'work', address: 'Site Road, Rossington, DN4 4DD', label: 'Rossington' });
+  assert.equal((await get('SELECT kind, label FROM mileage_places WHERE id = ?', unk.id)).kind, 'work');
+  ({ vehicles } = await mileageFor({ from: '2026-10-12', to: '2026-10-13' }));
+  assert.equal(vehicles.find((x) => x.reg === 'YX21KPL').personal, 7);
+  assert.equal((await admin('POST', `/mileage/addresses/${unk.id}`, { kind: 'home', address: 'Site Road, DN4 4DD' })).status, 400);
+  await admin('POST', `/mileage/addresses/${unk.id}/remove`, {});
   // Change a trip by hand, then undo it.
   const shop = await get("SELECT id FROM mileage_trips WHERE end_loc LIKE 'Shop Road%'");
   await admin('POST', `/mileage/trips/${shop.id}`, { use: 'work', back: '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13' });

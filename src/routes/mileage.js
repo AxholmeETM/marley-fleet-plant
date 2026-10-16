@@ -168,8 +168,10 @@ function unsavedAddresses(vehicles) {
     .sort((a, b) => (b.site - a.site) || (b.visits - a.visits));
 }
 
+const listPeople = () => all("SELECT id, name FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR EXISTS (SELECT 1 FROM vehicles v WHERE v.driver_id = users.id)) ORDER BY name");
+
 router.get('/mileage/addresses', async (req, res) => {
-  const people = await all("SELECT id, name FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR EXISTS (SELECT 1 FROM vehicles v WHERE v.driver_id = users.id)) ORDER BY name");
+  const people = await listPeople();
   const p = await period(req.query);
   const { vehicles, places } = await mileageFor(p);
   res.render('mileage-addresses', {
@@ -201,7 +203,21 @@ router.post('/mileage/addresses', async (req, res) => {
   const userId = kind === 'home' ? Number(req.body.user_id) : null;
   if (kind === 'home' && !(await get('SELECT id FROM users WHERE id = ?', userId))) throw new UserError('Please choose whose home this is.');
   await run('INSERT INTO mileage_places (kind, user_id, label, address) VALUES (?, ?, ?, ?)', kind, userId, kind !== 'home' ? text(req.body.label) : null, address.slice(0, 300));
-  req.flash('success', { home: 'Home address added. Personal miles have been worked out again.', work: 'Work address added. Trips to it now count as work.', unknown: 'Saved as an unknown address. It is listed under Unknown addresses so you can ask the driver; trips to it do not count as work.' }[kind]);
+  req.flash('success', { home: 'Home address added. Personal miles have been worked out again.', work: 'Work address added. Trips to it now count as work.', unknown: 'Saved as an unknown address. Trips to or from it now count as personal miles. It is listed under Unknown addresses so you can ask the driver.' }[kind]);
+  res.redirect(backTo(req.body.back));
+});
+
+// Change a saved address: what it is, whose home, its name, or the address itself.
+router.post('/mileage/addresses/:id', async (req, res) => {
+  const place = await get('SELECT id FROM mileage_places WHERE id = ?', Number(req.params.id));
+  if (!place) throw new UserError('Address not found.', 404);
+  const kind = ['home', 'unknown'].includes(req.body.kind) ? req.body.kind : 'work';
+  const address = text(req.body.address);
+  if (!address || !M.addressKey(address).postcode) throw new UserError('Please keep the postcode in the address, e.g. DN7 6AP. That is how trips are matched to it.');
+  const userId = kind === 'home' ? Number(req.body.user_id) : null;
+  if (kind === 'home' && !(await get('SELECT id FROM users WHERE id = ?', userId))) throw new UserError('Please choose whose home this is.');
+  await run('UPDATE mileage_places SET kind = ?, user_id = ?, label = ?, address = ? WHERE id = ?', kind, userId, kind !== 'home' ? text(req.body.label) : null, address.slice(0, 300), place.id);
+  req.flash('success', 'Address updated. Trips have been worked out again.');
   res.redirect(backTo(req.body.back));
 });
 
@@ -234,6 +250,7 @@ router.get('/mileage/:reg', async (req, res) => {
     days[days.length - 1].trips.push(t);
   }
   res.render('mileage-vehicle', {
+    people: await listPeople(),
     title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Weekly trips', '/mileage/weeks'], [weekLabel(p), `/mileage/drivers?${qs(p)}`], [v.regText]], navActive: '/mileage',
     p, qs: qs(p), v, days, M, back: `/mileage/${reg}?${qs(p)}`,
   });

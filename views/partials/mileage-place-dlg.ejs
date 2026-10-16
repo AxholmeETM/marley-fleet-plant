@@ -1,0 +1,46 @@
+<% /* Edit a saved home, work or unknown address. Opened by any element with data-place (JSON of the place). Needs people, back. */ %>
+<% if (canEdit) { %>
+<dialog id="place-dlg" class="dlg">
+  <div class="card">
+    <div class="dlg-head"><h2>Edit saved address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <form method="post" id="place-form">
+      <input type="hidden" name="back" value="<%= back %>">
+      <div class="field"><label for="pl-addr">Address</label><input id="pl-addr" name="address" type="text" required></div>
+      <div class="field"><label>This is</label>
+        <label class="radio"><input type="radio" name="kind" value="work"> A work address (site, yard, supplier)</label>
+        <label class="radio"><input type="radio" name="kind" value="home"> Someone's home</label>
+        <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (counts as personal; ask the driver)</label>
+      </div>
+      <div class="field" id="pl-user-f"><label for="pl-user">Whose home</label><select id="pl-user" name="user_id"><option value="">Choose…</option><% for (const u of people) { %><option value="<%= u.id %>"><%= u.name %></option><% } %></select></div>
+      <div class="field" id="pl-label-f"><label for="pl-label">Name or note <span class="hint">(optional)</span></label><input id="pl-label" name="label" type="text"></div>
+      <p class="hint">Changing this works every trip out again, in every week.</p>
+      <div class="form-actions"><button class="btn danger" type="submit" id="pl-remove" formnovalidate onclick="return confirm('Remove this saved address? Trips to it go back to not saved.')">Remove</button><span style="flex:1"></span><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save changes</button></div>
+    </form>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const dlg = document.getElementById('place-dlg');
+    const form = document.getElementById('place-form');
+    const sync = () => {
+      const kind = (form.querySelector('input[name=kind]:checked') || {}).value;
+      document.getElementById('pl-user-f').hidden = kind !== 'home';
+      document.getElementById('pl-label-f').hidden = kind === 'home';
+      document.getElementById('pl-user').required = kind === 'home';
+    };
+    form.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', sync));
+    document.querySelectorAll('[data-place]').forEach((el) => el.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const pl = JSON.parse(el.dataset.place);
+      form.action = '/mileage/addresses/' + pl.id;
+      document.getElementById('pl-remove').formAction = '/mileage/addresses/' + pl.id + '/remove';
+      document.getElementById('pl-addr').value = pl.address;
+      document.getElementById('pl-label').value = pl.label || '';
+      document.getElementById('pl-user').value = pl.user_id || '';
+      form.querySelector(`input[name=kind][value=${pl.kind}]`).checked = true;
+      sync(); dlg.showModal();
+    }));
+    dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
+  })();
+</script>
+<% } %>

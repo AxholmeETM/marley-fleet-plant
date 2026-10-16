@@ -819,3 +819,6 @@ a.mi-tile { color: inherit; } a.mi-tile:hover { text-decoration: none; border-co
 .mi-tag.unknown { background: #f3e8fb; color: #6b2f8f; }
 .mi-unknowns { margin-top: 14px; }
 .mi-unknowns h2 { font-size: 1.05rem; margin: 0 0 4px; }
+button.mi-tag { border: 0; cursor: pointer; font-family: inherit; line-height: inherit; }
+button.mi-tag:hover { outline: 1.5px solid currentColor; }
+.mi-places form { display: inline; }
