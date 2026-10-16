@@ -1,0 +1,41 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Weekly trips <span class="count"><%= weeks.length %></span></h1>
+    <p class="muted" style="margin:0">Upload each week's Trip List from SoTrack, then open the week and tick each driver once their trips are checked.</p></div>
+  <div class="actions">
+    <a class="btn" href="/mileage/addresses">Home and work addresses</a>
+    <% if (canEdit) { %>
+    <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
+      <label class="btn primary">Upload SoTrack file<input type="file" name="file" accept=".xlsx" required hidden onchange="this.form.submit()"></label>
+    </form>
+    <% } %>
+  </div>
+</div>
+<%- include('partials/pane-end') %>
+<% if (!weeks.length) { %>
+<div class="card">
+  <p class="empty" style="text-align:left">No weeks uploaded yet.</p>
+  <ol class="mi-steps">
+    <li>In SoTrack, run the <strong>Trip List</strong> report for the week and download it as Excel.</li>
+    <li>Click <strong>Upload SoTrack file</strong> and choose that file. Trips already loaded are skipped, so overlapping weeks are fine.</li>
+    <li>Add each driver's home under <strong>Home and work addresses</strong>, with your sites and the yard as work addresses.</li>
+  </ol>
+</div>
+<% } else { %>
+<div class="card flush">
+  <div class="table-wrap"><table>
+    <thead><tr><th>Week</th><th class="num">Trips</th><th class="num">Work miles</th><th class="num">Personal miles</th><th>Drivers checked</th><th>Uploaded</th></tr></thead>
+    <tbody><% for (const w of weeks) { const href = '/mileage/drivers?' + w.qs; const done = w.checked === w.drivers; %>
+      <tr class="clickable" onclick="location.href='<%= href %>'">
+        <td class="nowrap"><a href="<%= href %>"><strong><%= ukDate(w.date_from) %> to <%= ukDate(w.date_to) %></strong></a></td>
+        <td class="num"><%= w.trips %></td>
+        <td class="num"><%= M.fmtMiles(w.work) %></td>
+        <td class="num"><%= w.personal ? M.fmtMiles(w.personal) : '—' %></td>
+        <td class="nowrap"><span class="pill <%= done ? 'ok' : w.checked ? 'soon' : 'none' %>"><%= done ? 'All ' + w.drivers + ' checked' : w.checked + ' of ' + w.drivers + ' checked' %></span></td>
+        <td class="small muted nowrap"><%= ukDate(w.uploaded_at) %><%= w.uploaded_by ? ' by ' + w.uploaded_by : '' %><%= w.files > 1 ? ' (' + w.files + ' files)' : '' %></td>
+      </tr>
+    <% } %></tbody>
+  </table></div>
+</div>
+<% } %>
+<%- include('partials/footer') %>

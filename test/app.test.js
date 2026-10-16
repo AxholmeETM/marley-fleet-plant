@@ -549,7 +549,7 @@ test('mileage from a SoTrack trip list', async () => {
   const file = fs.readFileSync(path.join(__dirname, 'fixtures', 'trip-list.xlsx'));
   const send = () => { const fd = new FormData(); fd.append('file', new Blob([file]), 'Trip List.xlsx'); return admin('POST', '/mileage/upload', fd); };
   let r = await send();
-  assert.equal(r.location, '/mileage?from=2026-10-12&to=2026-10-13');
+  assert.equal(r.location, '/mileage/drivers?from=2026-10-12&to=2026-10-13');
   assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_trips')).n, 7);
   // The same file again adds nothing.
   await send();
@@ -602,6 +602,12 @@ test('mileage from a SoTrack trip list', async () => {
   const rep = (await admin('GET', '/reports/mileage?from=2026-10-12&to=2026-10-13')).text;
   assert.match(rep, /Mileage report/);
   assert.match(rep, /Trips – Dave Driver/);
+  // Weekly trips lists the week; removing it clears its trips so it can be uploaded again.
+  assert.match((await admin('GET', '/mileage/weeks')).text, /12\/10\/2026 to 13\/10\/2026/);
+  await admin('POST', '/mileage/weeks/remove', { from: '2026-10-12', to: '2026-10-13' });
+  assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_trips')).n, 0);
+  assert.equal((await send()).location, '/mileage/drivers?from=2026-10-12&to=2026-10-13');
+  assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_trips')).n, 7);
   // Drivers can't see it.
   const d = client();
   await d('POST', '/login', { email: 'dave@test.local', password: 'driverpass1' });

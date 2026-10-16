@@ -2,7 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const { all, get, run } = require('../db');
 const { requireAdmin, UserError, text } = require('../auth');
-const { isValidDate, addDays, isoDate } = require('../status');
+const { isValidDate, addDays, isoDate, ukDate } = require('../status');
 const M = require('../mileage');
 
 const router = express.Router();
@@ -82,9 +82,41 @@ router.get('/mileage', async (req, res) => {
   });
 });
 
+const weekLabel = (p) => `${ukDate(p.from)} to ${ukDate(p.to)}`;
+
+// Weekly trips: one row for each week uploaded, newest first, with how far the checking has got.
+router.get('/mileage/weeks', async (req, res) => {
+  const ranges = await all(`SELECT m.date_from, m.date_to, COUNT(*)::int AS files, MAX(m.created_at) AS uploaded_at,
+      (SELECT u.name FROM mileage_uploads x LEFT JOIN users u ON u.id = x.user_id WHERE x.date_from = m.date_from AND x.date_to = m.date_to ORDER BY x.id DESC LIMIT 1) AS uploaded_by
+    FROM mileage_uploads m GROUP BY m.date_from, m.date_to ORDER BY m.date_from DESC, m.date_to DESC LIMIT 52`);
+  const weeks = [];
+  for (const r of ranges) {
+    const p = { from: r.date_from, to: r.date_to };
+    const { vehicles } = await mileageFor(p);
+    const trips = vehicles.flatMap((v) => v.trips);
+    weeks.push({ ...r, p, qs: qs(p), drivers: vehicles.length, checked: vehicles.filter((v) => v.checked).length, trips: trips.length, work: M.sum(trips, 'work'), personal: M.sum(trips, 'personal') });
+  }
+  res.render('mileage-weeks', { title: 'Weekly trips', weeks, M });
+});
+
+// One week: every driver's miles, with a tick for each once checked.
 router.get('/mileage/drivers', async (req, res) => {
   const s = await summary(req.query);
-  res.render('mileage', { title: 'Mileage', ...s, placeCount: (await get('SELECT COUNT(*)::int AS n FROM mileage_places')).n });
+  res.render('mileage', {
+    title: `Week ${weekLabel(s.p)}`, crumbs: [['Weekly trips', '/mileage/weeks'], [weekLabel(s.p)]], navActive: '/mileage',
+    ...s, placeCount: (await get('SELECT COUNT(*)::int AS n FROM mileage_places')).n,
+  });
+});
+
+// Clear a week so it can be uploaded again: its trips, ticks and upload record.
+router.post('/mileage/weeks/remove', async (req, res) => {
+  const { from, to } = req.body;
+  if (!isValidDate(from) || !isValidDate(to)) throw new UserError('Please choose the week to remove.');
+  const gone = await run('DELETE FROM mileage_trips WHERE started_at >= ? AND started_at < ?', from, addDays(to, 1));
+  await run('DELETE FROM mileage_checks WHERE date_from = ? AND date_to = ?', from, to);
+  await run('DELETE FROM mileage_uploads WHERE date_from = ? AND date_to = ?', from, to);
+  req.flash('success', `Week ${weekLabel({ from, to })} removed (${gone.changes} trips). Upload its file again to start afresh.`);
+  res.redirect('/mileage/weeks');
 });
 
 // Upload a Trip List. Trips already loaded (same vehicle and start time) are skipped, so overlapping files are fine.
@@ -113,7 +145,7 @@ router.post('/mileage/upload', upload, async (req, res) => {
   const skipped = trips.length - added;
   req.flash('success', `${added} trip${added === 1 ? '' : 's'} added${skipped ? `, ${skipped} already loaded` : ''}.`
     + (unknown.length ? ` ${unknown.length} vehicle${unknown.length === 1 ? ' is' : 's are'} not on the Fleet register: ${unknown.map(M.fmtReg).join(', ')}.` : ''));
-  res.redirect(`/mileage?from=${dates[0]}&to=${dates[dates.length - 1]}`);
+  res.redirect(`/mileage/drivers?from=${dates[0]}&to=${dates[dates.length - 1]}`);
 });
 
 // Home and work addresses.
@@ -159,7 +191,7 @@ router.post('/mileage/check', async (req, res) => {
   res.redirect(backTo(req.body.back));
 });
 
-const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
+const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers|\/weeks)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
 
 router.post('/mileage/addresses', async (req, res) => {
   const kind = req.body.kind === 'home' ? 'home' : 'work';
@@ -202,7 +234,7 @@ router.get('/mileage/:reg', async (req, res) => {
     days[days.length - 1].trips.push(t);
   }
   res.render('mileage-vehicle', {
-    title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Mileage', `/mileage/drivers?${qs(p)}`], [v.regText]], navActive: '/mileage',
+    title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Weekly trips', '/mileage/weeks'], [weekLabel(p), `/mileage/drivers?${qs(p)}`], [v.regText]], navActive: '/mileage',
     p, qs: qs(p), v, days, M, back: `/mileage/${reg}?${qs(p)}`,
   });
 });

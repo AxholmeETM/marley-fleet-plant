@@ -1,33 +1,20 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1>Mileage by driver <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1><% if (vehicles.length) { %><p class="muted" style="margin:0"><strong><%= totals.checked %> of <%= vehicles.length %></strong> checked<%= totals.checked === vehicles.length ? '. All done for these dates.' : '' %></p><% } %></div>
+  <div><h1>Week <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1><% if (vehicles.length) { %><p class="muted" style="margin:0"><strong><%= totals.checked %> of <%= vehicles.length %></strong> checked<%= totals.checked === vehicles.length ? '. All done for this week.' : '' %></p><% } %></div>
   <div class="actions">
     <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
     <% if (vehicles.length) { %><a class="btn" href="/reports/mileage?<%= qs %>&print=1" target="_blank" rel="noopener">Print</a><% } %>
-    <% if (canEdit) { %>
-    <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
-      <label class="btn primary">Upload SoTrack file<input type="file" name="file" accept=".xlsx" required hidden onchange="this.form.submit()"></label>
-    </form>
-    <% } %>
+    <% if (canEdit && vehicles.length) { %><form method="post" action="/mileage/weeks/remove" style="display:inline" onsubmit="return confirm('Remove every trip and tick for this week? You can upload the file again afterwards.')">
+      <input type="hidden" name="from" value="<%= p.from %>"><input type="hidden" name="to" value="<%= p.to %>"><button class="btn" type="submit">Remove week</button></form><% } %>
   </div>
 </div>
-<form class="filters" method="get">
-  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= p.from %>"></div>
-  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= p.to %>"></div>
-  <% if (uploads.length) { %><div class="field"><label for="upl">Uploaded files</label>
-    <select id="upl" onchange="if (this.value) { const [f, t] = this.value.split('|'); this.form.from.value = f; this.form.to.value = t; this.form.submit(); }">
-      <option value="">Choose…</option>
-      <% for (const u of uploads) { %><option value="<%= u.date_from %>|<%= u.date_to %>"><%= ukDate(u.date_from) %> to <%= ukDate(u.date_to) %> (<%= u.trips %> trips)</option><% } %>
-    </select></div><% } %>
-  <button class="btn" type="submit">Show</button>
-</form>
 <%- include('partials/pane-end') %>
 <% if (!vehicles.length) { %>
 <div class="card">
   <p class="empty" style="text-align:left">No trips for these dates yet.</p>
   <ol class="mi-steps">
     <li>In SoTrack, run the <strong>Trip List</strong> report for the week and download it as Excel.</li>
-    <li>Click <strong>Upload SoTrack file</strong> and choose that file. Trips already loaded are skipped, so overlapping weeks are fine.</li>
+    <li>On <a href="/mileage/weeks">Weekly trips</a>, click <strong>Upload SoTrack file</strong> and choose that file. Trips already loaded are skipped, so overlapping weeks are fine.</li>
     <li>Add each driver's home under <strong>Home and work addresses</strong>, with your sites and the yard as work addresses.</li>
   </ol>
 </div>
