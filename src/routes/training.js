@@ -52,10 +52,9 @@ router.get('/training/matrix', async (req, res) => {
   const grp = GROUPS.includes(req.query.group) ? req.query.group : '';
   const q = String(req.query.q || '').trim().toLowerCase();
   let { people } = data;
-  if (q) people = people.filter((p) => [p.name, p.job_title, p.training_note].some((f) => f && f.toLowerCase().includes(q)));
+  if (q) people = people.filter((p) => [p.name, p.job_title].some((f) => f && f.toLowerCase().includes(q)));
   const courses = data.courses.filter((c) => !grp || c.grp === grp);
-  const others = await all("SELECT id, name FROM users WHERE on_matrix = 0 AND active = 1 ORDER BY name");
-  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, grp, q: req.query.q || '', GROUPS, others, userLabel });
+  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, grp, q: req.query.q || '', GROUPS, userLabel });
 });
 
 // One person's training, to update their dates and notes.

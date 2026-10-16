@@ -2,7 +2,7 @@
 <% const cardLabel = (c) => [c.provider, c.card_ref ? '#' + c.card_ref : '', c.last4 ? '••' + c.last4 : ''].filter(Boolean).join(' '); %>
 <div class="page-head">
   <div><h1><%= item.name %></h1></div>
-  <div class="actions"><a class="btn primary" href="/users/<%= item.id %>/edit">Edit Details</a></div>
+  <div class="actions"><% if (canEdit) { %><a class="btn" href="/training/people/<%= item.id %>">Training</a><% } %><a class="btn primary" href="/users/<%= item.id %>/edit">Edit Details</a></div>
 </div>
 <%- include('partials/pane-end') %>
 <div class="grid grid-2">
