@@ -442,6 +442,35 @@ UPDATE training_courses c SET code = v.code, info = v.info FROM (VALUES
 -- The CITB health, safety and environment test, listed under the CSCS card (Ben, 16/10/2026).
 UPDATE training_courses SET short = 'HS&E Test', info = 'CITB Health, Safety and Environment (HS&E) touch screen test. Needed to apply for or renew a CSCS card, and for NPORS and CPCS cards with the CSCS logo. A pass is valid for 2 years.'
   WHERE key = 'hse_test' AND short IS NULL;
+-- Short info pop-ups (Ben, 16/10/2026): a one-line description, then "Label: value" lines.
+UPDATE training_courses c SET info = v.info FROM (VALUES
+  ('npors_a09a', E'Forward tipping dumper, A09 category.\nOn card: A09A'),
+  ('npors_ftd', E'Forward tipping dumper.\nOn card: N204AA, C204AA\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_ftd_e', E'Forward tipping dumper, E endorsement.\nOn card: N204AAE, C204AAE\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_roller', E'Ride-on roller.\nOn card: N214\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_360', E'360 excavator.\nOn card: N202TK, C202TK, N202TJ, C202TKZ\nT: Tracked\nJ: Over 10 tonnes\nK: Under 10 tonnes\nZ: Extra endorsement, e.g. lifting\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_180', E'180 excavator (backhoe loader).\nOn card: N201\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_lorry', E'Lorry-mounted crane.\nOn card: N107A\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_telehandler', E'Telescopic handler.\nOn card: N010J3, C010J3\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_rear_dumper', E'Rear tipping dumper.\nOn card: ZD2d, C205BC\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_excav_crane', E'Lifting loads with an excavator.\nOn card: N100, N100T, C100, N160\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_slinger', E'Attaching loads and guiding the operator during lifts.\nOn card: N402, N402S\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_harness', E'Wearing, checking and using a safety harness at height.\nOn card: N723'),
+  ('npors_shovel', E'Loading shovel.\nOn card: N209\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_marshaller', E'Guiding vehicles and plant around site.\nOn card: N403'),
+  ('npors_dozer', E'Crawler tractor / dozer.\nOn card: N215\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('cpcs_ftd', E'Forward tipping dumper.\nOn card: A09'),
+  ('cpcs_crane_sup', E'Supervising lifting operations.\nOn card: A62'),
+  ('cpcs_roller', E'Ride-on roller.\nOn card: A31'),
+  ('cpcs_skid', E'Skid steer loader.\nOn card: A23'),
+  ('cpcs_slinger', E'Attaching loads and guiding the operator during lifts.\nOn card: A40'),
+  ('cpcs_telehandler', E'Telescopic handler.\nOn card: A17 (A77 for 360 slew)'),
+  ('cpcs_excav_small', E'360 excavator under 10 tonnes.\nOn card: A58'),
+  ('cpcs_excav_large', E'360 excavator over 10 tonnes.\nOn card: A59'),
+  ('cpcs_dump_artic', E'Articulated dump truck.\nOn card: A56'),
+  ('cpcs_dump_rigid', E'Rigid dump truck.\nOn card: A57'),
+  ('hse_test', E'CITB health, safety and environment test.\nNeeded for: CSCS, and NPORS / CPCS cards with the CSCS logo\nValid: 2 years')
+) AS v(key, info) WHERE c.key = v.key AND c.info IS DISTINCT FROM v.info;
 -- Which CSCS card someone holds (green labourer, blue skilled worker, ...); its expiry is the CSCS Card course.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
 -- Which NPORS and CPCS operator card someone holds (red trained / blue competent ...); the categories are the NPORS and CPCS courses.

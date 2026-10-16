@@ -1,5 +1,5 @@
 <%# The "i" buttons next to course names: a click shows what the course is. %>
-<div class="info-pop" id="info-pop" role="dialog" aria-modal="false" hidden><strong id="info-pop-t"></strong><p id="info-pop-b"></p></div>
+<div class="info-pop" id="info-pop" role="dialog" aria-modal="false" hidden><strong id="info-pop-t"></strong><p id="info-pop-b"></p><dl id="info-pop-l"></dl></div>
 <script>
   (() => {
     const pop = document.getElementById('info-pop');
@@ -12,7 +12,18 @@
       if (at === b) return close();
       at = b;
       document.getElementById('info-pop-t').textContent = b.dataset.t;
-      document.getElementById('info-pop-b').textContent = b.dataset.b;
+      // First line is what it is; any "Label: value" lines after it become a short list.
+      const [desc, ...rest] = b.dataset.b.split('\n');
+      document.getElementById('info-pop-b').textContent = desc;
+      const dl = document.getElementById('info-pop-l');
+      dl.replaceChildren();
+      for (const line of rest) {
+        const i = line.indexOf(': ');
+        const dt = document.createElement('dt'); const dd = document.createElement('dd');
+        dt.textContent = i > 0 ? line.slice(0, i) : ''; dd.textContent = i > 0 ? line.slice(i + 2) : line;
+        dl.append(dt, dd);
+      }
+      dl.hidden = !rest.length;
       pop.hidden = false;
       const r = b.getBoundingClientRect();
       const w = pop.offsetWidth;
