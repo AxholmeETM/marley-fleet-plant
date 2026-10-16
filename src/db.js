@@ -467,6 +467,8 @@ UPDATE training_courses c SET name = v.new FROM (VALUES
   ('cpcs_dump_artic', 'Dump Truck Articulated (15T)', 'Articulated Dump Truck'),
   ('cpcs_dump_rigid', 'Dump Truck Rigid (15T)', 'Rigid Dump Truck')
 ) AS v(key, old, new) WHERE c.key = v.key AND c.name = v.old;
+-- Ben asked to remove the A09A course (16/10/2026). Its dates are kept but no longer shown.
+UPDATE training_courses SET active = 0 WHERE key = 'npors_a09a' AND active = 1;
 -- Short info pop-ups (Ben, 16/10/2026): a one-line description, then "Label: value" lines.
 UPDATE training_courses c SET info = v.info FROM (VALUES
   ('npors_a09a', E'Forward tipping dumper, A09 category.\nOn card: A09A\nA: Listed on the back of the card'),
