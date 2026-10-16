@@ -442,12 +442,13 @@ UPDATE training_courses c SET code = v.code, info = v.info FROM (VALUES
 -- The CITB health, safety and environment test, listed under the CSCS card (Ben, 16/10/2026).
 UPDATE training_courses SET short = 'HS&E Test', info = 'CITB Health, Safety and Environment (HS&E) touch screen test. Needed to apply for or renew a CSCS card, and for NPORS and CPCS cards with the CSCS logo. A pass is valid for 2 years.'
   WHERE key = 'hse_test' AND short IS NULL;
+UPDATE training_courses SET code = 'N214 / C214' WHERE key = 'npors_roller' AND code = 'N214';
 -- Short info pop-ups (Ben, 16/10/2026): a one-line description, then "Label: value" lines.
 UPDATE training_courses c SET info = v.info FROM (VALUES
   ('npors_a09a', E'Forward tipping dumper, A09 category.\nOn card: A09A\nA: Listed on the back of the card'),
-  ('npors_ftd', E'Forward tipping dumper.\nOn card: N204AA, C204AA\nAA: Listed on the back of the card\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
-  ('npors_ftd_e', E'Forward tipping dumper, E endorsement.\nOn card: N204AAE, C204AAE\nAAE: AA plus the E endorsement, listed on the back of the card\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
-  ('npors_roller', E'Ride-on roller.\nOn card: N214\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_ftd', E'Forward tipping dumper.\nOn card: N204AA, C204AA\nAA: Wheeled, all sizes except mini dumpers / skip loaders under 1 tonne\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_ftd_e', E'Forward tipping dumper, E endorsement.\nOn card: N204AAE, C204AAE\nAA: Wheeled, all sizes except mini dumpers / skip loaders under 1 tonne\nE: Extra endorsement, listed on the back of the card\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
+  ('npors_roller', E'Ride-on roller.\nOn card: N214, C214AV\nAV: Ride-on, articulated / vibrating\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
   ('npors_360', E'360 excavator.\nOn card: N202TK, C202TK, N202TJ, C202TKZ\nT: Tracked\nJ: Over 10 tonnes\nK: Under 10 tonnes\nZ: Extra endorsement, e.g. lifting\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
   ('npors_180', E'180 excavator (backhoe loader).\nOn card: N201\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
   ('npors_lorry', E'Lorry-mounted crane.\nOn card: N107A\nA: Listed on the back of the card\nN code: Traditional NPORS card\nC code: NPORS card with CSCS logo'),
