@@ -4,7 +4,7 @@ const { upload: docUpload, saveDocs } = require('../documents');
 const { listDefects, listPlant, listVehicles } = require('../queries');
 const { CATEGORIES } = require('../categories');
 const { isoDate, isValidDate } = require('../status');
-const { requireAdmin, isAdmin, canUsePlant, canUseVehicle, UserError, text } = require('../auth');
+const { requireAdmin, isAdmin, canUsePlant, plantFor, canUseVehicle, UserError, text } = require('../auth');
 
 const router = express.Router();
 
@@ -23,7 +23,7 @@ router.get('/defects', requireAdmin, async (req, res) => {
 router.get('/defects/new', async (req, res) => {
   res.render('defect-form', {
     title: 'Report a defect',
-    plant: canUsePlant(req.user) ? await listPlant() : [],
+    plant: canUsePlant(req.user) ? plantFor(req.user, await listPlant()) : [],
     vehicles: await listVehicles({ driverId: isAdmin(req.user) ? null : req.user.id }),
     selected: req.query.asset || '',
   });
@@ -34,7 +34,7 @@ router.post('/defects', docUpload, async (req, res) => {
   const table = assetType === 'plant' ? 'plant' : assetType === 'vehicle' ? 'vehicles' : null;
   const asset = table && await get(`SELECT * FROM ${table} WHERE id = ?`, Number(idStr));
   if (!asset) throw new UserError('Please choose the plant or vehicle.');
-  if (table === 'plant' ? !canUsePlant(req.user) : !canUseVehicle(req.user, asset)) throw new UserError('You can only report defects on your own vehicle.', 403);
+  if (table === 'plant' ? !canUsePlant(req.user, asset) : !canUseVehicle(req.user, asset)) throw new UserError(table === 'plant' ? 'That item is not on one of your projects.' : 'You can only report defects on your own vehicle.', 403);
   const description = text(req.body.description);
   if (!description) throw new UserError('Please describe the defect.');
   const severity = ['minor', 'major', 'unsafe'].includes(req.body.severity) ? req.body.severity : 'minor';

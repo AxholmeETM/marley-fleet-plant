@@ -247,6 +247,8 @@ INSERT INTO projects (code, name) VALUES
   ('M26-009', 'Bessacarr'),
   ('M26-010', 'Harworth, Doncaster')
 ON CONFLICT (code) DO NOTHING;
+-- The site manager a project is assigned to: they see that project's plant and equipment.
+ALTER TABLE projects ADD COLUMN IF NOT EXISTS manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
 `;
 
 const TABLES = ['users', 'plant', 'vehicles', 'service_records', 'plant_checks', 'vehicle_checks', 'defects', 'fuel_cards', 'fuel_entries', 'projects', 'settings', 'documents'];

@@ -5,11 +5,15 @@ function requireAdmin(req, res, next) {
 
 // Who can see what:
 // - admin users: everything
-// - site managers: all plant (view, checks, defects, service and inspection records) plus their own vehicles
+// - site managers: the plant and equipment on the projects assigned to them (view, checks, defects, service and
+//   inspection records), plus their own vehicles and fuel cards
 // - fleet drivers: only the vehicles assigned to them
 const isAdmin = (u) => !!u && u.role === 'admin';
 const isSiteManager = (u) => !!u && u.role === 'driver' && u.employee_type === 'site_manager';
-const canUsePlant = (u) => isAdmin(u) || isSiteManager(u);
+// Without a plant item: may this person use the plant pages at all? With one: may they see that item?
+const canUsePlant = (u, plant) => isAdmin(u) || (isSiteManager(u) && (plant === undefined || (!!plant && !!plant.job_ref && (u.projects || []).includes(plant.job_ref))));
+// The items from a plant list this person may see.
+const plantFor = (u, list) => (isAdmin(u) ? list : list.filter((p) => canUsePlant(u, p)));
 
 function requirePlantAccess(req, res, next) {
   if (canUsePlant(req.user)) return next();
@@ -38,4 +42,4 @@ function numberField(value, label, { integer = false, min = 0, max = 99999999 } 
 
 const text = (v) => (v == null ? null : String(v).trim() || null);
 
-module.exports = { requireAdmin, requirePlantAccess, isAdmin, isSiteManager, canUsePlant, canUseVehicle, UserError, numberField, text };
+module.exports = { requireAdmin, requirePlantAccess, isAdmin, isSiteManager, canUsePlant, plantFor, canUseVehicle, UserError, numberField, text };

@@ -3,7 +3,7 @@ const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listProjects, listPlant, getPlant, listDefects } = require('../queries');
 const { planRepair, repairDone } = require('../planned');
 const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
-const { requireAdmin, requirePlantAccess, UserError, numberField, text } = require('../auth');
+const { requireAdmin, requirePlantAccess, canUsePlant, plantFor, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
 const { serviceWork, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE, INSPECTION_TYPES } = require('../categories');
 
@@ -102,7 +102,7 @@ router.get(['/plant', '/equipment'], async (req, res) => {
   const filter = req.query.filter || '';
   const category = CATEGORY[req.query.category] && CATEGORY[req.query.category].section === section ? req.query.category : '';
   const owner = OWNERS[req.query.owner] ? req.query.owner : '';
-  let plant = (await listPlant({ includeInactive: filter === 'inactive' })).filter((p) => (CATEGORY[p.category] || CATEGORY.misc).section === section);
+  let plant = plantFor(req.user, await listPlant({ includeInactive: filter === 'inactive' })).filter((p) => (CATEGORY[p.category] || CATEGORY.misc).section === section);
   if (filter === 'inactive') plant = plant.filter((p) => !p.active);
   if (filter === 'attention') plant = plant.filter((p) => [p.service, p.loler, p.check].some((s) => s.level === 'overdue' || s.level === 'soon') || p.open_defects);
   if (filter === 'repair') plant = plant.filter((p) => p.status === 'repair');
@@ -139,6 +139,7 @@ router.post('/plant', requireAdmin, async (req, res) => {
 router.get('/plant/:id', async (req, res) => {
   const item = await getPlant(Number(req.params.id));
   if (!item) return res.status(404).render('error', { title: 'Not found', message: 'Plant not found.' });
+  if (!canUsePlant(req.user, item)) return res.status(403).render('error', { title: 'No access', message: 'That item is not on one of your projects.' });
   const checks = await all(`SELECT c.*, u.name AS user_name FROM plant_checks c JOIN users u ON u.id = c.user_id
     WHERE c.plant_id = ? ORDER BY c.check_date DESC, c.id DESC LIMIT 20`, item.id);
   const records = await all(`SELECT * FROM service_records WHERE asset_type = 'plant' AND asset_id = ? ORDER BY record_date DESC, id DESC`, item.id);
@@ -168,6 +169,7 @@ router.post('/plant/:id', requireAdmin, async (req, res) => {
 router.post('/plant/:id/records', docUpload, async (req, res) => {
   const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Plant not found.', 404);
+  if (!canUsePlant(req.user, item)) throw new UserError('That item is not on one of your projects.', 403);
   if (req.body.kind === 'planned') return await planRepair(req, res, 'plant', item.id);
   const kind = ['service', 'loler', 'thorough', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
@@ -208,6 +210,7 @@ router.post('/plant/:id/records', docUpload, async (req, res) => {
 });
 
 router.post('/plant/:id/records/:rid/done', async (req, res) => {
+  if (!canUsePlant(req.user, await get('SELECT id, job_ref FROM plant WHERE id = ?', Number(req.params.id)))) throw new UserError('That item is not on one of your projects.', 403);
   await repairDone(req, 'plant', Number(req.params.id), Number(req.params.rid));
   res.redirect(`/plant/${Number(req.params.id)}#history`);
 });

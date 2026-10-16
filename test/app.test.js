@@ -235,6 +235,21 @@ test('admin and driver flows', async () => {
   // Site managers: all plant and equipment (no prices, no editing the asset record), plus their own vehicles.
   const manager = client();
   await manager('POST', '/login', { email: 'sam@test.local', password: 'managerpass1' });
+  // Until a project is assigned to them they see no plant; then they see that project's plant and equipment.
+  assert.doesNotMatch((await manager('GET', '/plant')).text, /MCL-EX-0001/);
+  assert.equal((await manager('GET', `/plant/${plant.id}`)).status, 403);
+  const samId = (await get("SELECT id FROM users WHERE email = 'sam@test.local'")).id;
+  await admin('POST', '/projects', { code: 'J100', name: 'Test job', active: '1', manager_id: samId });
+  assert.match((await admin('GET', '/projects/J100')).text, /Sam Site/);
+  const slingId = (await get("SELECT id FROM plant WHERE description = '2 leg chain sling'")).id;
+  await admin('POST', '/projects/J100/plant', { plant_id: slingId });
+  assert.equal((await get('SELECT job_ref FROM plant WHERE id = ?', slingId)).job_ref, 'J100');
+  const mDash = (await manager('GET', '/')).text;
+  assert.match(mDash, /To do/);
+  assert.match(mDash, /My vehicle and fuel card/);
+  assert.equal((await manager('GET', '/calendar')).status, 200);
+  assert.equal((await manager('GET', '/projects')).status, 403);
+  assert.equal((await manager('GET', '/fuel-cards')).status, 403);
   assert.match((await manager('GET', '/plant')).text, /MCL-EX-0001/);
   assert.match((await manager('GET', '/equipment')).text, /2 leg chain sling/);
   assert.doesNotMatch((await manager('GET', '/plant')).text, /2 leg chain sling/);
@@ -245,6 +260,8 @@ test('admin and driver flows', async () => {
 
   assert.equal((await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'NOPE', ...checklist(PLANT_ITEMS, -1) })).status, 400);
   await admin('POST', '/projects', { code: 'J200', name: 'Test site', active: '1' });
+  assert.equal((await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'J200', ...checklist(PLANT_ITEMS, -1) })).status, 400);
+  await admin('POST', '/projects/J200', { name: 'Test site', active: '1', manager_id: samId });
   await manager('POST', '/checks/plant', { asset_id: plant.id, check_date: status.isoDate(), reading: '1004.5', job_ref: 'J200', ...checklist(PLANT_ITEMS, -1) });
   const updated = await get('SELECT running_hours, job_ref FROM plant WHERE id = ?', plant.id);
   assert.equal(updated.running_hours, 1004.5);

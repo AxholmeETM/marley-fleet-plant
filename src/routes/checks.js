@@ -2,7 +2,7 @@ const express = require('express');
 const { all, get, run, transaction } = require('../db');
 const { listProjects, listPlant, listVehicles, getPlant, getVehicle } = require('../queries');
 const { VEHICLE_ITEMS, PLANT_ITEMS, RESULTS } = require('../checklists');
-const { requireAdmin, requirePlantAccess, isAdmin, canUsePlant, canUseVehicle, UserError, numberField, text } = require('../auth');
+const { requireAdmin, requirePlantAccess, isAdmin, canUsePlant, plantFor, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isoDate, isValidDate, addDays, ukDate } = require('../status');
 
 const router = express.Router();
@@ -68,10 +68,12 @@ router.post('/checks/vehicle', async (req, res) => {
 // ---- Plant weekly check sheet ----
 
 router.get('/checks/plant/new', requirePlantAccess, async (req, res) => {
-  const plant = (await listPlant()).filter((p) => p.weekly_checks && p.status !== 'repair');
+  const plant = plantFor(req.user, await listPlant()).filter((p) => p.weekly_checks && p.status !== 'repair');
   const selectedId = Number(req.query.plant) || null;
+  // Site managers can only book plant to their own projects.
+  const projects = (await listProjects()).filter((pr) => isAdmin(req.user) || req.user.projects.includes(pr.code));
   res.render('check-form', {
-    title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS, projects: await listProjects(),
+    title: 'Plant check sheet', kind: 'plant', items: PLANT_ITEMS, projects,
     assets: plant, mineIds: [], asset: selectedId ? plant.find((p) => p.id === selectedId) : null,
   });
 });
@@ -79,12 +81,15 @@ router.get('/checks/plant/new', requirePlantAccess, async (req, res) => {
 router.post('/checks/plant', requirePlantAccess, async (req, res) => {
   const plant = await getPlant(Number(req.body.asset_id));
   if (!plant || !plant.active) throw new UserError('Please choose a piece of plant.');
+  if (!canUsePlant(req.user, plant)) throw new UserError('That item is not on one of your projects.', 403);
   const results = readResults(req.body, PLANT_ITEMS);
   const date = checkDate(req.body.check_date);
   const hours = numberField(req.body.reading, 'Running hours');
   if (hours == null && plant.tracks_hours) throw new UserError('Please enter the running hours from the hour meter.');
   const jobRef = text(req.body.job_ref) || plant.job_ref;
-  if (text(req.body.job_ref) && jobRef !== plant.job_ref && !await get('SELECT code FROM projects WHERE code = ? AND active = 1', jobRef)) throw new UserError('Please choose a project from the list.');
+  if (text(req.body.job_ref) && jobRef !== plant.job_ref && (!await get('SELECT code FROM projects WHERE code = ? AND active = 1', jobRef) || !(isAdmin(req.user) || req.user.projects.includes(jobRef)))) {
+    throw new UserError('Please choose a project from the list.');
+  }
   const defectItems = results.filter((r) => r.result === 'defect');
   const details = text(req.body.defect_details);
   if (defectItems.length && !details) throw new UserError('Please describe the defects you found.');
@@ -137,7 +142,7 @@ router.get('/checks/:type/:id', async (req, res) => {
       JOIN plant p ON p.id = c.plant_id JOIN users u ON u.id = c.user_id WHERE c.id = ?`, Number(req.params.id));
   }
   // Admins see every check, site managers every plant check, everyone else only their own.
-  const allowed = check && (isAdmin(req.user) || check.user_id === req.user.id || (type === 'plant' && canUsePlant(req.user)));
+  const allowed = check && (isAdmin(req.user) || check.user_id === req.user.id || (type === 'plant' && canUsePlant(req.user, await get('SELECT job_ref FROM plant WHERE id = ?', check.plant_id))));
   if (!allowed) {
     return res.status(404).render('error', { title: 'Not found', message: 'Check not found.' });
   }

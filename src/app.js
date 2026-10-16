@@ -3,7 +3,7 @@ const cookieSession = require('cookie-session');
 const path = require('path');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { ready, get, run, ON_WORKERS } = require('./db');
+const { ready, all, get, run, ON_WORKERS } = require('./db');
 const status = require('./status');
 const { userLabel } = require('./categories');
 const views = require('./views');
@@ -68,6 +68,10 @@ async function createApp() {
   app.use(async (req, res, next) => {
     const uid = req.session && req.session.uid;
     req.user = uid ? await get('SELECT id, name, email, role, employee_type, job_title FROM users WHERE id = ? AND active = 1', uid) : null;
+    // Site managers see the plant on the projects assigned to them.
+    if (req.user && req.user.role === 'driver' && req.user.employee_type === 'site_manager') {
+      req.user.projects = (await all('SELECT code FROM projects WHERE manager_id = ?', req.user.id)).map((p) => p.code);
+    }
     res.locals.user = req.user;
     res.locals.isAdmin = !!(req.user && req.user.role === 'admin');
     res.locals.flash = req.session.flash || null;

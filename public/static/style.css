@@ -551,3 +551,12 @@ body.report-page { background: #f3f4f8; display: block; color: var(--ink); }
 /* Planned repairs on the calendar */
 .cal-ev.plan, .wk-ev.plan { background: #ece6fb; color: #4b2a99; }
 .todo li.lv-plan { border-left-color: #6b46c1; }
+/* Project page: pick plant to add */
+.pick-list { max-height: 320px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+.pick { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 12px; border-bottom: 1px solid var(--line); cursor: pointer; margin: 0; font-weight: 400; }
+.pick:last-child { border-bottom: 0; }
+.pick[hidden] { display: none; }
+.pick input { width: auto; margin: 0; }
+tr.clickable { cursor: pointer; }
+.today-list .row-muted { padding: 11px 22px; border-top: 1px solid var(--line); }
+.kpis-4 .kpi.plain { background: var(--accent-soft); color: var(--navy); } .kpis-4 .kpi.plain .label, .kpis-4 .kpi.plain .sub { color: var(--navy); }

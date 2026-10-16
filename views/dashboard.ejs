@@ -1,17 +1,22 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1>Dashboard</h1><p class="muted" style="margin:0"><%= ukDate(today) %> · <%= stats.plantTotal %> plant · <%= stats.vehicleTotal %> vehicles</p></div>
+  <div><h1>Dashboard</h1><p class="muted" style="margin:0"><%= ukDate(today) %><% if (manager) { %> · <%= projects.length ? 'Project' + (projects.length === 1 ? ' ' : 's ') + projects.join(', ') : 'No projects assigned yet' %><% } %> · <%= stats.plantTotal %> plant · <%= stats.vehicleTotal %> vehicle<%= stats.vehicleTotal === 1 ? '' : 's' %></p></div>
 </div>
 <%- include('partials/pane-end') %>
 <div class="kpis kpis-4">
-  <a class="kpi <%= stats.unsafe ? 'bad' : 'good' %>" href="/defects"><div class="label">Unsafe defects</div><div class="value"><%= stats.unsafe %></div>
+  <a class="kpi <%= stats.unsafe ? 'bad' : 'good' %>" href="<%= manager ? '#todo' : '/defects' %>"<% if (manager) { %> data-goto="defects"<% } %>><div class="label">Unsafe defects</div><div class="value"><%= stats.unsafe %></div>
     <div class="sub"><%= stats.unsafe ? 'do not use until fixed' : 'none reported' %></div></a>
   <a class="kpi <%= stats.overdue ? 'bad' : 'good' %>" href="#todo" data-goto="overdue"><div class="label">Overdue</div><div class="value"><%= stats.overdue %></div>
     <div class="sub">services, inspections, MOT, tax, checks</div></a>
   <a class="kpi <%= stats.dueSoon ? 'warn' : 'good' %>" href="#todo" data-goto="soon"><div class="label">Coming up</div><div class="value"><%= stats.dueSoon %></div>
     <div class="sub">due in the next 30 days</div></a>
+  <% if (manager) { %>
+  <a class="kpi plain" href="/plant"><div class="label">My plant</div><div class="value"><%= stats.plantTotal %></div>
+    <div class="sub">plant and equipment on my projects</div></a>
+  <% } else { %>
   <a class="kpi <%= stats.receipts ? 'warn' : 'good' %>" href="/fuel/log?show=unverified&period=year"><div class="label">Receipts to check</div><div class="value"><%= stats.receipts %></div>
     <div class="sub"><%= stats.receiptsCost ? money(stats.receiptsCost) + ' waiting for the office' : 'waiting for the office' %></div></a>
+  <% } %>
 </div>
 
 <div class="dash-grid">
@@ -74,6 +79,17 @@
   </script>
 
   <div class="dash-side">
+    <% if (manager) { %>
+    <div class="card flush">
+      <h2>My vehicle and fuel card</h2>
+      <div class="today-list">
+        <% for (const v of myVehicles) { %><a href="/vehicles/<%= v.id %>"><span><span class="reg sm"><%= v.reg %></span> <%= [v.make, v.model].filter(Boolean).join(' ') %></span><%- pill(v.mot.level === 'overdue' || v.tax.level === 'overdue' ? { level: 'overdue', text: 'Overdue' } : { level: 'ok', text: 'MOT ' + (v.mot.due ? ukDate(v.mot.due) : '—') }) %></a><% } %>
+        <% if (!myVehicles.length) { %><div class="row-muted"><span class="muted">No vehicle assigned</span></div><% } %>
+        <% for (const c of myCards) { %><a href="/fuel/new"><span><%= c.provider %><%= c.card_ref ? ' #' + c.card_ref : '' %> <span class="muted">···· <%= c.last4 || '' %></span></span><%- c.expiryStatus && c.expiryStatus.due ? pill(c.expiryStatus) : '<span class="pill none">No expiry</span>' %></a><% } %>
+        <% if (!myCards.length) { %><div class="row-muted"><span class="muted">No fuel card assigned</span></div><% } %>
+      </div>
+    </div>
+    <% } else { %>
     <div class="card">
       <div class="card-head"><h2>Fuel</h2><a class="small" href="/fuel">Fuel Logs →</a></div>
       <% const cMax = Math.max(1000, ...months.map((m) => m.litres)) * 1.18;
@@ -94,11 +110,12 @@
       </svg>
       <p class="small muted" style="margin:6px 0 0">Litres used, last 6 months · <%= money(months[months.length - 1].cost) %> spent this month</p>
     </div>
+    <% } %>
     <div class="card flush">
       <h2>Checks</h2>
       <div class="today-list">
-        <a href="/checks?type=vehicle"><span>Walk-arounds today</span><span class="pill <%= stats.walkaroundsDone >= stats.walkaroundsExpected ? 'ok' : 'soon' %>"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></span></a>
-        <a href="/checks?type=plant"><span>Plant check sheets this week</span><span class="pill <%= stats.checksWeek >= stats.checksExpected ? 'ok' : 'soon' %>"><%= stats.checksWeek %> / <%= stats.checksExpected %></span></a>
+        <a href="<%= manager ? '/checks/vehicle/new' : '/checks?type=vehicle' %>"><span>Walk-arounds today</span><span class="pill <%= stats.walkaroundsDone >= stats.walkaroundsExpected ? 'ok' : 'soon' %>"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></span></a>
+        <a href="<%= manager ? '/checks/plant/new' : '/checks?type=plant' %>"><span>Plant check sheets this week</span><span class="pill <%= stats.checksWeek >= stats.checksExpected ? 'ok' : 'soon' %>"><%= stats.checksWeek %> / <%= stats.checksExpected %></span></a>
       </div>
     </div>
   </div>

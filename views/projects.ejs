@@ -11,21 +11,17 @@
 <div class="card flush">
   <% if (!projects.length) { %><p class="empty">No projects yet.</p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Project No.</th><th class="desc">Project / site</th><th class="num">Plant &amp; equipment</th><th>Status</th><th></th></tr></thead>
-    <tbody><% for (const p of projects) { %>
-      <tr>
-        <td class="nowrap"><strong><%= p.code %></strong></td>
-        <td colspan="4">
-          <form class="inline-edit" method="post" action="/projects/<%= encodeURIComponent(p.code) %>">
-            <input name="name" type="text" value="<%= p.name %>" required aria-label="Project / site for <%= p.code %>">
-            <span class="num small muted"><%= p.items %> item<%= Number(p.items) === 1 ? '' : 's' %></span>
-            <select name="active" aria-label="Status of <%= p.code %>"><option value="1" <%= p.active ? 'selected' : '' %>>Open</option><option value="0" <%= p.active ? '' : 'selected' %>>Closed</option></select>
-            <button class="btn small" type="submit">Save</button>
-          </form>
-        </td>
+    <thead><tr><th>Project No.</th><th class="desc">Project / site</th><th>Site manager</th><th class="num">Plant &amp; equipment</th><th>Status</th></tr></thead>
+    <tbody><% for (const p of projects) { const href = '/projects/' + encodeURIComponent(p.code); %>
+      <tr class="clickable" onclick="location.href='<%= href %>'">
+        <td class="nowrap"><a href="<%= href %>"><strong><%= p.code %></strong></a></td>
+        <td><%= p.name %></td>
+        <td><%= p.manager_name || '—' %></td>
+        <td class="num"><%= p.items %></td>
+        <td><span class="pill <%= p.active ? 'ok' : 'none' %>"><%= p.active ? 'Open' : 'Closed' %></span></td>
       </tr>
     <% } %></tbody>
   </table></div><% } %>
 </div>
-<p class="small muted">Closed projects no longer appear in the Project No. drop-downs. Items already booked to them keep their number.</p>
+<p class="small muted">Click a project to pick its site manager and the plant on it. Closed projects no longer appear in the Project No. drop-downs; items already booked to them keep their number.</p>
 <%- include('partials/footer') %>

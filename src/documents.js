@@ -50,7 +50,7 @@ const listDocs = (assetType, assetId) => all(`SELECT d.*, u.name AS user_name FR
 
 // Who may see an asset's documents: the same people who can open its page.
 async function canSeeAsset(user, assetType, assetId) {
-  if (assetType === 'plant') return canUsePlant(user) && !!(await get('SELECT id FROM plant WHERE id = ?', assetId));
+  if (assetType === 'plant') return canUsePlant(user, await get('SELECT id, job_ref FROM plant WHERE id = ?', assetId));
   return canUseVehicle(user, await get('SELECT id, driver_id FROM vehicles WHERE id = ?', assetId));
 }
 
