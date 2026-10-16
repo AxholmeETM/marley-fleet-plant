@@ -26,7 +26,9 @@ router.post('/logout', async (req, res) => {
 
 router.get('/account', async (req, res) => {
   if (!req.user) return res.redirect('/login');
-  res.render('account', { title: 'My account' });
+  const { listDocs, DOC_KINDS } = require('../documents');
+  const personDocs = await listDocs('person', req.user.id);
+  res.render('account', { title: 'My account', personDocs, DOC_KINDS, person: req.user, back: '/account', canAddPersonDocs: true });
 });
 
 router.post('/account/password', async (req, res) => {

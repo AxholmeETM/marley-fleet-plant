@@ -1,0 +1,18 @@
+<%# An employee's documents: copies of their cards and certificates. Needs person (the employee), personDocs, DOC_KINDS, back and canAddPersonDocs. %>
+<details class="card docs" id="documents" open>
+  <summary><h2>Documents</h2><span class="count"><%= personDocs.length %></span></summary>
+  <% if (!personDocs.length) { %><p class="empty">No documents yet. Upload photos or PDFs of their CSCS, NPORS and CPCS cards and certificates.</p><% } else { %>
+  <ul class="doc-list"><% for (const d of personDocs) { %>
+    <li><a href="/documents/<%= d.id %>" target="_blank" rel="noopener"><%= d.name %></a>
+      <span class="small muted"><%= DOC_KINDS.person[d.kind] || d.kind %> · <%= ukDate(d.created_at) %><%= d.user_name ? ' · ' + d.user_name : '' %></span>
+      <% if (canAddPersonDocs) { %><form method="post" action="/documents/<%= d.id %>/remove" class="doc-remove" onsubmit="return confirm('Remove this document?')"><input type="hidden" name="back" value="<%= back %>"><button class="btn small danger" type="submit">Remove</button></form><% } %></li>
+  <% } %></ul><% } %>
+  <% if (canAddPersonDocs) { %>
+  <form class="doc-add" method="post" action="/documents" enctype="multipart/form-data">
+    <input type="hidden" name="asset" value="person:<%= person.id %>">
+    <input type="hidden" name="back" value="<%= back %>">
+    <select name="kind" aria-label="Document type"><% for (const [k, label] of Object.entries(DOC_KINDS.person)) { %><option value="<%= k %>"><%= label %></option><% } %></select>
+    <input name="docs" type="file" accept="image/*,application/pdf" multiple required aria-label="Files">
+    <button class="btn" type="submit">Upload</button>
+  </form><% } %>
+</details>

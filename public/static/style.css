@@ -686,3 +686,13 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tp-code { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
 table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .tp-table .cscs-pick select { min-width: 220px; }
+.doc-list li .doc-remove { margin-left: auto; }
+.seg.funded input#funded_Personal:checked + label { background: #d22b2b; color: #fff; }
+/* Employee types: soft colours (Ben, 16/10/2026). */
+.pill.et { font-weight: 500; }
+.pill.et-driver { background: #e6effc; color: #1d4f9c; }
+.pill.et-site_manager { background: #e3f4ea; color: #1e6b3d; }
+.pill.et-worker { background: #fdf1df; color: #8a5300; }
+.pill.et-manager { background: #efe8fb; color: #5b3a9e; }
+.pill.et-admin { background: #e8e9f5; color: #01024c; }
+.pill.et-none { background: var(--grey-bg); color: var(--muted); }

@@ -21,10 +21,9 @@
 <% } %>
 <form class="card" method="post" action="/training/people/<%= p.id %>">
   <% if (onboard) { %><input type="hidden" name="onboard" value="1"><% } %>
-  <div class="grid grid-2 tp-fields">
+  <div class="tp-fields">
     <div class="field"><span class="label">Training paid for</span>
       <div class="seg funded" role="radiogroup" aria-label="Training paid for"><% for (const v of ['Company', 'Personal']) { %><input type="radio" id="funded_<%= v %>" name="training_funded" value="<%= v %>" <%= p.training_funded === v ? 'checked' : '' %>><label for="funded_<%= v %>"><%= v %></label><% } %></div></div>
-    <div class="field"><label for="training_note">Note</label><input type="text" id="training_note" name="training_note" value="<%= p.training_note || '' %>" maxlength="200"></div>
   </div>
   <% for (const g of GROUPS) { const list = courses.filter((c) => c.grp === g); if (!list.length) continue;
     const st = list.map((c) => recs.get(c.id)).filter((r) => r && r.status).map((r) => r.status.level);
@@ -54,9 +53,6 @@
   <% } %>
   <div class="actions" style="margin-top:16px"><% if (onboard) { %><a class="btn" href="/users/<%= p.id %>">Skip for now</a><% } %><button class="btn primary" type="submit"><%= onboard ? 'Save and finish' : 'Save training' %></button></div>
 </form>
-<form method="post" action="/training/people/<%= p.id %>/remove" onsubmit="return confirm('Take <%= p.name.replace(/'/g, '') %> off the Training Matrix? Their dates are kept.')">
-  <button class="btn danger" type="submit">Take off the matrix</button>
-</form>
 <script>
   // A card opens the groups holding those items and highlights them.
   document.querySelectorAll('.tp-kpis [data-show]').forEach((b) => b.addEventListener('click', () => {
@@ -76,5 +72,6 @@
     });
   }
 </script>
+<%- include('partials/person-docs') %>
 <%- include('partials/course-info') %>
 <%- include('partials/footer') %>

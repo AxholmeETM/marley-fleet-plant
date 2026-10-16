@@ -457,7 +457,6 @@ test('training matrix and view-only managers', async () => {
   assert.equal((await mia('GET', '/training/matrix')).status, 403);
   assert.equal((await mia('GET', '/users/new')).status, 403);
   assert.equal((await mia('POST', '/projects', { code: 'M99-001', name: 'X' })).status, 403);
-  assert.equal((await mia('POST', `/training/people/${tess.id}/remove`, {})).status, 403);
   assert.doesNotMatch((await mia('GET', '/')).text, /href="\/training"/);
   assert.match((await admin('GET', '/')).text, /href="\/training"/);
 
@@ -485,6 +484,36 @@ test('training matrix and view-only managers', async () => {
   assert.equal((await get('SELECT card FROM training_records WHERE user_id = ? AND course_id = ?', tess.id, cscs.id)).card, null);
   await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'purple' });
   assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, null);
-  await admin('POST', `/training/people/${tess.id}/remove`, {});
-  assert.equal((await get('SELECT on_matrix FROM users WHERE id = ?', tess.id)).on_matrix, 0);
+  assert.doesNotMatch((await admin('GET', `/training/people/${tess.id}`)).text, /Take off the matrix|name="training_note"/);
+});
+
+test('employee documents: copies of cards', async () => {
+  const admin = client();
+  await admin('POST', '/login', { email: 'admin@test.local', password: 'adminpass1' });
+  const dave = await get("SELECT id FROM users WHERE email = 'dave@test.local'");
+  const other = await get("SELECT id FROM users WHERE email <> 'dave@test.local' AND role <> 'admin' ORDER BY id LIMIT 1");
+  const png = Buffer.from('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da63f8ffff3f0005fe02fea7d6a9a10000000049454e44ae426082', 'hex');
+  const up = async (who, personId, back) => {
+    const fd = new FormData();
+    fd.append('asset', `person:${personId}`); fd.append('kind', 'cscs'); fd.append('back', back);
+    fd.append('docs', new Blob([png], { type: 'image/png' }), 'cscs-front.png');
+    return who('POST', '/documents', fd);
+  };
+  let r = await up(admin, dave.id, `/training/people/${dave.id}`);
+  assert.equal(r.status, 302); assert.equal(r.location, `/training/people/${dave.id}#documents`);
+  const doc = await get("SELECT * FROM documents WHERE asset_type = 'person' AND asset_id = ?", dave.id);
+  assert.equal(doc.kind, 'cscs');
+  assert.match((await admin('GET', `/training/people/${dave.id}`)).text, /cscs-front\.png/);
+  assert.match((await admin('GET', `/users/${dave.id}`)).text, /cscs-front\.png/);
+  // The employee sees and adds their own from My account, but nobody else's.
+  const d = client();
+  await d('POST', '/login', { email: 'dave@test.local', password: 'driverpass1' });
+  assert.match((await d('GET', '/account')).text, /cscs-front\.png/);
+  assert.equal((await d('GET', `/documents/${doc.id}`)).status, 200);
+  assert.equal((await up(d, dave.id, '/account')).location, '/account#documents');
+  assert.equal((await up(d, other.id, '/account')).status, 404);
+  // Remove.
+  r = await d('POST', `/documents/${doc.id}/remove`, { back: '/account' });
+  assert.equal(r.status, 302);
+  assert.equal(await get('SELECT id FROM documents WHERE id = ?', doc.id), undefined);
 });

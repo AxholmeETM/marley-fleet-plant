@@ -236,6 +236,9 @@ CREATE TABLE IF NOT EXISTS documents (
   created_at TEXT NOT NULL DEFAULT (to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'))
 );
 CREATE INDEX IF NOT EXISTS documents_asset ON documents (asset_type, asset_id);
+-- Each employee's own documents too (copies of their CSCS, NPORS and CPCS cards, certificates), Ben 16/10/2026.
+ALTER TABLE documents DROP CONSTRAINT IF EXISTS documents_asset_type_check;
+ALTER TABLE documents ADD CONSTRAINT documents_asset_type_check CHECK (asset_type IN ('plant', 'vehicle', 'person'));
 
 -- Marley's project numbers. Plant and equipment are booked to one (plant.job_ref holds the code).
 CREATE TABLE IF NOT EXISTS projects (

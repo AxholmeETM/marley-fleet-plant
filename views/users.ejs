@@ -21,7 +21,7 @@
       <tr>
         <td><a href="/users/<%= u.id %>"><strong><%= u.name %></strong></a></td>
         <td><%= u.employee_no || '—' %></td>
-        <td><span class="pill <%= u.role === 'admin' ? 'soon' : 'none' %>"><%= userLabel(u) %></span></td>
+        <td><span class="pill et et-<%= u.role === 'admin' ? 'admin' : u.employee_type || 'none' %>"><%= userLabel(u) %></span></td>
         <td><%= u.job_title || '—' %></td>
         <td><%= u.email || '—' %><% if (!u.password_hash) { %> <span class="small muted">· No login</span><% } %><% if (u.phone) { %><div class="small muted"><%= u.phone %></div><% } %></td>
         <td><%= u.vehicles || '—' %></td>

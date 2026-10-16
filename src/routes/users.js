@@ -2,10 +2,11 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { all, get, run, transaction, isUniqueViolation } = require('../db');
 const { listVehicles, syncCardVehicles } = require('../queries');
-const { requireAdmin, UserError, text } = require('../auth');
+const { requireAdmin, isAdmin, UserError, text } = require('../auth');
 const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
 const { isValidDate, isoDate } = require('../status');
 
+const { listDocs, DOC_KINDS } = require('../documents');
 const router = express.Router();
 router.use('/users', requireAdmin);
 
@@ -149,7 +150,9 @@ router.get('/users/:id', async (req, res) => {
   const vehicles = await listVehicles();
   const cards = await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
     ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`);
+  const personDocs = await listDocs('person', item.id);
   res.render('user-view', {
+    personDocs, DOC_KINDS, person: item, back: `/users/${item.id}`, canAddPersonDocs: isAdmin(req.user),
     title: item.name, item, crumbHere: 'Employee details',
     crumbs: [['Employees', '/users'], [item.name]], EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
     myVehicles: vehicles.filter((v) => v.driver_id === item.id), otherVehicles: vehicles.filter((v) => v.driver_id !== item.id && v.active),

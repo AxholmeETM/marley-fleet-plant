@@ -3,6 +3,7 @@ const express = require('express');
 const { all, get, run, transaction } = require('../db');
 const { UserError, text, isAdmin } = require('../auth');
 const { isValidDate, dueStatus, ukDate } = require('../status');
+const { listDocs, DOC_KINDS } = require('../documents');
 const { userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, cardScheme, recordCard, heldCards } = require('../categories');
 
 const router = express.Router();
@@ -11,7 +12,7 @@ router.use('/training', (req, res, next) => (isAdmin(req.user) ? next() : res.st
 
 const GROUPS = ['General', 'NPORS', 'CPCS'];
 const listCourses = () => all('SELECT * FROM training_courses WHERE active = 1 ORDER BY sort, id');
-const listPeople = () => all("SELECT id, name, role, employee_type, job_title, training_note, training_funded, cscs_card FROM users WHERE on_matrix = 1 AND active = 1 ORDER BY name");
+const listPeople = () => all("SELECT id, name, role, employee_type, job_title, training_note, training_funded, cscs_card FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR on_matrix = 1) ORDER BY name");
 
 // A cell: held with an expiry date (ok, due within 30 days, expired), a note only (e.g. "Booked 19/10/26"), or needed but not held.
 function cellStatus(r) {
@@ -27,7 +28,7 @@ function cellStatus(r) {
 
 async function matrixData() {
   const [courses, people, records] = await Promise.all([listCourses(), listPeople(),
-    all('SELECT r.* FROM training_records r JOIN users u ON u.id = r.user_id WHERE u.on_matrix = 1 AND u.active = 1')]);
+    all('SELECT r.* FROM training_records r JOIN users u ON u.id = r.user_id WHERE u.active = 1 AND (u.employee_type IS NOT NULL OR u.on_matrix = 1)')]);
   const byKey = new Map(records.map((r) => [`${r.user_id}:${r.course_id}`, { ...r, status: cellStatus(r) }]));
   // The different NPORS and CPCS cards each person holds, from the card colour on their training.
   const grpOf = new Map(courses.map((c) => [c.id, c.grp]));
@@ -113,7 +114,8 @@ router.get('/training/people/:id', async (req, res) => {
   if (!p) return res.status(404).render('error', { title: 'Not found', message: 'Employee not found.' });
   const courses = await listCourses();
   const recs = new Map((await all('SELECT * FROM training_records WHERE user_id = ?', p.id)).map((r) => [r.course_id, { ...r, status: cellStatus(r) }]));
-  res.render('training-person', { title: `${p.name} – training`, crumbs: [['Training Matrix', '/training/matrix'], [p.name]], crumbHere: 'Training', navActive: '/training', p, courses, recs, GROUPS, userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, cardScheme, onboard: req.query.onboard === '1' });
+  const personDocs = await listDocs('person', p.id);
+  res.render('training-person', { personDocs, DOC_KINDS, person: p, back: `/training/people/${p.id}`, canAddPersonDocs: true, title: `${p.name} – training`, crumbs: [['Training Matrix', '/training/matrix'], [p.name]], crumbHere: 'Training', navActive: '/training', p, courses, recs, GROUPS, userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, cardScheme, onboard: req.query.onboard === '1' });
 });
 
 router.post('/training/people/:id', async (req, res) => {
@@ -128,7 +130,7 @@ router.post('/training/people/:id', async (req, res) => {
     rows.push({ c, expiry, note: text(req.body[`note_${c.id}`]), required: req.body[`required_${c.id}`] ? 1 : 0, card: recordCard(c.grp, card) ? card : null });
   }
   await transaction(async () => {
-    await run('UPDATE users SET on_matrix = 1, training_note = ?, training_funded = ?, cscs_card = ? WHERE id = ?', text(req.body.training_note), ['Company', 'Personal'].includes(req.body.training_funded) ? req.body.training_funded : null,
+    await run('UPDATE users SET on_matrix = 1, training_funded = ?, cscs_card = ? WHERE id = ?', ['Company', 'Personal'].includes(req.body.training_funded) ? req.body.training_funded : null,
       Object.hasOwn(CSCS_CARDS, req.body.cscs_card) ? req.body.cscs_card : null, p.id);
     for (const r of rows) await saveRecord(p.id, r.c.id, r);
   });
@@ -140,7 +142,7 @@ router.post('/training/people/:id', async (req, res) => {
   res.redirect(`/training/people/${p.id}`);
 });
 
-// Put an employee on the matrix, or take them off (their records are kept).
+// Put an employee on the matrix.
 router.post('/training/people', async (req, res) => {
   const p = await get('SELECT id FROM users WHERE id = ? AND active = 1', Number(req.body.user_id));
   if (!p) throw new UserError('Please choose an employee.');
@@ -148,13 +150,6 @@ router.post('/training/people', async (req, res) => {
   res.redirect(`/training/people/${p.id}`);
 });
 
-router.post('/training/people/:id/remove', async (req, res) => {
-  const p = await get('SELECT id, name FROM users WHERE id = ?', Number(req.params.id));
-  if (!p) throw new UserError('Employee not found.', 404);
-  await run('UPDATE users SET on_matrix = 0 WHERE id = ?', p.id);
-  req.flash('success', `${p.name} taken off the Training Matrix.`);
-  res.redirect('/training/matrix');
-});
 
 // Add a course (column) to the matrix.
 router.post('/training/courses', async (req, res) => {
