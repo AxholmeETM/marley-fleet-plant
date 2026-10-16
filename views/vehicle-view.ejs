@@ -49,7 +49,7 @@
   const kindName = DOC_KINDS.vehicle;
   const docsFor = (key, id) => documents.filter((d) => d[key] === id);
   const events = [
-    ...records.map((r) => ({ dlg: 'rec-' + r.id, type: 'service', date: r.record_date, label: kindName[r.kind] || r.kind, reading: r.reading, text: [r.done_by, r.notes, r.next_due ? 'expires ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · '), docs: docsFor('record_id', r.id) })),
+    ...records.map((r) => ({ dlg: 'rec-' + r.id, type: 'service', date: r.record_date, label: r.planned ? 'Planned repair' : kindName[r.kind] || r.kind, result: r.planned ? '<span class="pill soon">Booked</span>' : null, reading: r.reading, text: [r.done_by, r.notes, r.next_due ? 'expires ' + ukDate(r.next_due) : ''].filter(Boolean).join(' · '), docs: docsFor('record_id', r.id) })),
     ...checks.map((c) => ({ type: 'check', date: c.check_date, label: 'Walk-around', reading: c.mileage, href: '/checks/vehicle/' + c.id, text: c.user_name, result: c.defects_found ? `<span class="pill overdue">${c.defects_found} defect${c.defects_found > 1 ? 's' : ''}</span>` : '<span class="pill ok">All OK</span>' })),
     ...defects.map((d) => ({ dlg: 'def-' + d.id, type: 'defect', date: d.reported_at, label: 'Defect', text: d.description + ' · ' + d.reported_by_name + (d.status === 'resolved' ? ' · Fixed ' + ukDate(d.resolved_at) + ': ' + (d.resolution || '') : ''), result: d.status === 'open' ? `<span class="pill ${d.severity}">${SEVERITY_LABELS[d.severity]}</span>` : '<span class="pill ok">Resolved</span>', docs: docsFor('defect_id', d.id) })),
   ].sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -74,12 +74,12 @@
     <div class="dlg-head"><h2>Add a record</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
     <div class="form-grid">
       <div class="field"><label for="kind">Type</label>
-        <select id="kind" name="kind"><option value="service">Service</option><option value="mot">MOT pass</option><option value="tax">Tax renewed</option><option value="repair">Repair</option><option value="defect">Defect</option></select></div>
-      <div class="field rec-field"><label for="record_date">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+        <select id="kind" name="kind"><option value="service">Service</option><option value="mot">MOT pass</option><option value="tax">Tax renewed</option><option value="repair">Repair</option><option value="planned">Planned repair</option><option value="defect">Defect</option></select></div>
+      <div class="field rec-field"><label for="record_date" id="rdate-label">Date</label><input id="record_date" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
       <div class="field defect-field"><label for="severity">How serious?</label><select id="severity" name="severity">
         <option value="minor">Minor – safe to use, fix soon</option><option value="major">Major – needs fixing quickly</option><option value="unsafe">Unsafe – do not use</option></select></div>
       <div class="field" id="next-due-field"><label for="next_due">New expiry date <span class="hint" id="next-hint">(MOT: defaults to 1 year)</span></label><input id="next_due" name="next_due" type="date"></div>
-      <div class="field rec-field"><label for="reading">Mileage</label><input id="reading" name="reading" type="number" min="0" step="1"></div>
+      <div class="field rec-field done-field"><label for="reading">Mileage</label><input id="reading" name="reading" type="number" min="0" step="1"></div>
       <div class="field rec-field"><label for="done_by">Done by</label><input id="done_by" name="done_by" type="text" placeholder="Garage"></div>
     </div>
     <div class="field"><label for="rnotes" id="rnotes-label">Notes</label><input id="rnotes" name="notes" type="text"></div>
@@ -91,19 +91,22 @@
 <script>
   (function () {
     const kind = document.getElementById('kind');
+    <%- include('partials/plan-date') %>
     if (kind) {
       const field = document.getElementById('next-due-field'), input = document.getElementById('next_due'), hint = document.getElementById('next-hint');
       function upd() {
         field.style.display = kind.value === 'mot' || kind.value === 'tax' ? '' : 'none';
         input.required = kind.value === 'tax';
         hint.textContent = kind.value === 'mot' ? '(defaults to 1 year)' : '(required)';
-        const defect = kind.value === 'defect';
+        const defect = kind.value === 'defect', planned = kind.value === 'planned';
         document.querySelectorAll('.rec-field').forEach((el) => { el.style.display = defect ? 'none' : ''; });
+        document.querySelectorAll('.done-field').forEach((el) => { el.style.display = defect || planned ? 'none' : ''; });
         document.querySelectorAll('.defect-field').forEach((el) => { el.style.display = defect ? '' : 'none'; });
+        planDate(planned);
         const notes = document.getElementById('rnotes');
-        notes.required = defect;
-        notes.placeholder = defect ? 'Describe the defect' : '';
-        document.getElementById('rnotes-label').textContent = defect ? 'What is wrong?' : 'Notes';
+        notes.required = defect || planned;
+        notes.placeholder = defect ? 'Describe the defect' : planned ? 'e.g. Replace clutch' : '';
+        document.getElementById('rnotes-label').textContent = defect ? 'What is wrong?' : planned ? 'What is the repair?' : 'Notes';
       }
       kind.addEventListener('change', upd); upd();
       const dlg = document.getElementById('record-dlg');
@@ -142,5 +145,5 @@
     fit(); addEventListener('resize', fit);
   })();
 </script>
-<%- include('partials/history-dialogs', { assetType: 'vehicle', recordName: (r) => kindName[r.kind] || r.kind, readingLabel: 'Mileage', fmtReading: (n) => num(n) }) %>
+<%- include('partials/history-dialogs', { assetType: 'vehicle', recordName: (r) => r.planned ? 'Planned repair' : kindName[r.kind] || r.kind, readingLabel: 'Mileage', fmtReading: (n) => num(n) }) %>
 <%- include('partials/footer') %>

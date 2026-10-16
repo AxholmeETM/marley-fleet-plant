@@ -1,6 +1,7 @@
 const express = require('express');
 const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listVehicles, getVehicle, listDefects, listDrivers, syncCardVehicles } = require('../queries');
+const { planRepair, repairDone } = require('../planned');
 const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
 const { requireAdmin, isAdmin, canUseVehicle, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate, addMonths, addDays } = require('../status');
@@ -131,9 +132,10 @@ router.post('/vehicles/:id', async (req, res) => {
 });
 
 // Record a service, MOT pass, tax renewal, repair or defect, with any documents; updates the vehicle's due dates.
-router.post('/vehicles/:id/records', docUpload, async (req, res) => {
+router.post('/vehicles/:id/records', requireAdmin, docUpload, async (req, res) => {
   const item = await get('SELECT * FROM vehicles WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Vehicle not found.', 404);
+  if (req.body.kind === 'planned') return await planRepair(req, res, 'vehicle', item.id);
   const kind = ['service', 'mot', 'tax', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
   if (!isValidDate(date) || date > isoDate()) throw new UserError('Please enter a valid date, today or earlier.');
@@ -166,6 +168,11 @@ router.post('/vehicles/:id/records', docUpload, async (req, res) => {
   });
   req.flash('success', { service: 'Service recorded.', mot: 'MOT recorded.', tax: 'Tax renewal recorded.', repair: 'Repair recorded.' }[kind]);
   res.redirect(`/vehicles/${item.id}`);
+});
+
+router.post('/vehicles/:id/records/:rid/done', requireAdmin, async (req, res) => {
+  await repairDone(req, 'vehicle', Number(req.params.id), Number(req.params.rid));
+  res.redirect(`/vehicles/${Number(req.params.id)}#history`);
 });
 
 module.exports = router;

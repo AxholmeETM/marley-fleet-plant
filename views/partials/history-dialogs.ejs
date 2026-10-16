@@ -37,7 +37,7 @@
   <div class="card">
     <div class="dlg-head"><h2><%= recordName(r) %></h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
     <dl class="facts">
-      <dt>Date</dt><dd><%= ukDate(r.record_date) %></dd>
+      <dt><%= r.planned ? 'Booked for' : 'Date' %></dt><dd><%= ukDate(r.record_date) %></dd>
       <% if (r.reading != null) { %><dt><%= readingLabel %></dt><dd><%= fmtReading(r.reading) %></dd><% } %>
       <% if (r.done_by) { %><dt>Done by</dt><dd><%= r.done_by %></dd><% } %>
       <% if (r.cert_no) { %><dt>Certificate no</dt><dd><%= r.cert_no %></dd><% } %>
@@ -45,6 +45,16 @@
       <% if (r.notes) { %><dt>Notes</dt><dd style="white-space:pre-wrap"><%= r.notes %></dd><% } %>
     </dl>
     <%- docList(ds) %>
+    <% if (r.planned && (isAdmin || assetType === 'plant')) { %>
+    <form method="post" action="<%= assetType === 'plant' ? '/plant/' : '/vehicles/' %><%= item.id %>/records/<%= r.id %>/done">
+      <div class="form-grid">
+        <div class="field"><label for="donedate-<%= r.id %>">Date done</label><input id="donedate-<%= r.id %>" name="record_date" type="date" value="<%= today %>" max="<%= today %>" required></div>
+        <div class="field"><label for="doneby-<%= r.id %>">Done by</label><input id="doneby-<%= r.id %>" name="done_by" type="text" value="<%= r.done_by || '' %>"></div>
+      </div>
+      <div class="field"><label for="donenotes-<%= r.id %>">Work done</label><input id="donenotes-<%= r.id %>" name="notes" type="text" value="<%= r.notes || '' %>"></div>
+      <div class="form-actions"><button class="btn dark" type="submit">Mark as done</button></div>
+    </form>
+    <% } %>
     <% if (isAdmin || assetType === 'plant') { %>
     <form method="post" action="/documents" enctype="multipart/form-data">
       <input type="hidden" name="asset" value="<%= assetType %>:<%= item.id %>"><input type="hidden" name="record" value="<%= r.id %>"><input type="hidden" name="kind" value="<%= r.kind %>">

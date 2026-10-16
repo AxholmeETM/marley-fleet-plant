@@ -89,6 +89,17 @@ async function calendarEvents(plant, vehicles) {
   for (const c of (await all(`${fuelCards.CARD_SQL} WHERE c.status = 'active' AND c.expiry IS NOT NULL`)).map(fuelCards.decorate)) {
     add(c.expiryStatus, `${c.provider}${c.card_ref ? ' #' + c.card_ref : ''} fuel card${c.holder_display ? ' · ' + c.holder_display : ''}`, 'Card expires', `/fuel-cards/${c.id}/edit`);
   }
+  // Planned repairs stay on the calendar until they are marked as done.
+  const repairs = await all(`SELECT r.id, r.asset_type, r.asset_id, r.record_date, r.notes, p.plant_no, p.description, v.reg, v.make, v.model
+    FROM service_records r
+    LEFT JOIN plant p ON r.asset_type = 'plant' AND p.id = r.asset_id
+    LEFT JOIN vehicles v ON r.asset_type = 'vehicle' AND v.id = r.asset_id
+    WHERE r.planned = 1 AND (p.id IS NOT NULL OR v.id IS NOT NULL)`);
+  for (const r of repairs) {
+    const what = r.notes ? ` · ${r.notes}` : '';
+    if (r.asset_type === 'plant') out.push({ d: r.record_date, t: `${r.plant_no} · ${r.description}${what}`, k: 'Planned repair', h: `/plant/${r.asset_id}#rec-${r.id}`, r: null });
+    else out.push({ d: r.record_date, t: [r.make, r.model].filter(Boolean).join(' ') + what, k: 'Planned repair', h: `/vehicles/${r.asset_id}#rec-${r.id}`, r: r.reg });
+  }
   return out.sort((a, b) => a.d.localeCompare(b.d));
 }
 

@@ -1,0 +1,8 @@
+// A planned repair is booked for today or later; every other record is today or earlier.
+    function planDate(planned) {
+      const d = document.getElementById('record_date'), today = '<%= today %>';
+      if (!d) return;
+      d.min = planned ? today : ''; d.max = planned ? '' : today;
+      if ((planned && d.value < today) || (!planned && d.value > today)) d.value = today;
+      document.getElementById('rdate-label').textContent = planned ? 'Booked for' : 'Date';
+    }

@@ -1,6 +1,7 @@
 const express = require('express');
 const { all, run, get, transaction, isUniqueViolation } = require('../db');
 const { listProjects, listPlant, getPlant, listDefects } = require('../queries');
+const { planRepair, repairDone } = require('../planned');
 const { upload: docUpload, saveDocs, listDocs, DOC_KINDS } = require('../documents');
 const { requireAdmin, requirePlantAccess, UserError, numberField, text } = require('../auth');
 const { isValidDate, isoDate } = require('../status');
@@ -167,6 +168,7 @@ router.post('/plant/:id', requireAdmin, async (req, res) => {
 router.post('/plant/:id/records', docUpload, async (req, res) => {
   const item = await get('SELECT * FROM plant WHERE id = ?', Number(req.params.id));
   if (!item) throw new UserError('Plant not found.', 404);
+  if (req.body.kind === 'planned') return await planRepair(req, res, 'plant', item.id);
   const kind = ['service', 'loler', 'thorough', 'repair', 'defect'].includes(req.body.kind) ? req.body.kind : 'service';
   const date = req.body.record_date || isoDate();
   if (!isValidDate(date) || date > isoDate()) throw new UserError('Please enter a valid date, today or earlier.');
@@ -203,6 +205,11 @@ router.post('/plant/:id/records', docUpload, async (req, res) => {
   });
   req.flash('success', `${DOC_KINDS.plant[kind]} recorded.`);
   res.redirect(`/plant/${item.id}`);
+});
+
+router.post('/plant/:id/records/:rid/done', async (req, res) => {
+  await repairDone(req, 'plant', Number(req.params.id), Number(req.params.rid));
+  res.redirect(`/plant/${Number(req.params.id)}#history`);
 });
 
 module.exports = router;

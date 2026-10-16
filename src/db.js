@@ -204,6 +204,8 @@ CREATE TABLE IF NOT EXISTS settings (
 );
 
 ALTER TABLE fuel_cards ADD COLUMN IF NOT EXISTS card_number TEXT;
+-- A repair booked for a future date; it shows on the calendar until it is marked as done.
+ALTER TABLE service_records ADD COLUMN IF NOT EXISTS planned INTEGER NOT NULL DEFAULT 0;
 
 -- Documents (certificates, invoices, reports, photos) attached to a plant or vehicle record.
 DO $$ BEGIN

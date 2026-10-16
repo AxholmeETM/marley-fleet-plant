@@ -296,6 +296,15 @@ test('admin and driver flows', async () => {
   await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: '2024-01-10', reading: '500' });
   assert.equal((await get('SELECT last_service_hours FROM plant WHERE id = ?', plant.id)).last_service_hours, 1004.5);
   assert.equal((await admin('POST', `/plant/${plant.id}/records`, { kind: 'service', record_date: '2099-01-01' })).status, 400);
+  // A planned repair is booked for a future date, shows on the calendar, then is marked as done.
+  await admin('POST', `/plant/${plant.id}/records`, { kind: 'planned', record_date: '2099-03-01', notes: 'Replace track tensioner', done_by: 'Finning' });
+  const planned = await get("SELECT * FROM service_records WHERE planned = 1");
+  assert.equal(planned.record_date, '2099-03-01');
+  assert.match((await admin('GET', '/calendar')).text, /Planned repair/);
+  assert.match((await admin('GET', `/plant/${plant.id}`)).text, /Mark as done/);
+  await admin('POST', `/plant/${plant.id}/records/${planned.id}/done`, { record_date: status.isoDate() });
+  assert.equal((await get('SELECT planned FROM service_records WHERE id = ?', planned.id)).planned, 0);
+  assert.doesNotMatch((await admin('GET', '/calendar')).text, /Replace track tensioner/);
   assert.match((await admin('GET', `/plant/${plant.id}`)).text, /1,500 hr service/);
   await admin('POST', `/plant/${sling.id}/records`, { kind: 'loler', record_date: status.isoDate(), cert_no: 'C123' });
   assert.equal((await get('SELECT cert_no FROM plant WHERE id = ?', sling.id)).cert_no, 'C123');
