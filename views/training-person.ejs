@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <div class="page-head">
   <div><h1><%= p.name %></h1><p class="muted" style="margin:0"><%= userLabel(p) %><%= p.job_title ? ' · ' + p.job_title : '' %></p></div>
-  <div class="actions"><a class="btn" href="/users/<%= p.id %>">Employee details</a></div>
+  <div class="actions"><a class="btn" href="/users/<%= p.id %>"><%= onboard ? 'Skip for now' : 'Employee details' %></a><button class="btn primary" type="submit" form="tp-form"><%= onboard ? 'Save and finish' : 'Save training' %></button></div>
 </div>
 <%- include('partials/pane-end') %>
 <% if (onboard) { %>
@@ -19,7 +19,7 @@
   <button type="button" class="kpi plain" data-show="ok soon"><div class="label">Qualifications held</div><div class="value"><%= n('ok') + n('soon') %></div></button>
 </div>
 <% } %>
-<form class="card" method="post" action="/training/people/<%= p.id %>">
+<form class="card" id="tp-form" method="post" action="/training/people/<%= p.id %>">
   <% if (onboard) { %><input type="hidden" name="onboard" value="1"><% } %>
   <div class="tp-fields">
     <div class="field"><span class="label">Training paid for</span>
@@ -51,7 +51,6 @@
   </table></div>
   </details>
   <% } %>
-  <div class="actions" style="margin-top:16px"><% if (onboard) { %><a class="btn" href="/users/<%= p.id %>">Skip for now</a><% } %><button class="btn primary" type="submit"><%= onboard ? 'Save and finish' : 'Save training' %></button></div>
 </form>
 <script>
   // A card opens the groups holding those items and highlights them.
