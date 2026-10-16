@@ -591,6 +591,14 @@ test('mileage from a SoTrack trip list', async () => {
   assert.match(addrPage, /Not saved yet/);
   assert.match(addrPage, /Site Road, Rossington/);
   assert.doesNotMatch(addrPage.split('Not saved yet')[1].split('Work addresses')[0], /Yard Lane/);
+  // An address can be saved as unknown, to ask the driver; it leaves the not-saved list and doesn't make trips work.
+  await admin('POST', '/mileage/addresses', { kind: 'unknown', label: 'Ask Dave', address: 'Shop Road, Thorne, DN3 3CC', back: '/mileage/addresses' });
+  const withUnknown = (await admin('GET', '/mileage/addresses?from=2026-10-12&to=2026-10-13')).text;
+  assert.match(withUnknown.split('<h2>Unknown addresses')[1], /Ask Dave/);
+  assert.doesNotMatch(withUnknown.split('Not saved yet')[1].split('Work addresses')[0], /Shop Road/);
+  assert.match((await admin('GET', '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13')).text, /mi-tag unknown/);
+  ({ vehicles } = await mileageFor({ from: '2026-10-12', to: '2026-10-13' }));
+  assert.equal(vehicles.find((x) => x.reg === 'YX21KPL').personal, 7);
   // Change a trip by hand, then undo it.
   const shop = await get("SELECT id FROM mileage_trips WHERE end_loc LIKE 'Shop Road%'");
   await admin('POST', `/mileage/trips/${shop.id}`, { use: 'work', back: '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13' });

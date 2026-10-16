@@ -44,7 +44,7 @@ async function mileageFor(p, reg) {
   const vehicles = [...byReg].map(([r, ts]) => {
     const last = ts[ts.length - 1];
     const homes = last.driver_id ? places.filter((x) => x.kind === 'home' && x.user_id === last.driver_id) : [];
-    const out = M.classify(ts, { homes, works });
+    const out = M.classify(ts, { homes, works, unknowns: places.filter((x) => x.kind === 'unknown') });
     return {
       reg: r, regText: last.fleet_reg || M.fmtReg(r), device: last.device, vehicle_id: last.vehicle_id, driver_id: last.driver_id, driver_name: last.driver_name,
       trips: out, work: M.sum(out, 'work'), personal: M.sum(out, 'personal'), total: M.sum(out),
@@ -194,14 +194,14 @@ router.post('/mileage/check', async (req, res) => {
 const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers|\/weeks)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
 
 router.post('/mileage/addresses', async (req, res) => {
-  const kind = req.body.kind === 'home' ? 'home' : 'work';
+  const kind = ['home', 'unknown'].includes(req.body.kind) ? req.body.kind : 'work';
   const address = text(req.body.address);
   if (!address) throw new UserError('Please enter the address, as SoTrack shows it, including the postcode.');
   if (!M.addressKey(address).postcode) throw new UserError('Please include the postcode, e.g. DN7 6AP. That is how trips are matched to the address.');
   const userId = kind === 'home' ? Number(req.body.user_id) : null;
   if (kind === 'home' && !(await get('SELECT id FROM users WHERE id = ?', userId))) throw new UserError('Please choose whose home this is.');
-  await run('INSERT INTO mileage_places (kind, user_id, label, address) VALUES (?, ?, ?, ?)', kind, userId, kind === 'work' ? text(req.body.label) : null, address.slice(0, 300));
-  req.flash('success', kind === 'home' ? 'Home address added. Personal miles have been worked out again.' : 'Work address added. Trips to it now count as work.');
+  await run('INSERT INTO mileage_places (kind, user_id, label, address) VALUES (?, ?, ?, ?)', kind, userId, kind !== 'home' ? text(req.body.label) : null, address.slice(0, 300));
+  req.flash('success', { home: 'Home address added. Personal miles have been worked out again.', work: 'Work address added. Trips to it now count as work.', unknown: 'Saved as an unknown address. It is listed under Unknown addresses so you can ask the driver; trips to it do not count as work.' }[kind]);
   res.redirect(backTo(req.body.back));
 });
 

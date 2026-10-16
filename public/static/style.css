@@ -816,3 +816,6 @@ a.mi-tile { color: inherit; } a.mi-tile:hover { text-decoration: none; border-co
 .mi-quick select { padding: 4px 6px; font-size: .8rem; }
 .table-wrap.mi-unsaved-list thead th { position: sticky; top: 0; z-index: 1; background: #fff; }
 .mi-quick select { min-width: 140px; max-width: 180px; }
+.mi-tag.unknown { background: #f3e8fb; color: #6b2f8f; }
+.mi-unknowns { margin-top: 14px; }
+.mi-unknowns h2 { font-size: 1.05rem; margin: 0 0 4px; }

@@ -563,6 +563,9 @@ CREATE TABLE IF NOT EXISTS mileage_places (
   address TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'))
 );
+-- Addresses can also be marked unknown: not a home or a site, so a question for the driver.
+ALTER TABLE mileage_places DROP CONSTRAINT IF EXISTS mileage_places_kind_check;
+ALTER TABLE mileage_places ADD CONSTRAINT mileage_places_kind_check CHECK (kind IN ('home', 'work', 'unknown'));
 `;
 
 const TABLES = ['users', 'plant', 'vehicles', 'service_records', 'plant_checks', 'vehicle_checks', 'defects', 'fuel_cards', 'fuel_entries', 'projects', 'settings', 'documents', 'training_courses', 'training_records', 'mileage_uploads', 'mileage_trips', 'mileage_places', 'mileage_checks'];

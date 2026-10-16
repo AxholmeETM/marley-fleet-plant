@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <%
   const loc = (where, text, t) => {
-    const tag = where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
+    const tag = where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: ask the driver">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
     const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-addr="${escapeHtml(text)}" title="Save this address">+</button>` : '';
     return tag + escapeHtml(text || '—') + add;
   };
@@ -54,8 +54,9 @@
       <div class="field"><label>This is</label>
         <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
         <% if (v.driver_id) { %><label class="radio"><input type="radio" name="kind" value="home"> <%= v.driver_name %>'s home</label><input type="hidden" name="user_id" value="<%= v.driver_id %>"><% } %>
+        <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (not sure what it is, ask the driver)</label>
       </div>
-      <div class="field" id="addr-label-f"><label for="addr-label">Name <span class="hint">(optional, e.g. Rossington site)</span></label><input id="addr-label" name="label" type="text"></div>
+      <div class="field" id="addr-label-f"><label for="addr-label">Name or note <span class="hint">(optional, e.g. Rossington site, or ask Andy)</span></label><input id="addr-label" name="label" type="text"></div>
       <p class="hint">Trips match on the postcode, or the same street in the same postcode area.</p>
       <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save address</button></div>
     </form>

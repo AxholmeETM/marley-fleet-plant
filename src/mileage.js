@@ -86,10 +86,11 @@ const secsBetween = (a, b) => (Date.parse(b.replace(' ', 'T') + 'Z') - Date.pars
 // Marks each trip (in time order, one vehicle) with what it touched and whether it is work or personal.
 // homes: that driver's home addresses; works: every work address. With no driver or no home address, nothing is
 // counted as personal (yard vehicles, and drivers whose home hasn't been entered yet).
-function classify(trips, { homes, works }) {
+function classify(trips, { homes, works, unknowns = [] }) {
   const isHome = matcher(homes);
   const isWork = matcher(works);
-  const where = (loc) => (isHome(loc) ? 'home' : isWork(loc) ? 'work' : null);
+  const isUnknown = matcher(unknowns);
+  const where = (loc) => (isHome(loc) ? 'home' : isWork(loc) ? 'work' : isUnknown(loc) ? 'unknown' : null);
   const out = trips.map((t) => ({ ...t, from: where(t.start_loc), to: where(t.end_loc) }));
   // A weekday stop of 3 hours or more that starts in the morning, away from home, is taken to be a site not saved yet.
   for (let i = 0; i < out.length - 1; i++) {
