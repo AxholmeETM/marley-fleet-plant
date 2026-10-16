@@ -270,6 +270,7 @@ CREATE TABLE IF NOT EXISTS training_courses (
 );
 INSERT INTO training_courses (key, grp, name, sort) VALUES
   ('cscs', 'General', 'CSCS Card', 10),
+  ('hse_test', 'General', 'HS&E Touch Screen Test', 15),
   ('temp_works', 'General', 'Temp Works Supervisor', 20),
   ('groundworker_reg', 'General', 'Groundworker Reg (NVQ)', 30),
   ('swqr', 'General', 'SWQR', 40),
@@ -438,6 +439,9 @@ UPDATE training_courses c SET code = v.code, info = v.info FROM (VALUES
   ('cpcs_dump_artic', 'A56', 'CPCS A56 Dump Truck, articulated chassis. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
   ('cpcs_dump_rigid', 'A57', 'CPCS A57 Dump Truck, rigid chassis. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.')
 ) AS v(key, code, info) WHERE c.key = v.key AND c.code IS NULL;
+-- The CITB health, safety and environment test, listed under the CSCS card (Ben, 16/10/2026).
+UPDATE training_courses SET short = 'HS&E Test', info = 'CITB Health, Safety and Environment (HS&E) touch screen test. Needed to apply for or renew a CSCS card, and for NPORS and CPCS cards with the CSCS logo. A pass is valid for 2 years.'
+  WHERE key = 'hse_test' AND short IS NULL;
 -- Which CSCS card someone holds (green labourer, blue skilled worker, ...); its expiry is the CSCS Card course.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
 -- Which NPORS and CPCS operator card someone holds (red trained / blue competent ...); the categories are the NPORS and CPCS courses.
