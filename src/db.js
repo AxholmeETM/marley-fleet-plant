@@ -323,6 +323,56 @@ CREATE TABLE IF NOT EXISTS training_records (
 ALTER TABLE users ADD COLUMN IF NOT EXISTS on_matrix INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS training_note TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS training_funded TEXT;
+-- A short column heading for each course on the matrix (the full name shows on hover).
+ALTER TABLE training_courses ADD COLUMN IF NOT EXISTS short TEXT;
+UPDATE training_courses c SET short = v.short FROM (VALUES
+  ('cscs', 'CSCS'),
+  ('temp_works', 'Temp Works'),
+  ('groundworker_reg', 'NVQ'),
+  ('swqr', 'SWQR'),
+  ('smsts', 'SMSTS'),
+  ('sssts', 'SSSTS'),
+  ('face_fit', 'Face-fit'),
+  ('first_aid', 'First Aid'),
+  ('fire_marshal', 'Fire Marshal'),
+  ('scaffold', 'Scaffold'),
+  ('abrasive', 'Abrasive Wheels'),
+  ('asbestos', 'Asbestos'),
+  ('confined', 'Confined Space'),
+  ('cat_eusr', 'CAT / EUSR'),
+  ('npors_a09a', 'A09A'),
+  ('npors_ftd', 'FTD'),
+  ('npors_ftd_e', 'FTD (E)'),
+  ('npors_roller', 'Roller'),
+  ('npors_360', '360'),
+  ('npors_180', '180'),
+  ('npors_lorry', 'Lorry Loader'),
+  ('npors_telehandler', 'Telehandler'),
+  ('npors_rear_dumper', 'Rear Dumper'),
+  ('npors_excav_crane', 'Excav Crane'),
+  ('npors_slinger', 'Slinger'),
+  ('npors_harness', 'Harness'),
+  ('npors_shovel', 'Shovel'),
+  ('npors_marshaller', 'Marshaller'),
+  ('npors_dozer', 'Dozer'),
+  ('cpcs_ftd', 'FTD'),
+  ('cpcs_crane_sup', 'Crane Sup'),
+  ('cpcs_roller', 'Roller'),
+  ('cpcs_skid', 'Skid Steer'),
+  ('cpcs_slinger', 'Slinger'),
+  ('cpcs_telehandler', 'Telehandler'),
+  ('cpcs_excav_small', 'Excav <10T'),
+  ('cpcs_excav_large', 'Excav >10T'),
+  ('cpcs_dump_artic', 'Dump Artic'),
+  ('cpcs_dump_rigid', 'Dump Rigid')
+) AS v(key, short) WHERE c.key = v.key AND c.short IS NULL;
+-- Which CSCS card someone holds (green labourer, blue skilled worker, ...); its expiry is the CSCS Card course.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
+UPDATE users u SET cscs_card = CASE r.note WHEN 'Blue card' THEN 'blue' WHEN 'Green card' THEN 'green' ELSE 'red' END
+  FROM training_records r JOIN training_courses c ON c.id = r.course_id AND c.key = 'cscs'
+  WHERE r.user_id = u.id AND u.cscs_card IS NULL AND r.note IN ('Blue card', 'Green card', 'Red card');
+UPDATE training_records r SET note = NULL FROM training_courses c
+  WHERE c.id = r.course_id AND c.key = 'cscs' AND r.note IN ('Blue card', 'Green card', 'Red card');
 `;
 
 const TABLES = ['users', 'plant', 'vehicles', 'service_records', 'plant_checks', 'vehicle_checks', 'defects', 'fuel_cards', 'fuel_entries', 'projects', 'settings', 'documents', 'training_courses', 'training_records'];

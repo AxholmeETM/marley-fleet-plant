@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { ready, all, get, run, ON_WORKERS } = require('./db');
 const status = require('./status');
+const { originTrail } = require('./crumbs');
 const { userLabel } = require('./categories');
 const views = require('./views');
 
@@ -84,6 +85,8 @@ async function createApp() {
     res.locals.today = status.isoDate();
     Object.assign(res.locals, { escapeHtml, ukDate: status.ukDate, ukDateTime: status.ukDateTime, money, num, fmtHours: status.fmtHours, FUEL_LABELS, SEVERITY_LABELS, pill, userLabel });
     req.flash = (type, msg) => { req.session.flash = { type, msg }; };
+    // Breadcrumb for the page this one was opened from (see src/crumbs.js).
+    res.locals.origin = req.user && req.method === 'GET' && req.query.from ? await originTrail(String(req.query.from)) : null;
     // Managers can't change anything except their own password.
     if (manager && !['GET', 'HEAD'].includes(req.method) && !['/logout', '/account/password'].includes(req.path)) {
       return res.status(403).render('error', { title: 'View only', message: 'Managers can view everything but not make changes.' });

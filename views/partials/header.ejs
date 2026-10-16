@@ -15,6 +15,7 @@
     <nav class="side-nav" aria-label="Main menu">
       <%
         // [href, label, other paths that belong to the same section]; admins get headings that open to show their pages.
+        const cameFrom = typeof origin !== 'undefined' && origin ? origin : null;
         const menu = isAdmin
           ? [['/', 'Dashboard', ['/calendar']],
             { label: 'Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
@@ -28,6 +29,7 @@
         const nav = menu.flatMap((m) => m.items || [m]);
         const under = (base) => path === base || path.startsWith(base + '/');
         const isActive = ([href, , also = []]) => {
+          if (cameFrom) return cameFrom.nav === href;
           if (typeof navActive !== 'undefined') return navActive === href;
           if (href === '/') return path === '/' || also.includes(path);
           if (isAdmin || href === '/plant' || href === '/equipment') return [href, ...also].some(under);
@@ -66,8 +68,10 @@
     '/training': [['/training', 'Dashboard', (p) => p === '/training'], ['/training/matrix', 'Training Matrix', (p) => p === '/training/matrix']],
   };
   const subnav = !crumbs && current && (isAdmin ? SUBNAV[current[0]] : user.employee_type === 'site_manager' && current[0] === '/' && SUBNAV['/']);
-  if (crumbs) { %>
-<nav class="crumbs" aria-label="Breadcrumb"><% crumbs.forEach(([label, href], i) => { %><%- i ? '<span class="sep">›</span>' : '' %><% if (href) { %><a href="<%= href %>"><%= label %></a><% } else { %><span aria-current="page"><%= label %></span><% } %><% }) %></nav>
+  // Opened from another page (?from=): lead back through that page, then this one.
+  const trail = crumbs && cameFrom ? [...cameFrom.trail, [typeof crumbHere !== 'undefined' ? crumbHere : crumbs[crumbs.length - 1][0]]] : crumbs;
+  if (trail) { %>
+<nav class="crumbs" aria-label="Breadcrumb"><% trail.forEach(([label, href], i) => { %><%- i ? '<span class="sep">›</span>' : '' %><% if (href) { %><a href="<%= href %>"><%= label %></a><% } else { %><span aria-current="page"><%= label %></span><% } %><% }) %></nav>
 <% } else if (subnav) { %>
 <nav class="subnav"><% for (const [href, label, on] of subnav) { %><a href="<%= href %>" class="<%= on(path) ? 'active' : '' %>"><%= label %></a><% } %></nav>
 <% } %>

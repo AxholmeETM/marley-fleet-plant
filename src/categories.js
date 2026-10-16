@@ -81,7 +81,29 @@ const userLabel = (u) => (u.role === 'admin' ? ['Admin', EMPLOYEE_TYPES[u.employ
 const FUEL_CARD_PROVIDERS = ['Esso', 'Key Fuels (The Fuelcard Company)', 'FastFuels (Silvey)'];
 const FUEL_CARD_STATUSES = { active: 'Active', expired: 'Expired', stopped: 'Stopped', cancelled: 'Cancelled', lost: 'Lost / stolen' };
 
+// CSCS card types (cscs.uk.com, checked 16/10/2026). Red cards are temporary and can't be renewed: the holder needs to
+// qualify for another card. The expiry date lives on the CSCS Card course of the Training Matrix.
+const CSCS_CARDS = {
+  green: { colour: 'green', label: 'Green', name: 'Labourer', renew: true },
+  red_provisional: { colour: 'red', label: 'Red', name: 'Provisional', renew: false },
+  red_trainee: { colour: 'red', label: 'Red', name: 'Trainee', renew: false },
+  red_experienced: { colour: 'red', label: 'Red', name: 'Experienced Worker', renew: false },
+  red_tsm: { colour: 'red', label: 'Red', name: 'Experienced Technical, Supervisor or Manager', renew: false },
+  red_apprentice: { colour: 'red', label: 'Red', name: 'Apprentice', renew: false },
+  red_placement: { colour: 'red', label: 'Red', name: 'Industry Placement', renew: false },
+  red: { colour: 'red', label: 'Red', name: 'type not recorded', renew: false },
+  blue: { colour: 'blue', label: 'Blue', name: 'Skilled Worker', renew: true },
+  gold_craft: { colour: 'gold', label: 'Gold', name: 'Advanced Craft', renew: true },
+  gold_supervisory: { colour: 'gold', label: 'Gold', name: 'Supervisory', renew: true },
+  black: { colour: 'black', label: 'Black', name: 'Manager', renew: true },
+  white_aqp: { colour: 'white', label: 'White', name: 'Academically Qualified Person', renew: true },
+  white_pqp: { colour: 'white', label: 'White', name: 'Professionally Qualified Person', renew: false },
+  partner: { colour: 'partner', label: 'Partner card', name: 'with the CSCS logo (e.g. CPCS, NPORS)', renew: true },
+};
+const cscsLabel = (k) => (CSCS_CARDS[k] ? `${CSCS_CARDS[k].label} · ${CSCS_CARDS[k].name}` : '');
+
 module.exports = {
+  CSCS_CARDS, cscsLabel,
   serviceWork, INSPECTION_TYPES, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE,
   VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, EMPLOYEE_TYPES, userLabel, FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES,
 };

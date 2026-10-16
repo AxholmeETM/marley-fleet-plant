@@ -565,37 +565,8 @@ tr.clickable { cursor: pointer; }
 .form-section { font-size: 1rem; margin: 24px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
 dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink); margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 
-/* Training Matrix: a wide grid with the names held on the left and the course names turned upright. */
-.tm-wrap { overflow: auto; max-height: calc(100vh - var(--pane-h, 0px) - 40px); }
-.tm-table { border-collapse: separate; border-spacing: 0; font-size: .78rem; width: max-content; }
-.tm-table th, .tm-table td { padding: 4px 6px; border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); text-align: center; white-space: nowrap; }
-.tm-table thead th { position: sticky; top: 0; background: var(--card); z-index: 2; }
-.tm-table thead tr:nth-child(2) th { top: 29px; }
-.tm-table th.tm-grp { font-weight: 600; color: var(--navy); background: var(--accent-soft); }
-.tm-table th.tm-course { height: 150px; vertical-align: bottom; padding: 6px 2px; min-width: 64px; }
-.tm-table th.tm-course span { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 500; white-space: normal; max-height: 140px; display: inline-block; text-align: left; }
-.tm-table .tm-name { position: sticky; left: 0; z-index: 1; background: var(--card); text-align: left; min-width: 180px; max-width: 220px; white-space: normal; font-weight: 500; }
-.tm-table thead .tm-name { z-index: 3; }
-.tm-table .tm-name small { display: block; font-weight: 400; color: var(--ink-2); font-size: .72rem; }
-.tm.ok { background: var(--green-bg); color: var(--green); }
-.tm.soon { background: var(--amber-bg); color: var(--amber); font-weight: 600; }
-.tm.overdue { background: var(--red-bg); color: var(--red); font-weight: 600; }
-.tm.needed { background: var(--grey-bg); color: var(--ink-2); font-style: italic; }
-.tm.note { background: var(--accent-soft); color: var(--navy); }
-.tm-key { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 6px; }
-.tm-key .tm { padding: 1px 8px; border-radius: 6px; font-size: .74rem; }
 .tp-table input[type=date] { min-width: 150px; }
 .tp-table td:nth-child(1) { min-width: 180px; }
-@media (max-width: 700px) { .tm-table .tm-name { min-width: 120px; max-width: 140px; } .tm-table .tm-name small { display: none; } .tm-table th.tm-grp { text-align: left; } }
-/* Each training group (General, NPORS, CPCS) has its own colour, with a strong line where a group starts. */
-.tm-table th.tm-grp { font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; text-align: left; padding: 6px 10px; }
-.tm-table th.tm-grp.g0 { background: #01024c; color: #fff; }
-.tm-table th.tm-grp.g1 { background: #0b6e4f; color: #fff; }
-.tm-table th.tm-grp.g2 { background: #b45309; color: #fff; }
-.tm-table th.tm-course.g0 { background: #eef0fb; }
-.tm-table th.tm-course.g1 { background: #e6f4ee; }
-.tm-table th.tm-course.g2 { background: #fdf1e3; }
-.tm-table .gstart { border-left: 3px solid #01024c; }
 /* One person's training: each group folds away; the header shows how many are held and any that need attention. */
 .field > span.label { display: block; font-weight: 500; font-size: .86rem; margin-bottom: 6px; color: var(--ink-2); }
 .tp-group { border: 1px solid var(--line); border-radius: 12px; margin-top: 14px; overflow: hidden; }
@@ -610,25 +581,6 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tp-group .table-wrap { padding: 0 16px 8px; }
 .tp-group .table-wrap thead th { position: static; box-shadow: none; }
 .seg.funded input:checked + label { background: var(--navy); color: #fff; }
-/* Matrix: group tabs in the group colours, clickable cells and a highlighted row. */
-.tm-tabs a.t0.active { background: #01024c; } .tm-tabs a.t1.active { background: #0b6e4f; } .tm-tabs a.t2.active { background: #b45309; }
-.tm-table td.tm-cell { cursor: pointer; }
-.tm-table td.tm-cell:hover, .tm-table td.tm-cell:focus-visible { outline: 2px solid #01024c; outline-offset: -2px; }
-.tm-table tbody tr:hover td:not(.tm), .tm-table tbody tr:hover th.tm-name { background: #f1f3fb; }
-.tm-table tbody tr:hover th.tm-name a { font-weight: 600; }
-.tm-more { margin: 10px 4px 0; font-size: .86rem; }
-/* Slanted course names: narrow columns with the names at 45 degrees, so the header takes far less height. */
-.tm-wrap { padding-right: 110px; }
-.tm-table th.tm-course { height: 128px; min-width: 0; width: 58px; max-width: 58px; padding: 0; vertical-align: bottom; white-space: nowrap; overflow: visible; }
-.tm-table th.tm-course > div { width: 58px; transform: translate(29px, -6px) rotate(-45deg); transform-origin: bottom left; }
-.tm-table th.tm-course > div > span { writing-mode: horizontal-tb; transform: none; display: inline-block; max-height: none; font-size: .74rem; font-weight: 500; padding: 0 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
-.tm-table td { min-width: 58px; max-width: 58px; padding: 4px 2px; font-size: .74rem; }
-.tm-table th.tm-course.g0, .tm-table th.tm-course.g1, .tm-table th.tm-course.g2 { background: var(--card); }
-.tm-table th.tm-course.g0 > div > span { color: #01024c; } .tm-table th.tm-course.g1 > div > span { color: #0b6e4f; } .tm-table th.tm-course.g2 > div > span { color: #b45309; }
-.tm-table thead tr:first-child th { z-index: 210; }
-.tm-table thead .tm-name { z-index: 220; }
-.tm-table td { overflow: hidden; text-overflow: ellipsis; }
-.tm-table th.tm-course { border-right-color: transparent; }
 /* The employee type choice has four options; let it wrap on a phone. */
 #emp-type .seg { flex-wrap: wrap; max-width: 100%; }
 #emp-type { min-width: 0; }
@@ -636,3 +588,63 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tp-kpis button.kpi { font: inherit; text-align: left; border: 0; cursor: pointer; width: 100%; }
 .tp-kpis { margin-bottom: 16px; }
 .tp-table tr.tp-hit td { background: #fff7e0; }
+.tp-onboard { border-left: 5px solid #01024c; }
+.tp-onboard p { margin: 4px 0 0; color: var(--ink-2); max-width: 70ch; }
+
+/* Training Matrix. People down the side (name, CSCS card, job role, status), courses across under a group band.
+   Each date is a small chip coloured by status; the CSCS chip also carries the card colour on its left edge. */
+.tm-tabs a.t0.active { background: #01024c; } .tm-tabs a.t1.active { background: #0b6e4f; } .tm-tabs a.t2.active { background: #b45309; }
+.tm-legend { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; margin: 0 0 12px; font-size: .78rem; }
+.tm-legend-group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.tm-card { overflow: hidden; }
+.tm-wrap { overflow: auto; max-height: calc(100vh - var(--pane-h, 0px) - 90px); }
+.tm-table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.tm-table th, .tm-table td { border-bottom: 1px solid var(--line); padding: 0; background: var(--card); }
+.tm-table thead th { position: sticky; z-index: 3; }
+.tm-table thead tr.tm-groups th { top: 0; height: 34px; }
+.tm-table thead tr.tm-heads th { top: 34px; }
+.tm-table .tm-name { position: sticky; left: 0; z-index: 2; width: 230px; min-width: 230px; max-width: 230px; text-align: left; padding: 7px 14px; font-weight: 400; }
+.tm-table .tm-sum { position: sticky; left: 230px; z-index: 2; width: 132px; min-width: 132px; padding: 6px 10px; text-align: left; border-right: 1px solid var(--line-strong); }
+.tm-table thead .tm-name, .tm-table thead .tm-sum { z-index: 5; vertical-align: bottom; color: var(--ink-2); font-size: .74rem; font-weight: 500; padding-bottom: 10px; }
+.tm-table tbody .tm-name a { display: block; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tm-table tbody .tm-name a:hover { color: var(--accent); }
+.tm-sub { display: flex; align-items: center; gap: 6px; color: var(--ink-2); font-size: .72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+.tm-table th.tm-grp { text-align: left; padding: 0 12px; font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; border-left: 1px solid var(--line-strong); }
+.tm-table th.tm-grp.g0 { color: #01024c; background: #eceefa; box-shadow: inset 0 3px 0 #01024c; }
+.tm-table th.tm-grp.g1 { color: #0b6e4f; background: #e5f3ec; box-shadow: inset 0 3px 0 #0b6e4f; }
+.tm-table th.tm-grp.g2 { color: #9a4708; background: #fbefe2; box-shadow: inset 0 3px 0 #b45309; }
+.tm-table th.tm-course { width: 78px; min-width: 78px; max-width: 78px; height: 44px; padding: 4px 6px; font-size: .72rem; font-weight: 600; line-height: 1.2; text-align: center; vertical-align: middle; color: var(--ink); white-space: normal; border-bottom: 1px solid var(--line-strong); }
+.tm-table .gstart { border-left: 1px solid var(--line-strong); }
+.tm-table td.tm-cell { text-align: center; height: 44px; cursor: pointer; }
+.tm-table tbody tr:nth-child(even) td, .tm-table tbody tr:nth-child(even) th { background: #fafbfd; }
+.tm-table tbody tr:hover td, .tm-table tbody tr:hover th { background: #f0f2fa; }
+.tm-table td.tm-cell:hover, .tm-table td.tm-cell:focus-visible { box-shadow: inset 0 0 0 2px #01024c; outline: none; }
+.chip { display: inline-block; min-width: 62px; box-sizing: border-box; padding: 3px 6px; border-radius: 6px; font-size: .74rem; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; vertical-align: middle; }
+.chip.ok { background: var(--green-bg); color: var(--green); }
+.chip.soon { background: #ffe9b8; color: #7a4a00; font-weight: 700; }
+.chip.overdue { background: #fbd9d7; color: #a3121f; font-weight: 700; }
+.chip.needed { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line-strong); font-style: italic; }
+.chip.note { background: var(--accent-soft); color: var(--navy); font-weight: 400; }
+.tm-legend .chip { min-width: 0; max-width: none; }
+.badge { display: inline-block; margin: 1px 4px 1px 0; padding: 1px 7px; border-radius: 999px; font-size: .7rem; font-weight: 600; white-space: nowrap; }
+.badge.overdue { background: #fbd9d7; color: #a3121f; } .badge.soon { background: #ffe9b8; color: #7a4a00; }
+.badge.needed { background: var(--grey-bg); color: var(--ink-2); } .badge.ok { background: var(--green-bg); color: var(--green); font-weight: 500; }
+/* CSCS card colours (Green labourer, Red temporary, Blue skilled, Gold advanced/supervisory, Black manager, White qualified person). */
+.cscs { display: inline-block; flex: none; width: 16px; height: 11px; border-radius: 2px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18); vertical-align: -1px; }
+.cscs-green { background: #2e9e4a; } .cscs-red { background: #d22b2b; } .cscs-blue { background: #1f5fd1; }
+.cscs-gold { background: #d4a12a; } .cscs-black { background: #1b1b1f; } .cscs-white { background: #ffffff; }
+.cscs-partner { background: linear-gradient(135deg, #1f5fd1 50%, #2e9e4a 50%); }
+.cscs-chip { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-2); }
+.chip .cscs { width: 10px; height: 8px; margin-right: 4px; vertical-align: 0; }
+.tm-table td.tm-cell + td.tm-cell:not(.gstart) { box-shadow: inset 1px 0 0 #eef0f5; }
+.tm-table td.tm-cell + td.tm-cell:not(.gstart):hover { box-shadow: inset 0 0 0 2px #01024c; }
+.tm-more { margin: 10px 4px 0; font-size: .86rem; }
+@media (max-width: 700px) {
+  .tm-table .tm-name { width: 140px; min-width: 140px; max-width: 140px; padding: 6px 8px; }
+  .tm-table .tm-sum { display: none; }
+  .tm-sub { display: none; }
+}
+.cscs-pick { display: flex; align-items: center; gap: 10px; } .cscs-pick select { flex: 1; min-width: 0; }
+.cscs-pick .cscs { width: 30px; height: 20px; border-radius: 4px; }
+.cscs-none { background: repeating-linear-gradient(45deg, #eef0f5 0 4px, #dfe2ec 4px 8px); }
+.chip:has(.cscs) { max-width: 76px; padding-inline: 4px; }

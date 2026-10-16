@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1>Training Matrix</h1><p class="muted" style="margin:0">Expiry dates for each person. <span class="tm-key"><span class="tm ok">In date</span> <span class="tm soon">Within 30 days</span> <span class="tm overdue">Expired</span> <span class="tm needed">Needed</span> <span class="tm note">Note</span></span></p></div>
+  <div><h1>Training Matrix</h1><p class="muted" style="margin:0">Expiry dates for each person. Click a date to update it, or a name to see all their training.</p></div>
 </div>
 <% const link = (o) => { const u = new URLSearchParams({ group: grp, ...(q ? { q } : {}), ...(attention ? { show: 'attention' } : {}), ...(showEmpty ? { empty: '1' } : {}), ...o }); for (const [k, v] of [...u]) if (v === '') u.delete(k); return '/training/matrix?' + u; }; %>
 <nav class="tabs tm-tabs"><% for (const g of [...GROUPS, 'All']) { %><a href="<%= link({ group: g }) %>" class="<%= grp === g ? 'active' : '' %> t<%= GROUPS.indexOf(g) %>"><%= g %></a><% } %></nav>
@@ -14,17 +14,25 @@
   <a class="btn" href="/training/matrix?group=<%= grp %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
-<div class="card flush">
-  <% if (!people.length) { %><p class="empty"><%= attention ? 'Nothing needs attention here: nobody has anything expired or due within 30 days.' : q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet. Use the Training button on an employee\'s page to add them.' %></p><% } else { %>
+<div class="tm-legend">
+  <span class="tm-legend-group"><span class="chip ok">In date</span><span class="chip soon">Within 30 days</span><span class="chip overdue">Expired</span><span class="chip needed">Needed</span><span class="chip note">Note</span></span>
+  <span class="tm-legend-group"><span class="muted">CSCS card</span><% for (const c of ['green', 'red', 'blue', 'gold', 'black', 'white', 'partner']) { %><span class="cscs-chip"><span class="cscs cscs-<%= c %>"></span><%= c === 'partner' ? 'Partner' : c[0].toUpperCase() + c.slice(1) %></span><% } %></span>
+</div>
+<div class="card flush tm-card">
+  <% if (!people.length) { %><p class="empty"><%= attention ? 'Nothing needs attention here: nobody has anything expired or due within 30 days.' : q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet.' %></p><% } else { %>
   <div class="tm-wrap"><table class="tm-table">
     <thead>
-      <tr><th class="tm-name" rowspan="2">Employee</th><% for (const g of GROUPS) { const n = courses.filter((c) => c.grp === g).length; if (n) { %><th class="tm-grp g<%= GROUPS.indexOf(g) %> gstart" colspan="<%= n %>"><%= g %></th><% } } %></tr>
-      <tr><% courses.forEach((c, i) => { %><th class="tm-course g<%= GROUPS.indexOf(c.grp) %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.name %>" style="z-index:<%= 200 - i %>"><div><span><%= c.name %></span></div></th><% }) %></tr>
+      <tr class="tm-groups"><th class="tm-name" rowspan="2"><%= people.length %> <%= people.length === 1 ? 'person' : 'people' %></th><th class="tm-sum" rowspan="2">Status</th><% for (const g of GROUPS) { const n = courses.filter((c) => c.grp === g).length; if (n) { %><th class="tm-grp g<%= GROUPS.indexOf(g) %>" colspan="<%= n %>"><%= g %></th><% } } %></tr>
+      <tr class="tm-heads"><% courses.forEach((c, i) => { %><th class="tm-course g<%= GROUPS.indexOf(c.grp) %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.grp %>: <%= c.name %>"><%= c.short || c.name %></th><% }) %></tr>
     </thead>
-    <tbody><% for (const p of people) { %>
+    <tbody><% for (const p of people) { const t = summary(p); const card = CSCS_CARDS[p.cscs_card]; %>
       <tr>
-        <th class="tm-name" scope="row"><a href="/training/people/<%= p.id %>"><%= p.name %></a></th>
-        <% courses.forEach((c, i) => { const r = cell(p, c); const s = r && r.status; %><td tabindex="0" data-p="<%= p.id %>" data-c="<%= c.id %>" data-pn="<%= p.name %>" data-cn="<%= c.name %>" data-e="<%= r && r.expiry || '' %>" data-n="<%= r && r.note || '' %>" data-r="<%= r && r.required ? 1 : '' %>" class="tm-cell <%= s ? 'tm ' + s.level : '' %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>"<% if (s) { %> title="<%= c.name %>: <%= s.text %><%= r.note && r.expiry ? ' · ' + r.note : '' %>"<% } %>><%= s ? s.short : '' %></td><% }) %>
+        <th class="tm-name" scope="row">
+          <a href="/training/people/<%= p.id %>"><%= p.name %></a>
+          <span class="tm-sub"><% if (card) { %><span class="cscs cscs-<%= card.colour %>" title="CSCS: <%= cscsLabel(p.cscs_card) %>"></span><% } %><%= p.job_title || userLabel(p) %></span>
+        </th>
+        <td class="tm-sum"><% if (t.overdue) { %><span class="badge overdue"><%= t.overdue %> expired</span><% } %><% if (t.soon) { %><span class="badge soon"><%= t.soon %> due</span><% } %><% if (t.needed) { %><span class="badge needed"><%= t.needed %> needed</span><% } %><% if (!t.overdue && !t.soon && !t.needed) { %><span class="badge ok">All in date</span><% } %></td>
+        <% courses.forEach((c, i) => { const r = cell(p, c); const s = r && r.status; const cs = c.key === 'cscs' && card; %><td tabindex="0" data-p="<%= p.id %>" data-c="<%= c.id %>" data-pn="<%= p.name %>" data-cn="<%= c.name %>" data-e="<%= r && r.expiry || '' %>" data-n="<%= r && r.note || '' %>" data-r="<%= r && r.required ? 1 : '' %>" class="tm-cell<%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.name %><%= s ? ': ' + s.text : '' %><%= r && r.note && r.expiry ? ' · ' + r.note : '' %><%= cs ? ' · ' + cscsLabel(p.cscs_card) + ' card' : '' %>"><% if (s) { %><span class="chip <%= s.level %>"><% if (cs) { %><span class="cscs cscs-<%= card.colour %>"></span><% } %><%= s.short %></span><% } %></td><% }) %>
       </tr>
     <% } %></tbody>
   </table></div><% } %>

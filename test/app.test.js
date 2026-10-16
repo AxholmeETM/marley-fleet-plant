@@ -89,7 +89,7 @@ test('admin and driver flows', async () => {
   assert.match((await admin('POST', '/vehicles', { reg: 'yx21 kpl', make: 'Ford', model: 'Transit', fuel_type: 'diesel', driver_id: dave, mot_due: status.addDays(status.isoDate(), 5) })).location, /^\/vehicles\/\d+$/);
   const vehicle = await get("SELECT * FROM vehicles WHERE reg = 'YX21 KPL'");
   // Employees without an email have no login; vehicles and fuel cards can be assigned from their page.
-  assert.match((await admin('POST', '/users', { name: 'Laura Severn', role: 'driver', employee_type: 'driver', job_title: 'Groundworker' })).location, /^\/users\/\d+$/);
+  assert.match((await admin('POST', '/users', { name: 'Laura Severn', role: 'driver', employee_type: 'driver', job_title: 'Groundworker' })).location, /^\/training\/people\/\d+\?onboard=1&from=%2Fusers%2F\d+$/);
   const laura = await get("SELECT * FROM users WHERE name = 'Laura Severn'");
   assert.equal(laura.email, null);
   assert.equal(laura.password_hash, null);
@@ -401,8 +401,12 @@ test('training matrix and view-only managers', async () => {
   const admin = client();
   await admin('POST', '/login', { email: 'admin@test.local', password: 'adminpass1' });
   await admin('POST', '/users', { name: 'Mia Manager', email: 'mia@test.local', password: 'managerpass1', role: 'driver', employee_type: 'manager', job_title: 'Contracts Manager' });
-  await admin('POST', '/users', { name: 'Tess Trained', role: 'driver', employee_type: 'worker', job_title: 'Groundworker' });
-  const tess = await get("SELECT id FROM users WHERE name = 'Tess Trained'");
+  // A new employee goes straight onto the Training Matrix and on to their training page to set it up.
+  const added = await admin('POST', '/users', { name: 'Tess Trained', role: 'driver', employee_type: 'worker', job_title: 'Groundworker' });
+  const tess = await get("SELECT id, on_matrix FROM users WHERE name = 'Tess Trained'");
+  assert.equal(tess.on_matrix, 1);
+  assert.match(added.location, new RegExp(`^/training/people/${tess.id}\\?onboard=1`));
+  assert.match((await admin('GET', added.location)).text, /Save and finish/);
   const cscs = await get("SELECT id FROM training_courses WHERE key = 'cscs'");
   const smsts = await get("SELECT id FROM training_courses WHERE key = 'smsts'");
   const first = await get("SELECT id FROM training_courses WHERE key = 'first_aid'");
@@ -423,12 +427,12 @@ test('training matrix and view-only managers', async () => {
   assert.match((await admin('GET', '/training?show=expired')).text, /First Aid/i);
   assert.match((await admin('GET', '/training?show=needed')).text, /Tess Trained/);
   const matrix = (await admin('GET', '/training/matrix')).text;
-  assert.match(matrix, /tm soon/);
-  assert.match(matrix, /tm overdue/);
-  assert.match(matrix, /tm needed/);
+  assert.match(matrix, /chip soon/);
+  assert.match(matrix, /chip overdue/);
+  assert.match(matrix, /chip needed/);
   assert.equal((await admin('POST', '/training/courses', { name: 'Hand Arm Vibration', grp: 'General' })).status, 302);
-  assert.doesNotMatch((await admin('GET', '/training/matrix?group=General')).text, /<span>Hand Arm Vibration/);
-  assert.match((await admin('GET', '/training/matrix?group=General&empty=1')).text, /<span>Hand Arm Vibration/);
+  assert.doesNotMatch((await admin('GET', '/training/matrix?group=General')).text, /class="tm-course[^>]*>Hand Arm Vibration</);
+  assert.match((await admin('GET', '/training/matrix?group=General&empty=1')).text, /class="tm-course[^>]*>Hand Arm Vibration</);
   // One cell can be changed from the matrix pop-up, which returns to the same view.
   assert.equal((await admin('POST', `/training/people/${tess.id}/courses/${cscs.id}`, { expiry: '2030-01-31', back: '/training/matrix?group=General' })).location, '/training/matrix?group=General');
   assert.equal((await get('SELECT expiry FROM training_records WHERE user_id = ? AND course_id = ?', tess.id, cscs.id)).expiry, '2030-01-31');
@@ -438,8 +442,12 @@ test('training matrix and view-only managers', async () => {
   // The dashboard has an Update button per row; the pop-up returns to the same tab.
   assert.match((await admin('GET', '/training?show=expired')).text, /class="btn small tm-upd"/);
   assert.equal((await admin('POST', `/training/people/${tess.id}/courses/${first.id}`, { expiry: '2031-05-01', back: '/training?show=expired' })).location, '/training?show=expired');
-  // Employee details opened from the training page leads back to it.
-  assert.match((await admin('GET', `/users/${tess.id}?from=training`)).text, new RegExp(`class="crumbs".*href="/training/matrix">Training Matrix</a>.*href="/training/people/${tess.id}">Tess Trained</a>`));
+  // Breadcrumbs follow the way you came: employee details opened from the training page leads back to it, and the other way round.
+  const crumbsOf = (html) => (html.match(/<nav class="crumbs"[\s\S]*?<\/nav>/) || [''])[0].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  assert.equal(crumbsOf((await admin('GET', `/users/${tess.id}?from=${encodeURIComponent(`/training/people/${tess.id}`)}`)).text), 'Training Matrix › Tess Trained – training › Employee details');
+  assert.equal(crumbsOf((await admin('GET', `/training/people/${tess.id}?from=/users/${tess.id}`)).text), 'Employees › Tess Trained › Training');
+  assert.equal(crumbsOf((await admin('GET', `/training/people/${tess.id}`)).text), 'Training Matrix › Tess Trained');
+  assert.equal(crumbsOf((await admin('GET', `/training/people/${tess.id}?from=//evil.example`)).text), 'Training Matrix › Tess Trained');
 
   // Managers see everything read-only, apart from the Training Matrix and full card numbers.
   const mia = client();
@@ -453,6 +461,13 @@ test('training matrix and view-only managers', async () => {
   assert.doesNotMatch((await mia('GET', '/')).text, /href="\/training"/);
   assert.match((await admin('GET', '/')).text, /href="\/training"/);
 
+  // The CSCS card type is saved, shown on the matrix, and anything else is ignored.
+  await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'red_trainee', [`expiry_${cscs.id}`]: '2030-01-31' });
+  assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, 'red_trainee');
+  assert.match((await admin('GET', '/training/matrix')).text, /cscs cscs-red/);
+  assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /can't be renewed/);
+  await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'purple' });
+  assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, null);
   await admin('POST', `/training/people/${tess.id}/remove`, {});
   assert.equal((await get('SELECT on_matrix FROM users WHERE id = ?', tess.id)).on_matrix, 0);
 });

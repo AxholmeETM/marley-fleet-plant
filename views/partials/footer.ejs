@@ -40,6 +40,24 @@ document.querySelectorAll('a[href$="/new"], a[href*="/new?"], a[href$="/edit"], 
   if (!el.closest('.side-nav')) el.style.display = 'none';
 });
 <% } %>
+<% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+// Breadcrumbs follow the way you came: a link from one section to a page in another carries ?from=<this page>.
+(function () {
+  const DETAIL = /^\/(users|vehicles|plant|projects|training\/people|checks\/(plant|vehicle))\/[^/]+$/;
+  const section = (p) => { const s = p.split('/')[1] || ''; return s === 'calendar' ? '' : s === 'equipment' ? 'plant' : s; };
+  document.addEventListener('click', function (e) {
+    const a = e.target.closest && e.target.closest('a[href]');
+    if (!a || a.closest('.crumbs, .side-nav, .subnav') || a.origin !== location.origin) return;
+    if (!DETAIL.test(a.pathname) || /\/new$/.test(a.pathname)) return;
+    if (section(a.pathname) === section(location.pathname)) return;
+    const here = new URL(location.href);
+    here.searchParams.delete('from');
+    const url = new URL(a.href);
+    url.searchParams.set('from', here.pathname + here.search);
+    a.href = url.pathname + url.search + url.hash;
+  }, true);
+})();
+<% } %>
 </script>
 </body>
 </html>

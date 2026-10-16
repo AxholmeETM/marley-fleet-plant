@@ -90,7 +90,14 @@ router.post('/users', async (req, res) => {
       u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email && !u.noLogin ? bcrypt.hashSync(u.password, 10) : null,
       ...DETAIL_COLS.map((c) => u.details[c]))).lastInsertRowid;
   } catch (err) { saveError(err); }
-  req.flash('success', u.email && !u.noLogin ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
+  const added = u.email && !u.noLogin ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`;
+  // Every new employee goes on the Training Matrix; the next step is their training.
+  if (u.employee_type) {
+    await run('UPDATE users SET on_matrix = 1 WHERE id = ?', id);
+    req.flash('success', `${added} Now choose the training they need and add any they already hold.`);
+    return res.redirect(`/training/people/${id}?onboard=1&from=${encodeURIComponent(`/users/${id}`)}`);
+  }
+  req.flash('success', added);
   res.redirect(`/users/${id}`);
 });
 
@@ -143,10 +150,8 @@ router.get('/users/:id', async (req, res) => {
   const cards = await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
     ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`);
   res.render('user-view', {
-    title: item.name, item,
-    // Opened from someone's training page: the breadcrumb leads back there.
-    ...(req.query.from === 'training' && req.user.role === 'admin' ? { navActive: '/training' } : {}),
-    crumbs: req.query.from === 'training' && req.user.role === 'admin' ? [['Training Matrix', '/training/matrix'], [item.name, `/training/people/${item.id}`], ['Employee details']] : [['Employees', '/users'], [item.name]], EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
+    title: item.name, item, crumbHere: 'Employee details',
+    crumbs: [['Employees', '/users'], [item.name]], EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
     myVehicles: vehicles.filter((v) => v.driver_id === item.id), otherVehicles: vehicles.filter((v) => v.driver_id !== item.id && v.active),
     myCards: cards.filter((c) => c.user_id === item.id), otherCards: cards.filter((c) => c.user_id !== item.id && c.status === 'active'),
   });
