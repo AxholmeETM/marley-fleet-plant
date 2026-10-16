@@ -15,7 +15,7 @@
   <ol class="mi-steps">
     <li>In SoTrack, run the <strong>Trip List</strong> report for the week and download it as Excel.</li>
     <li>On <a href="/mileage/weeks">Weekly trips</a>, click <strong>Upload SoTrack file</strong> and choose that file. Trips already loaded are skipped, so overlapping weeks are fine.</li>
-    <li>Add each driver's home under <strong>Addresses</strong>, with your sites and the yard as work addresses.</li>
+    <li>Add each driver's home under <strong>Addresses</strong>, with your sites, and fuel stations or lunch spots as allowed stops.</li>
   </ol>
 </div>
 <% } else { %>
@@ -44,6 +44,6 @@
     <tfoot><tr><th class="mi-chk"><%= totals.checked %>/<%= vehicles.length %></th><th colspan="2">Total</th><th class="num"><%= totals.trips %></th><th class="num"><%= M.fmtMiles(totals.work) %></th><th class="num"><%= M.fmtMiles(totals.personal) %></th><th class="num"><%= M.fmtMiles(totals.work + totals.personal) %></th><th></th><th></th></tr></tfoot>
   </table></div>
 </div>
-<p class="small muted">A journey runs from leaving home to getting back home (or to a stop of 4 hours or more). If none of its trips starts or ends at a work address, its miles count as personal. A weekday stop of 3 hours or more away from home counts as a site until you save it. Vehicles with no driver count as work. Open a driver to check their trips, change any trip, or save an address.</p>
+<p class="small muted">A journey runs from leaving home to getting back home (or to a stop of 4 hours or more). If none of its trips starts or ends at a site, its miles count as personal. A weekday stop of 3 hours or more away from home counts as a site until you save it. Vehicles with no driver count as work. Open a driver to check their trips, change any trip, or save an address.</p>
 <% } %>
 <%- include('partials/footer') %>

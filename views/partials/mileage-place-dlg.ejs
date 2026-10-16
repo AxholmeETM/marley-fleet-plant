@@ -1,4 +1,4 @@
-<% /* Edit a saved home, work or unknown address. Opened by any element with data-place (JSON of the place). Needs people, back. */ %>
+<% /* Edit a saved site, stop, home or unknown address. Opened by any element with data-place (JSON of the place). Needs people, back. */ %>
 <% if (canEdit) { %>
 <dialog id="place-dlg" class="dlg">
   <div class="card">
@@ -7,7 +7,8 @@
       <input type="hidden" name="back" value="<%= back %>"><input type="hidden" name="at" id="pl-at">
       <div class="field"><label for="pl-addr">Address</label><div class="mi-addr-row"><input id="pl-addr" name="address" type="text" required><a class="btn" id="pl-map" target="_blank" rel="noopener">See location</a></div></div>
       <div class="field"><label>This is</label>
-        <label class="radio"><input type="radio" name="kind" value="work"> A work address (site, yard, supplier)</label>
+        <label class="radio"><input type="radio" name="kind" value="work"> A site (where we're working)</label>
+        <label class="radio"><input type="radio" name="kind" value="stop"> An allowed stop (fuel, lunch, supplier; counts as the rest of the journey)</label>
         <label class="radio"><input type="radio" name="kind" value="home"> Someone's home</label>
         <label class="radio"><input type="radio" name="kind" value="unknown"> Unknown address (counts as personal; ask the driver)</label>
       </div>

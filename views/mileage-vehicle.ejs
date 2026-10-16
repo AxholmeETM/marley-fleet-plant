@@ -1,10 +1,10 @@
 <%- include('partials/header') %>
 <%
-  const TAGS = { home: 'Home', work: 'Work', unknown: 'Unknown' };
+  const TAGS = { home: 'Home', work: 'Site', unknown: 'Unknown', stop: 'Stop' };
   const loc = (where, text, place) => {
     const tag = place && canEdit
       ? `<button type="button" class="mi-tag ${place.kind} mi-edit" title="Change or remove this saved address" data-place="${escapeHtml(JSON.stringify({ id: place.id, kind: place.kind, user_id: place.user_id, label: place.label, address: place.address }))}">${TAGS[place.kind]}</button>`
-      : where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: counts as personal">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
+      : where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Site</span>' : where === 'stop' ? '<span class="mi-tag stop" title="Allowed stop: counts as the rest of the journey">Stop</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: counts as personal">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
     const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-add="${escapeHtml(JSON.stringify({ address: text, user_id: v.driver_id }))}" title="Save this address">+</button>` : '';
     return tag + escapeHtml(text || '—') + add;
   };
@@ -47,7 +47,7 @@
     <% } %>
   </table></div>
 </div>
-<p class="small muted"><span class="mi-tag home">Home</span> and <span class="mi-tag work">Work</span> mark saved addresses. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click a tag to change or remove that saved address. Click <strong>+</strong> next to any other address to save it as a work address, a home or an unknown address. Click Work or Personal on a trip to change it; Undo puts it back.</p>
+<p class="small muted"><span class="mi-tag home">Home</span>, <span class="mi-tag work">Site</span>, <span class="mi-tag stop">Stop</span> and <span class="mi-tag unknown">Unknown</span> mark saved addresses; a Stop (fuel, lunch, a supplier) counts as the rest of its journey. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click a tag to change or remove that saved address. Click <strong>+</strong> next to any other address to save it as a site, an allowed stop, a home or an unknown address. Click Work or Personal on a trip to change it; Undo puts it back.</p>
 <%- include('partials/mileage-add-dlg') %>
 <%- include('partials/mileage-place-dlg') %>
 <%- include('partials/footer') %>

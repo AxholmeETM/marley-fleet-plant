@@ -835,3 +835,5 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .btn.mi-kind.home { background: var(--amber-bg); color: var(--amber); }
 .btn.mi-kind.unknown { background: #f3e8fb; color: #6b2f8f; }
 .btn.mi-kind:hover { box-shadow: inset 0 0 0 1.5px currentColor; }
+.mi-tag.stop { background: #e3f4ef; color: #1d6b55; }
+.btn.mi-kind.stop { background: #e3f4ef; color: #1d6b55; }

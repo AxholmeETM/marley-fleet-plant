@@ -3,15 +3,16 @@
   const works = places.filter((x) => x.kind === 'work').sort((a, b) => (a.label || a.address).localeCompare(b.label || b.address));
   const homes = places.filter((x) => x.kind === 'home').sort((a, b) => (a.user_name || '').localeCompare(b.user_name || ''));
   const unknowns = places.filter((x) => x.kind === 'unknown');
-  const TABS = [['sort', 'To sort', unsaved.length], ['work', 'Work', works.length], ['home', 'Homes', homes.length], ['unknown', 'Unknown', unknowns.length]];
+  const stops = places.filter((x) => x.kind === 'stop').sort((a, b) => (a.label || a.address).localeCompare(b.label || b.address));
+  const TABS = [['sort', 'To sort', unsaved.length], ['work', 'Sites', works.length], ['stop', 'Allowed stops', stops.length], ['home', 'Homes', homes.length], ['unknown', 'Unknown', unknowns.length]];
   const mapUrl = (a) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a);
   const placeJson = (x) => JSON.stringify({ id: x.id, kind: x.kind, user_id: x.user_id, label: x.label, address: x.address });
   const names = (ds) => (ds.length > 2 ? `${ds.slice(0, 2).map((d) => d.name).join(', ')} +${ds.length - 2}` : ds.map((d) => d.name).join(', ')) || '—';
 %>
 <div class="page-head">
   <div><h1>Addresses</h1>
-  <p class="muted" style="margin:0">Save sites, the yard and drivers' homes so each trip can be marked as work or personal.</p></div>
-  <% if (canEdit) { %><div class="actions"><button class="btn primary" type="button" data-add="<%= JSON.stringify({ kind: ['home', 'unknown'].includes(show) ? show : 'work' }) %>">Add address</button></div><% } %>
+  <p class="muted" style="margin:0">Save sites, allowed stops and drivers' homes so each trip can be marked as work or personal.</p></div>
+  <% if (canEdit) { %><div class="actions"><button class="btn primary" type="button" data-add="<%= JSON.stringify({ kind: ['home', 'unknown', 'stop'].includes(show) ? show : 'work' }) %>">Add address</button></div><% } %>
 </div>
 <%- include('partials/pane-end') %>
 <div class="card mi-addr">
@@ -33,7 +34,8 @@
           <td class="small" title="<%= a.drivers.map((d) => d.name).join(', ') %>"><%= names(a.drivers) %></td>
           <% if (canEdit) { %><td class="num nowrap"><form method="post" action="/mileage/addresses" class="mi-quick">
             <input type="hidden" name="address" value="<%= a.address %>"><input type="hidden" name="back" value="<%= back %>">
-            <button class="btn small mi-kind work" type="submit" name="kind" value="work">Work</button>
+            <button class="btn small mi-kind work" type="submit" name="kind" value="work">Site</button>
+            <button class="btn small mi-kind stop" type="submit" name="kind" value="stop">Stop</button>
             <button class="btn small mi-kind home" type="button" data-add="<%= JSON.stringify({ address: a.address, kind: 'home', user_id: a.drivers.length === 1 ? a.drivers[0].id : null }) %>">Home</button>
             <button class="btn small mi-kind unknown" type="submit" name="kind" value="unknown">Unknown</button>
           </form></td><% } %>
@@ -44,8 +46,8 @@
   </section>
   <% } else if (show === 'work') { %>
   <section data-list="work">
-    <p class="muted small mi-addr-intro">Sites, the yard and suppliers. A journey that reaches one of these counts as work.</p>
-    <% if (!works.length) { %><p class="empty">No work addresses yet.</p><% } else { %>
+    <p class="muted small mi-addr-intro">Sites where we're working. A journey that reaches one of these counts as work.</p>
+    <% if (!works.length) { %><p class="empty">No sites yet.</p><% } else { %>
     <div class="table-wrap"><table class="mi-addr-table">
       <thead><tr><th>Name</th><th class="desc">Address</th><% if (canEdit) { %><th></th><% } %></tr></thead>
       <tbody><% for (const w of works) { %>
@@ -56,9 +58,23 @@
     </table></div>
     <% } %>
   </section>
+  <% } else if (show === 'stop') { %>
+  <section data-list="stop">
+    <p class="muted small mi-addr-intro">Fuel stations, lunch spots and suppliers. A stop doesn't make a trip work or personal: it counts as whatever the rest of the journey is.</p>
+    <% if (!stops.length) { %><p class="empty">No allowed stops yet.</p><% } else { %>
+    <div class="table-wrap"><table class="mi-addr-table">
+      <thead><tr><th>Name</th><th class="desc">Address</th><% if (canEdit) { %><th></th><% } %></tr></thead>
+      <tbody><% for (const w of stops) { %>
+        <tr><td><strong><%= w.label || '—' %></strong></td>
+          <td class="desc"><a href="<%= mapUrl(w.address) %>" target="_blank" rel="noopener" title="See location in Google Maps"><%= w.address %></a></td>
+          <% if (canEdit) { %><td class="num"><button class="btn small" type="button" data-place="<%= placeJson(w) %>">Edit</button></td><% } %></tr>
+      <% } %></tbody>
+    </table></div>
+    <% } %>
+  </section>
   <% } else if (show === 'home') { %>
   <section data-list="home">
-    <p class="muted small mi-addr-intro">Where each driver lives. A journey from home that never reaches a work address counts as personal.</p>
+    <p class="muted small mi-addr-intro">Where each driver lives. A journey from home that never reaches a site counts as personal.</p>
     <% if (!homes.length) { %><p class="empty">No home addresses yet.</p><% } else { %>
     <div class="table-wrap"><table class="mi-addr-table">
       <thead><tr><th>Employee</th><th class="desc">Address</th><% if (canEdit) { %><th></th><% } %></tr></thead>

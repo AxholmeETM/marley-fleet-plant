@@ -46,7 +46,7 @@ async function mileageFor(p, reg) {
   const vehicles = [...byReg].map(([r, ts]) => {
     const last = ts[ts.length - 1];
     const homes = last.driver_id ? places.filter((x) => x.kind === 'home' && x.user_id === last.driver_id) : [];
-    const out = M.classify(ts, { homes, works, unknowns: places.filter((x) => x.kind === 'unknown') });
+    const out = M.classify(ts, { homes, works, unknowns: places.filter((x) => x.kind === 'unknown'), stops: places.filter((x) => x.kind === 'stop') });
     return {
       reg: r, regText: last.fleet_reg || M.fmtReg(r), device: last.device, vehicle_id: last.vehicle_id, driver_id: last.driver_id, driver_name: last.driver_name,
       trips: out, work: M.sum(out, 'work'), personal: M.sum(out, 'personal'), total: M.sum(out),
@@ -178,7 +178,7 @@ router.get('/mileage/addresses', async (req, res) => {
   const { vehicles, places } = await mileageFor(p);
   const unsaved = unsavedAddresses(vehicles);
   // One list at a time: what still needs sorting, then the saved work, home and unknown addresses.
-  const show = ['sort', 'work', 'home', 'unknown'].includes(req.query.show) ? req.query.show : unsaved.length ? 'sort' : 'work';
+  const show = ['sort', 'work', 'stop', 'home', 'unknown'].includes(req.query.show) ? req.query.show : unsaved.length ? 'sort' : 'work';
   res.render('mileage-addresses', {
     title: 'Addresses', navActive: '/mileage',
     places, people, p, qs: qs(p), unsaved, show, back: `/mileage/addresses?${qs(p)}&show=${show}`,
@@ -203,14 +203,14 @@ const backAt = (req) => backTo(req.body.back) + (/^\d+$/.test(String(req.body.at
 const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers|\/weeks)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
 
 router.post('/mileage/addresses', async (req, res) => {
-  const kind = ['home', 'unknown'].includes(req.body.kind) ? req.body.kind : 'work';
+  const kind = ['home', 'unknown', 'stop'].includes(req.body.kind) ? req.body.kind : 'work';
   const address = text(req.body.address);
   if (!address) throw new UserError('Please enter the address, as SoTrack shows it, including the postcode.');
   if (!M.addressKey(address).postcode) throw new UserError('Please include the postcode, e.g. DN7 6AP. That is how trips are matched to the address.');
   const userId = kind === 'home' ? Number(req.body.user_id) : null;
   if (kind === 'home' && !(await get('SELECT id FROM users WHERE id = ?', userId))) throw new UserError('Please choose whose home this is.');
   await run('INSERT INTO mileage_places (kind, user_id, label, address) VALUES (?, ?, ?, ?)', kind, userId, kind !== 'home' ? text(req.body.label) : null, address.slice(0, 300));
-  req.flash('success', { home: 'Home address added. Personal miles have been worked out again.', work: 'Work address added. Trips to it now count as work.', unknown: 'Saved as an unknown address. Trips to or from it now count as personal miles. It is listed under Unknown addresses so you can ask the driver.' }[kind]);
+  req.flash('success', { home: 'Home address added. Personal miles have been worked out again.', work: 'Site added. Journeys that reach it now count as work.', stop: 'Saved as an allowed stop. Trips to it count as whatever the rest of the journey is.', unknown: 'Saved as an unknown address. Trips to or from it now count as personal miles. It is listed under Unknown addresses so you can ask the driver.' }[kind]);
   res.redirect(backAt(req));
 });
 
@@ -218,7 +218,7 @@ router.post('/mileage/addresses', async (req, res) => {
 router.post('/mileage/addresses/:id', async (req, res) => {
   const place = await get('SELECT id FROM mileage_places WHERE id = ?', Number(req.params.id));
   if (!place) throw new UserError('Address not found.', 404);
-  const kind = ['home', 'unknown'].includes(req.body.kind) ? req.body.kind : 'work';
+  const kind = ['home', 'unknown', 'stop'].includes(req.body.kind) ? req.body.kind : 'work';
   const address = text(req.body.address);
   if (!address || !M.addressKey(address).postcode) throw new UserError('Please keep the postcode in the address, e.g. DN7 6AP. That is how trips are matched to it.');
   const userId = kind === 'home' ? Number(req.body.user_id) : null;

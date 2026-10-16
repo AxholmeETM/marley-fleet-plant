@@ -636,3 +636,15 @@ test('mileage from a SoTrack trip list', async () => {
   await d('POST', '/login', { email: 'dave@test.local', password: 'driverpass1' });
   assert.equal((await d('GET', '/mileage')).status, 403);
 });
+
+test('an allowed stop counts as the rest of its journey', () => {
+  const { classify } = require('../src/mileage');
+  const trip = (s, e, from, to) => ({ started_at: s, ended_at: e, start_loc: from, end_loc: to, distance: 1 });
+  const places = { homes: [{ kind: 'home', address: 'Home Road, DN7 1AA' }], works: [{ kind: 'work', address: 'Site Road, DN4 4DD' }], stops: [{ kind: 'stop', address: 'Fuel Road, DN7 9FF' }] };
+  // Home to the fuel station and back on a Saturday: personal.
+  const own = classify([trip('2026-10-10 10:00:00', '2026-10-10 10:10:00', 'Home Road, DN7 1AA', 'Fuel Road, DN7 9FF'), trip('2026-10-10 10:20:00', '2026-10-10 10:30:00', 'Fuel Road, DN7 9FF', 'Home Road, DN7 1AA')], places);
+  assert.deepEqual(own.map((t) => [t.to, t.use]), [['stop', 'personal'], ['home', 'personal']]);
+  // Fuel on the way to site and back: work.
+  const job = classify([trip('2026-10-12 07:00:00', '2026-10-12 07:10:00', 'Home Road, DN7 1AA', 'Fuel Road, DN7 9FF'), trip('2026-10-12 07:15:00', '2026-10-12 07:40:00', 'Fuel Road, DN7 9FF', 'Site Road, DN4 4DD'), trip('2026-10-12 16:00:00', '2026-10-12 16:30:00', 'Site Road, DN4 4DD', 'Home Road, DN7 1AA')], places);
+  assert.deepEqual(job.map((t) => t.use), ['work', 'work', 'work']);
+});

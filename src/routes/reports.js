@@ -159,7 +159,7 @@ const REPORTS = {
       const reg = query.reg ? M.normReg(query.reg) : null;
       const { vehicles } = await mileageFor(p, reg);
       const when = `${ukDate(p.from)} to ${ukDate(p.to)}`;
-      const tagOf = (w) => ({ home: 'Home · ', work: 'Work · ', site: 'Site? · ', unknown: 'Unknown · ' }[w] || '');
+      const tagOf = (w) => ({ home: 'Home · ', work: 'Site · ', site: 'Site? · ', unknown: 'Unknown · ', stop: 'Stop · ' }[w] || '');
       const who = (v) => v.driver_name || (v.notOnFleet ? v.device : 'No driver');
       const summary = {
         title: 'Mileage report', sub: when, count: `${M.fmtMiles(M.sum(vehicles.flatMap((v) => v.trips), 'personal'))} personal miles`,
