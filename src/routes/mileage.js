@@ -71,14 +71,11 @@ const who = (v) => v.driver_name || (v.notOnFleet ? v.device : `No driver (${v.r
 // Dashboard: the week's top 5 for personal miles and idle time, and work against personal miles for each driver.
 router.get('/mileage', async (req, res) => {
   const s = await summary(req.query);
-  // Previous and Next step through the uploaded weeks.
+  // The uploaded weeks, for the picker.
   const ranges = await all('SELECT DISTINCT date_from, date_to FROM mileage_uploads ORDER BY date_from, date_to');
-  const prev = ranges.filter((r) => r.date_from < s.p.from).pop();
-  const next = ranges.find((r) => r.date_from > s.p.from);
-  const rq = (r) => (r ? `from=${r.date_from}&to=${r.date_to}` : null);
   const named = s.vehicles.map((v) => ({ ...v, who: who(v) }));
   res.render('mileage-dashboard', {
-    title: 'Mileage', ...s, prevQs: rq(prev), nextQs: rq(next), weeks: ranges.slice().reverse(),
+    title: 'Mileage', ...s, weeks: ranges.slice().reverse(),
     topPersonal: named.filter((v) => v.personal > 0).sort((a, b) => b.personal - a.personal).slice(0, 5),
     topIdle: named.filter((v) => v.idle > 0).sort((a, b) => b.idle - a.idle).slice(0, 5),
     byDriver: named.filter((v) => v.total > 0).sort((a, b) => b.total - a.total),
