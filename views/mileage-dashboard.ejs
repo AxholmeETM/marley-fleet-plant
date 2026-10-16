@@ -10,7 +10,6 @@
 <div class="page-head">
   <div><h1>Mileage <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1></div>
   <div class="actions">
-    <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
     <% if (canEdit) { %>
     <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
       <label class="btn primary">Upload SoTrack file<input type="file" name="file" accept=".xlsx" required hidden onchange="this.form.submit()"></label>

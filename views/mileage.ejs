@@ -2,7 +2,7 @@
 <div class="page-head">
   <div><h1>Week <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1><% if (vehicles.length) { %><p class="muted" style="margin:0"><strong><%= totals.checked %> of <%= vehicles.length %></strong> checked<%= totals.checked === vehicles.length ? '. All done for this week.' : '' %></p><% } %></div>
   <div class="actions">
-    <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
+    <a class="btn" href="/mileage/addresses?<%= qs %>">Addresses</a>
     <% if (vehicles.length) { %><a class="btn" href="/reports/mileage?<%= qs %>&print=1" target="_blank" rel="noopener">Print</a><% } %>
     <% if (canEdit && vehicles.length) { %><form method="post" action="/mileage/weeks/remove" style="display:inline" onsubmit="return confirm('Delete this week? Its trips and ticks are removed. You can upload the file again afterwards.')">
       <input type="hidden" name="from" value="<%= p.from %>"><input type="hidden" name="to" value="<%= p.to %>"><button class="btn danger" type="submit">Delete week</button></form><% } %>
@@ -15,7 +15,7 @@
   <ol class="mi-steps">
     <li>In SoTrack, run the <strong>Trip List</strong> report for the week and download it as Excel.</li>
     <li>On <a href="/mileage/weeks">Weekly trips</a>, click <strong>Upload SoTrack file</strong> and choose that file. Trips already loaded are skipped, so overlapping weeks are fine.</li>
-    <li>Add each driver's home under <strong>Home and work addresses</strong>, with your sites and the yard as work addresses.</li>
+    <li>Add each driver's home under <strong>Addresses</strong>, with your sites and the yard as work addresses.</li>
   </ol>
 </div>
 <% } else { %>

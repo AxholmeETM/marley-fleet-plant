@@ -12,9 +12,9 @@
 <div class="page-head">
   <div><h1><%= v.driver_name || v.device %> <span class="reg"><%= v.regText %></span></h1>
     <p class="muted" style="margin:0"><%= ukDate(p.from) %> to <%= ukDate(p.to) %> · <strong><%= M.fmtMiles(v.work) %></strong> work miles · <strong class="mi-personal"><%= M.fmtMiles(v.personal) %></strong> personal miles<% if (v.notOnFleet) { %> · not on the Fleet register<% } %></p></div>
-  <div class="actions"><span class="mi-check-box<%= v.checked ? ' done' : '' %>"><%- include('partials/mileage-check', { v, back, showLabel: true }) %></span><a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a><a class="btn" href="/reports/mileage?<%= qs %>&reg=<%= v.reg %>&print=1" target="_blank" rel="noopener">Print</a></div>
+  <div class="actions"><span class="mi-check-box<%= v.checked ? ' done' : '' %>"><%- include('partials/mileage-check', { v, back, showLabel: true }) %></span><a class="btn" href="/mileage/addresses?<%= qs %>">Addresses</a><a class="btn" href="/reports/mileage?<%= qs %>&reg=<%= v.reg %>&print=1" target="_blank" rel="noopener">Print</a></div>
 </div>
-<% if (v.needsHome) { %><div class="flash warning">No home address for <%= v.driver_name %> yet, so every trip counts as work. Click <strong>+</strong> next to their home on a trip below, or add it under Home and work addresses.</div><% } %>
+<% if (v.needsHome) { %><div class="flash warning">No home address for <%= v.driver_name %> yet, so every trip counts as work. Click <strong>+</strong> next to their home on a trip below, or add it under Addresses.</div><% } %>
 <% if (!v.driver_id && !v.notOnFleet) { %><div class="flash warning">This vehicle has no driver on the Fleet register, so every trip counts as work.</div><% } %>
 <%- include('partials/pane-end') %>
 <div class="card flush">

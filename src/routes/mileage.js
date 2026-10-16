@@ -175,7 +175,7 @@ router.get('/mileage/addresses', async (req, res) => {
   const p = await period(req.query);
   const { vehicles, places } = await mileageFor(p);
   res.render('mileage-addresses', {
-    title: 'Home and work addresses', crumbs: [['Mileage', '/mileage'], ['Addresses']], navActive: '/mileage',
+    title: 'Addresses', navActive: '/mileage',
     places, people, p, qs: qs(p), unsaved: unsavedAddresses(vehicles), back: `/mileage/addresses?${qs(p)}`,
   });
 });

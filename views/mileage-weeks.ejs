@@ -3,7 +3,6 @@
   <div><h1>Weekly trips <span class="count"><%= weeks.length %></span></h1>
     <p class="muted" style="margin:0">Upload each week's Trip List from SoTrack, then open the week and tick each driver once their trips are checked.</p></div>
   <div class="actions">
-    <a class="btn" href="/mileage/addresses">Home and work addresses</a>
     <% if (canEdit) { %>
     <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
       <label class="btn primary">Upload SoTrack file<input type="file" name="file" accept=".xlsx" required hidden onchange="this.form.submit()"></label>
@@ -18,7 +17,7 @@
   <ol class="mi-steps">
     <li>In SoTrack, run the <strong>Trip List</strong> report for the week and download it as Excel.</li>
     <li>Click <strong>Upload SoTrack file</strong> and choose that file. Trips already loaded are skipped, so overlapping weeks are fine.</li>
-    <li>Add each driver's home under <strong>Home and work addresses</strong>, with your sites and the yard as work addresses.</li>
+    <li>Add each driver's home under <strong>Addresses</strong>, with your sites and the yard as work addresses.</li>
   </ol>
 </div>
 <% } else { %>
