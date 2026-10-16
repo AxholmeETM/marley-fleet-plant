@@ -18,8 +18,9 @@
         const cameFrom = typeof origin !== 'undefined' && origin ? origin : null;
         const menu = isAdmin
           ? [['/', 'Dashboard', ['/calendar']],
-            { label: 'Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet', ['/mileage']], ['/equipment', 'Equipment']] },
+            { label: 'Registers', items: [['/plant', 'Plant', ['/checks', '/defects']], ['/vehicles', 'Fleet'], ['/equipment', 'Equipment']] },
             { label: 'Fuel', items: [['/fuel', 'Fuel Logs'], ['/fuel-cards', 'Fuel Cards']] },
+            ['/mileage', 'Mileage'],
             ['/users', 'Employees'],
             ...(canEdit ? [['/training', 'Training Matrix']] : []),
             { label: 'Admin', items: [['/projects', 'Projects'], ['/reports', 'Reports']] }]
@@ -64,7 +65,6 @@
   const SUBNAV = {
     '/': [['/', 'Dashboard', (p) => p === '/'], ['/calendar', 'Calendar', (p) => p === '/calendar']],
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
-    '/vehicles': [['/vehicles', 'Fleet', (p) => p === '/vehicles'], ['/mileage', 'Mileage', (p) => p === '/mileage']],
     '/fuel': [['/fuel', 'Summary', (p) => p === '/fuel'], ['/fuel/log', 'Fuel log and receipts', (p) => p === '/fuel/log']],
     '/training': [['/training', 'Dashboard', (p) => p === '/training'], ['/training/matrix', 'Training Matrix', (p) => p === '/training/matrix']],
   };

@@ -95,7 +95,7 @@ router.post('/mileage/upload', upload, async (req, res) => {
 // Home and work addresses.
 router.get('/mileage/addresses', async (req, res) => {
   const people = await all("SELECT id, name FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR EXISTS (SELECT 1 FROM vehicles v WHERE v.driver_id = users.id)) ORDER BY name");
-  res.render('mileage-addresses', { title: 'Home and work addresses', crumbs: [['Mileage', '/mileage'], ['Addresses']], navActive: '/vehicles', places: await listPlaces(), people });
+  res.render('mileage-addresses', { title: 'Home and work addresses', crumbs: [['Mileage', '/mileage'], ['Addresses']], navActive: '/mileage', places: await listPlaces(), people });
 });
 
 const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
@@ -141,7 +141,7 @@ router.get('/mileage/:reg', async (req, res) => {
     days[days.length - 1].trips.push(t);
   }
   res.render('mileage-vehicle', {
-    title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Mileage', `/mileage?${qs(p)}`], [v.regText]], navActive: '/vehicles',
+    title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Mileage', `/mileage?${qs(p)}`], [v.regText]], navActive: '/mileage',
     p, qs: qs(p), v, days, M, back: `/mileage/${reg}?${qs(p)}`,
   });
 });
