@@ -25,7 +25,7 @@
     <tbody><% for (const x of list) { %>
       <tr>
         <td><a href="/training/people/<%= x.p.id %>"><%= x.p.name %></a><% if (x.p.job_title) { %> <span class="muted"><%= x.p.job_title %></span><% } %></td>
-        <td><%= x.c.name %><% if (x.c.code) { %> <span class="code-tag"><%= x.c.code %></span><% } %></td>
+        <td><%= x.c.name %><% if (x.c.code) { %><span class="code-tag"><%= x.c.code %></span><% } %></td>
         <td><%= x.c.grp %></td>
         <td><% if (show === 'needed') { %><%= x.r.note || '—' %><% } else { %><%- pill({ level: x.s.level, text: x.s.text }) %><% if (x.r.note) { %> <span class="muted"><%= x.r.note %></span><% } %><% } %></td>
         <td class="nowrap" style="text-align:right"><button type="button" class="btn small tm-upd" data-p="<%= x.p.id %>" data-c="<%= x.c.id %>" data-pn="<%= x.p.name %>" data-cn="<%= x.c.name %><%= x.c.code ? ' (' + x.c.code + ')' : '' %>" data-e="<%= x.r.expiry || '' %>" data-n="<%= x.r.note || '' %>" data-r="<%= x.r.required ? 1 : '' %>" data-g="<%= x.c.grp %>" data-k="<%= x.r.card || '' %>">Update</button></td>

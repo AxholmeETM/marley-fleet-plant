@@ -683,3 +683,6 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 #info-pop-l dt { color: var(--ink-2); white-space: nowrap; }
 #info-pop-l dd { margin: 0; color: var(--ink); font-weight: 500; }
 #info-pop-l[hidden] { display: none; }
+.tp-code { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
+.tp-table .cscs-pick select { min-width: 220px; }

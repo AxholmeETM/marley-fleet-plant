@@ -476,7 +476,7 @@ test('training matrix and view-only managers', async () => {
   assert.match(html, new RegExp(`data-c="${n1.id}"[^>]*data-g="NPORS" data-k="blue"`));
   // Scheme codes show with the training names.
   assert.match((await admin('GET', '/training/matrix?group=NPORS&empty=1')).text, /<span class="tm-code">N202 \/ C202<\/span>/);
-  assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /Excavator \(above 10T\) <span class="code-tag">A59<\/span>/);
+  assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /360° Excavator \(above 10 tonnes\)<div class="tp-code"><span class="code-tag">A59<\/span>/);
   assert.match((await admin('GET', `/training/people/${tess.id}`)).text, new RegExp(`id="card_${n1.id}_blue" name="card_${n1.id}" value="blue" checked`));
   // The pop-up can change one card; a General course can't have one.
   await admin('POST', `/training/people/${tess.id}/courses/${n2.id}`, { expiry: '2028-01-31', card: 'blue', back: '/training/matrix' });

@@ -21,13 +21,9 @@
 <% } %>
 <form class="card" method="post" action="/training/people/<%= p.id %>">
   <% if (onboard) { %><input type="hidden" name="onboard" value="1"><% } %>
-  <div class="grid grid-3 tp-fields">
+  <div class="grid grid-2 tp-fields">
     <div class="field"><span class="label">Training paid for</span>
       <div class="seg funded" role="radiogroup" aria-label="Training paid for"><% for (const v of ['Company', 'Personal']) { %><input type="radio" id="funded_<%= v %>" name="training_funded" value="<%= v %>" <%= p.training_funded === v ? 'checked' : '' %>><label for="funded_<%= v %>"><%= v %></label><% } %></div></div>
-    <div class="field"><label for="cscs_card">CSCS card</label>
-      <div class="cscs-pick"><span class="cscs cscs-<%= CSCS_CARDS[p.cscs_card] ? CSCS_CARDS[p.cscs_card].colour : 'none' %>" id="cscs-swatch"></span>
-      <select id="cscs_card" name="cscs_card"><option value="">Not recorded</option><% for (const [k, c] of Object.entries(CSCS_CARDS)) { %><option value="<%= k %>" data-colour="<%= c.colour %>" <%= p.cscs_card === k ? 'selected' : '' %>><%= cscsLabel(k) %></option><% } %></select></div>
-      <% if (CSCS_CARDS[p.cscs_card] && !CSCS_CARDS[p.cscs_card].renew) { %><p class="hint">This card can't be renewed. They'll need to qualify for another card before it runs out.</p><% } %></div>
     <div class="field"><label for="training_note">Note</label><input type="text" id="training_note" name="training_note" value="<%= p.training_note || '' %>" maxlength="200"></div>
   </div>
   <% for (const g of GROUPS) { const list = courses.filter((c) => c.grp === g); if (!list.length) continue;
@@ -37,10 +33,15 @@
   <summary><span class="tp-name"><%= g %></span><span class="tp-sum"><%= st.filter((x) => ['ok', 'soon'].includes(x)).length %> held<% if (count('soon')) { %> · <span class="pill soon"><%= count('soon') %> within 30 days</span><% } %><% if (count('overdue')) { %> · <span class="pill overdue"><%= count('overdue') %> expired</span><% } %></span><span class="chev" aria-hidden="true"></span></summary>
   <div class="table-wrap"><table class="tp-table">
     <% const scheme = cardScheme(g); %>
-    <thead><tr><th>Training</th><% if (scheme) { %><th>Card</th><% } %><th>Expiry date</th><th>Note</th><th>Needs this</th><th>Status</th></tr></thead>
+    <thead><tr><th>Training</th><% if (scheme || g === 'General') { %><th>Card</th><% } %><th>Expiry date</th><th>Note</th><th>Needs this</th><th>Status</th></tr></thead>
     <tbody><% for (const c of list) { const r = recs.get(c.id) || {}; %>
       <tr data-level="<%= r.status ? r.status.level : '' %>">
-        <td><%= c.name %><% if (c.code) { %> <span class="code-tag"><%= c.code %></span><% } %><% if (c.info) { %> <button type="button" class="info-btn" aria-label="What is <%= c.name %>?" data-t="<%= g %> · <%= c.name %><%= c.code ? ' · ' + c.code : '' %>" data-b="<%= c.info %>">i</button><% } %></td>
+        <td><%= c.name %><% if (c.code) { %><div class="tp-code"><span class="code-tag"><%= c.code %></span><% } %><% if (c.info) { %> <button type="button" class="info-btn" aria-label="What is <%= c.name %>?" data-t="<%= g %> · <%= c.name %><%= c.code ? ' · ' + c.code : '' %>" data-b="<%= c.info %>">i</button><% } %><% if (c.code) { %></div><% } %></td>
+        <% if (g === 'General') { %><td><% if (c.key === 'cscs') { %>
+      <div class="cscs-pick"><span class="cscs cscs-<%= CSCS_CARDS[p.cscs_card] ? CSCS_CARDS[p.cscs_card].colour : 'none' %>" id="cscs-swatch"></span>
+      <select id="cscs_card" name="cscs_card" aria-label="CSCS card"><option value="">Not recorded</option><% for (const [k, cc] of Object.entries(CSCS_CARDS)) { %><option value="<%= k %>" data-colour="<%= cc.colour %>" <%= p.cscs_card === k ? 'selected' : '' %>><%= cscsLabel(k) %></option><% } %></select></div>
+      <% if (CSCS_CARDS[p.cscs_card] && !CSCS_CARDS[p.cscs_card].renew) { %><p class="hint">This card can't be renewed. They'll need to qualify for another card before it runs out.</p><% } %>
+        <% } %></td><% } %>
         <% if (scheme) { %><td><div class="card-ticks small" role="radiogroup" aria-label="<%= c.name %> card"><input type="radio" id="card_<%= c.id %>_" name="card_<%= c.id %>" value="" <%= !PLANT_CARDS[scheme][r.card] ? 'checked' : '' %>><label for="card_<%= c.id %>_" title="Not recorded">None</label><% for (const [k, cc] of Object.entries(PLANT_CARDS[scheme])) { %><input type="radio" id="card_<%= c.id %>_<%= k %>" name="card_<%= c.id %>" value="<%= k %>" <%= r.card === k ? 'checked' : '' %>><label for="card_<%= c.id %>_<%= k %>" title="<%= cc.label %> · <%= cc.name %>"><span class="cscs cscs-<%= cc.colour %>"></span><%= cc.label %></label><% } %></div></td><% } %>
         <td><input type="date" name="expiry_<%= c.id %>" value="<%= r.expiry || '' %>" aria-label="<%= c.name %> expiry"></td>
         <td><input type="text" name="note_<%= c.id %>" value="<%= r.note || '' %>" maxlength="80" aria-label="<%= c.name %> note" placeholder="e.g. Booked 19/10/26"></td>
