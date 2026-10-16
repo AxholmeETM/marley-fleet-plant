@@ -632,3 +632,7 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 /* The employee type choice has four options; let it wrap on a phone. */
 #emp-type .seg { flex-wrap: wrap; max-width: 100%; }
 #emp-type { min-width: 0; }
+/* Summary cards on one person's training page; they are buttons, so reset the button look. */
+.tp-kpis button.kpi { font: inherit; text-align: left; border: 0; cursor: pointer; width: 100%; }
+.tp-kpis { margin-bottom: 16px; }
+.tp-table tr.tp-hit td { background: #fff7e0; }

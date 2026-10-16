@@ -4,6 +4,14 @@
   <div class="actions"><a class="btn" href="/users/<%= p.id %>?from=training">Employee details</a></div>
 </div>
 <%- include('partials/pane-end') %>
+<% const lv = [...recs.values()].map((r) => r.status && r.status.level).filter(Boolean);
+   const n = (l) => lv.filter((x) => x === l).length; %>
+<div class="kpis kpis-4 tp-kpis">
+  <button type="button" class="kpi <%= n('soon') ? 'warn' : 'good' %>" data-show="soon"><div class="label">Expiring in 30 days</div><div class="value"><%= n('soon') %></div></button>
+  <button type="button" class="kpi <%= n('overdue') ? 'bad' : 'good' %>" data-show="overdue"><div class="label">Expired</div><div class="value"><%= n('overdue') %></div></button>
+  <button type="button" class="kpi <%= n('needed') ? 'warn' : 'good' %>" data-show="needed"><div class="label">Needed</div><div class="value"><%= n('needed') %></div></button>
+  <button type="button" class="kpi plain" data-show="ok soon"><div class="label">Qualifications held</div><div class="value"><%= n('ok') + n('soon') %></div></button>
+</div>
 <form class="card" method="post" action="/training/people/<%= p.id %>">
   <div class="grid-2">
     <div class="field"><span class="label">Training paid for</span>
@@ -14,11 +22,11 @@
     const st = list.map((c) => recs.get(c.id)).filter((r) => r && r.status).map((r) => r.status.level);
     const count = (l) => st.filter((x) => x === l).length; %>
   <details class="tp-group g<%= GROUPS.indexOf(g) %>">
-  <summary><span class="tp-name"><%= g %></span><span class="tp-sum"><%= st.filter((x) => ['ok', 'soon', 'overdue'].includes(x)).length %> held<% if (count('soon')) { %> · <span class="pill soon"><%= count('soon') %> within 30 days</span><% } %><% if (count('overdue')) { %> · <span class="pill overdue"><%= count('overdue') %> expired</span><% } %></span><span class="chev" aria-hidden="true"></span></summary>
+  <summary><span class="tp-name"><%= g %></span><span class="tp-sum"><%= st.filter((x) => ['ok', 'soon'].includes(x)).length %> held<% if (count('soon')) { %> · <span class="pill soon"><%= count('soon') %> within 30 days</span><% } %><% if (count('overdue')) { %> · <span class="pill overdue"><%= count('overdue') %> expired</span><% } %></span><span class="chev" aria-hidden="true"></span></summary>
   <div class="table-wrap"><table class="tp-table">
     <thead><tr><th>Training</th><th>Expiry date</th><th>Note</th><th>Needed</th><th>Status</th></tr></thead>
     <tbody><% for (const c of list) { const r = recs.get(c.id) || {}; %>
-      <tr>
+      <tr data-level="<%= r.status ? r.status.level : '' %>">
         <td><%= c.name %></td>
         <td><input type="date" name="expiry_<%= c.id %>" value="<%= r.expiry || '' %>" aria-label="<%= c.name %> expiry"></td>
         <td><input type="text" name="note_<%= c.id %>" value="<%= r.note || '' %>" maxlength="80" aria-label="<%= c.name %> note" placeholder="e.g. Booked 19/10/26"></td>
@@ -34,4 +42,15 @@
 <form method="post" action="/training/people/<%= p.id %>/remove" onsubmit="return confirm('Take <%= p.name.replace(/'/g, '') %> off the Training Matrix? Their dates are kept.')">
   <button class="btn danger" type="submit">Take off the matrix</button>
 </form>
+<script>
+  // A card opens the groups holding those items and highlights them.
+  document.querySelectorAll('.tp-kpis [data-show]').forEach((b) => b.addEventListener('click', () => {
+    const levels = b.dataset.show.split(' ');
+    document.querySelectorAll('tr.tp-hit').forEach((tr) => tr.classList.remove('tp-hit'));
+    const rows = [...document.querySelectorAll('tr[data-level]')].filter((tr) => levels.includes(tr.dataset.level));
+    document.querySelectorAll('details.tp-group').forEach((d) => { d.open = rows.some((tr) => d.contains(tr)); });
+    rows.forEach((tr) => tr.classList.add('tp-hit'));
+    if (rows[0]) rows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }));
+</script>
 <%- include('partials/footer') %>
