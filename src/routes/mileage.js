@@ -115,7 +115,7 @@ router.post('/mileage/weeks/remove', async (req, res) => {
   const gone = await run('DELETE FROM mileage_trips WHERE started_at >= ? AND started_at < ?', from, addDays(to, 1));
   await run('DELETE FROM mileage_checks WHERE date_from = ? AND date_to = ?', from, to);
   await run('DELETE FROM mileage_uploads WHERE date_from = ? AND date_to = ?', from, to);
-  req.flash('success', `Week ${weekLabel({ from, to })} removed (${gone.changes} trips). Upload its file again to start afresh.`);
+  req.flash('success', `Week ${weekLabel({ from, to })} deleted (${gone.changes} trips). Upload its file again to start afresh.`);
   res.redirect('/mileage/weeks');
 });
 

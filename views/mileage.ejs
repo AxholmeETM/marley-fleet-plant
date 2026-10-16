@@ -4,8 +4,8 @@
   <div class="actions">
     <a class="btn" href="/mileage/addresses?<%= qs %>">Home and work addresses</a>
     <% if (vehicles.length) { %><a class="btn" href="/reports/mileage?<%= qs %>&print=1" target="_blank" rel="noopener">Print</a><% } %>
-    <% if (canEdit && vehicles.length) { %><form method="post" action="/mileage/weeks/remove" style="display:inline" onsubmit="return confirm('Remove every trip and tick for this week? You can upload the file again afterwards.')">
-      <input type="hidden" name="from" value="<%= p.from %>"><input type="hidden" name="to" value="<%= p.to %>"><button class="btn" type="submit">Remove week</button></form><% } %>
+    <% if (canEdit && vehicles.length) { %><form method="post" action="/mileage/weeks/remove" style="display:inline" onsubmit="return confirm('Delete this week? Its trips and ticks are removed. You can upload the file again afterwards.')">
+      <input type="hidden" name="from" value="<%= p.from %>"><input type="hidden" name="to" value="<%= p.to %>"><button class="btn danger" type="submit">Delete week</button></form><% } %>
   </div>
 </div>
 <%- include('partials/pane-end') %>
