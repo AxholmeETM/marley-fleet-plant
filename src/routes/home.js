@@ -1,7 +1,7 @@
 const express = require('express');
 const { all, get } = require('../db');
 const { listPlant, listVehicles, listDefects } = require('../queries');
-const { isoDate, addMonths, ukDate } = require('../status');
+const { isoDate, addMonths, addDays, ukDate } = require('../status');
 const { INSPECTION_TYPES } = require('../categories');
 const fuelCards = require('./fuel-cards');
 const { isSiteManager } = require('../auth');
@@ -111,6 +111,9 @@ router.get('/', async (req, res) => {
     return { ym, label: new Date(`${ym}-01T12:00:00Z`).toLocaleDateString('en-GB', { month: 'short' }), litres: Number(r.litres || 0), cost: Number(r.cost || 0) };
   });
   const checkable = plant.filter((p) => p.check.level !== 'none');
+  // Plant check sheets run weekly, Monday to Sunday: count machines with a sheet since this Monday.
+  const today = isoDate();
+  const monday = addDays(today, -((new Date(`${today}T12:00:00Z`).getUTCDay() + 6) % 7));
 
   res.render('dashboard', {
     title: 'Dashboard',
@@ -124,7 +127,7 @@ router.get('/', async (req, res) => {
       receipts: receipts.n, receiptsCost: receipts.cost,
       walkaroundsDone: vehicles.filter((v) => v.walkaround.level === 'ok').length,
       walkaroundsExpected: vehicles.filter((v) => v.driver_id && v.status === 'active').length,
-      checksOk: checkable.filter((p) => p.check.level === 'ok').length, checksExpected: checkable.length,
+      checksWeek: checkable.filter((p) => p.last_check && String(p.last_check).slice(0, 10) >= monday).length, checksExpected: checkable.length,
       defectsOpen: defects.length,
     },
   });

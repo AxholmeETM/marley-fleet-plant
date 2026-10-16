@@ -95,11 +95,10 @@
       <p class="small muted" style="margin:6px 0 0">Litres used, last 6 months · <%= money(months[months.length - 1].cost) %> spent this month</p>
     </div>
     <div class="card flush">
-      <h2>Today</h2>
+      <h2>Checks</h2>
       <div class="today-list">
-        <a href="/checks?type=vehicle"><span>Walk-arounds done</span><span class="pill <%= stats.walkaroundsDone >= stats.walkaroundsExpected ? 'ok' : 'soon' %>"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></span></a>
-        <a href="/checks?type=plant"><span>Plant check sheets in date</span><span class="pill <%= stats.checksOk >= stats.checksExpected ? 'ok' : 'soon' %>"><%= stats.checksOk %> / <%= stats.checksExpected %></span></a>
-        <a href="/defects"><span>Open defects</span><span class="pill <%= stats.defectsOpen ? 'soon' : 'ok' %>"><%= stats.defectsOpen %></span></a>
+        <a href="/checks?type=vehicle"><span>Walk-arounds today</span><span class="pill <%= stats.walkaroundsDone >= stats.walkaroundsExpected ? 'ok' : 'soon' %>"><%= stats.walkaroundsDone %> / <%= stats.walkaroundsExpected %></span></a>
+        <a href="/checks?type=plant"><span>Plant check sheets this week</span><span class="pill <%= stats.checksWeek >= stats.checksExpected ? 'ok' : 'soon' %>"><%= stats.checksWeek %> / <%= stats.checksExpected %></span></a>
       </div>
     </div>
   </div>
