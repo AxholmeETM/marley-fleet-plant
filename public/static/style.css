@@ -704,3 +704,6 @@ table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .chip.card-white::before { background: #fff; box-shadow: inset 0 0 0 1px #b8bac4; }
 .chip.card-partner::before { background: linear-gradient(180deg, #1f5fd1 50%, #2e9e4a 50%); }
 .chip.card-traditional::before { background: repeating-linear-gradient(45deg, #8a8fa3 0 3px, #c9ccd8 3px 6px); }
+.report-pick { display: flex; flex-direction: column; gap: 10px; }
+.report-pick select { width: 100%; }
+.report-sub { font-weight: 500; color: var(--ink); }

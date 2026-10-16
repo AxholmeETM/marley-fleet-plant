@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <div class="page-head">
   <div><h1><%= p.name %></h1><p class="muted" style="margin:0"><%= userLabel(p) %><%= p.job_title ? ' · ' + p.job_title : '' %></p></div>
-  <div class="actions"><a class="btn" href="/users/<%= p.id %>"><%= onboard ? 'Skip for now' : 'Employee details' %></a><button class="btn primary" type="submit" form="tp-form"><%= onboard ? 'Save and finish' : 'Save training' %></button></div>
+  <div class="actions"><a class="btn" href="/users/<%= p.id %>"><%= onboard ? 'Skip for now' : 'Employee details' %></a><% if (!onboard) { %><a class="btn" href="/reports/training?person=<%= p.id %>&print=1" target="_blank" rel="noopener">Print</a><% } %><button class="btn primary" type="submit" form="tp-form"><%= onboard ? 'Save and finish' : 'Save training' %></button></div>
 </div>
 <%- include('partials/pane-end') %>
 <% if (onboard) { %>

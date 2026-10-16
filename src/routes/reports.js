@@ -1,10 +1,11 @@
 const express = require('express');
-const { all } = require('../db');
+const { all, get } = require('../db');
 const { listPlant, listVehicles } = require('../queries');
 const { requireAdmin, isAdmin } = require('../auth');
 const { ukDate, fmtHours } = require('../status');
 const { decorate: decorateCard } = require('./fuel-cards');
-const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES, userLabel } = require('../categories');
+const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES, userLabel, CSCS_CARDS, cscsLabel, recordCard } = require('../categories');
+const { cellStatus } = require('./training');
 
 const router = express.Router();
 router.use('/reports', requireAdmin);
@@ -41,6 +42,41 @@ async function plantReport(section) {
     widths: [11, 20, 10, 12, 8, 11, 10, 10, 8],
     groups,
   };
+}
+
+// Everyone on the Training Matrix, for the Training report's employee picker.
+const matrixPeople = () => all('SELECT id, name, role, employee_type FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR on_matrix = 1) ORDER BY name');
+
+// One person's training (or everyone's), from the Training Matrix: what they hold, what is due or expired, and what they need.
+async function trainingReport({ query }) {
+  const everyone = query.person === 'all';
+  const people = everyone ? await all('SELECT * FROM users WHERE active = 1 AND (employee_type IS NOT NULL OR on_matrix = 1) ORDER BY name')
+    : [await get('SELECT * FROM users WHERE id = ?', Number(query.person))].filter(Boolean);
+  const courses = await all('SELECT * FROM training_courses WHERE active = 1 ORDER BY sort, id');
+  const recs = people.length ? await all(`SELECT * FROM training_records WHERE user_id IN (${people.map(() => '?').join(', ')})`, ...people.map((p) => p.id)) : [];
+  const recOf = new Map(recs.map((r) => [`${r.user_id}:${r.course_id}`, r]));
+  const LEVEL = { ok: 'ok', soon: 'soon', overdue: 'overdue', needed: 'none', note: 'none' };
+  const rowsFor = (p, list, withGroup) => list.map((c) => {
+    const r = recOf.get(`${p.id}:${c.id}`);
+    const s = cellStatus(r);
+    if (!s) return null;
+    const card = c.key === 'cscs' ? (CSCS_CARDS[p.cscs_card] ? cscsLabel(p.cscs_card) : '—') : (recordCard(c.grp, r.card) ? `${recordCard(c.grp, r.card).label} · ${recordCard(c.grp, r.card).name}` : '—');
+    return [...(withGroup ? [c.grp] : []), c.name, c.code || '—', card, r.expiry ? ukDate(r.expiry) : '—',
+      pill(LEVEL[s.level], s.level === 'ok' ? 'In date' : s.level === 'soon' ? 'Due soon' : s.level === 'overdue' ? 'Expired' : s.level === 'needed' ? 'Needed' : 'Note'), r.note || '—'];
+  }).filter(Boolean);
+  if (!everyone) {
+    const p = people[0];
+    if (!p) return { title: 'Training report', count: 'Choose an employee', columns: ['Training'], widths: [100], groups: [] };
+    const groups = ['General', 'NPORS', 'CPCS'].map((g) => ({ label: g, rows: rowsFor(p, courses.filter((c) => c.grp === g), false) })).filter((g) => g.rows.length);
+    const held = groups.flatMap((g) => g.rows).filter((r) => r[4].pill && ['ok', 'soon'].includes(r[4].pill.level)).length;
+    return {
+      title: `Training report – ${p.name}`, sub: [userLabel(p), p.job_title, p.employee_no ? `Employee ID ${p.employee_no}` : '', p.training_funded ? `Training paid for: ${p.training_funded}` : ''].filter(Boolean).join(' · '),
+      count: `${held} held`, columns: ['Training', 'Code', 'Card', 'Expiry', 'Status', 'Note'], widths: [30, 12, 22, 10, 10, 16], groups,
+    };
+  }
+  const groups = people.map((p) => ({ label: `${p.name} · ${userLabel(p)}`, rows: rowsFor(p, courses, true) })).filter((g) => g.rows.length);
+  return { title: 'Training report – everyone', count: `${people.length} people`,
+    columns: ['Group', 'Training', 'Code', 'Card', 'Expiry', 'Status', 'Note'], widths: [8, 28, 11, 20, 9, 9, 15], groups };
 }
 
 const REPORTS = {
@@ -93,6 +129,11 @@ const REPORTS = {
         columns: ['Employee ID', 'Name', 'Type', 'Job role', 'Phone', 'Email', 'Vehicles', 'Fuel cards', 'Status'], widths: [8, 13, 11, 11, 10, 15, 11, 13, 8], groups };
     },
   },
+  training: {
+    label: 'Training', adminOnly: true, picker: true,
+    blurb: 'One employee\'s training from the Training Matrix: what they hold with expiry dates and card colours, what is due or expired, and what they need. Or everyone at once.',
+    build: trainingReport,
+  },
   projects: {
     label: 'Projects', blurb: 'Every project number with its site, status and the plant and equipment booked to it.',
     async build() {
@@ -106,12 +147,13 @@ const REPORTS = {
   },
 };
 
-router.get('/reports', (req, res) => res.render('reports', { title: 'Reports', REPORTS }));
+router.get('/reports', async (req, res) => res.render('reports', { title: 'Reports', REPORTS, people: await matrixPeople() }));
 
 router.get('/reports/:key', async (req, res) => {
   const def = Object.hasOwn(REPORTS, req.params.key) ? REPORTS[req.params.key] : null;
-  if (!def) return res.status(404).render('error', { title: 'Not found', message: 'Report not found.' });
-  res.render('report', { report: await def.build({ full: isAdmin(req.user) }), autoPrint: req.query.print === '1' });
+  // The Training report is for admin users only, like the Training Matrix.
+  if (!def || (def.adminOnly && !isAdmin(req.user))) return res.status(404).render('error', { title: 'Not found', message: 'Report not found.' });
+  res.render('report', { report: await def.build({ full: isAdmin(req.user), query: req.query }), autoPrint: req.query.print === '1' });
 });
 
 module.exports = router;

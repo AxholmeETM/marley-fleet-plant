@@ -484,6 +484,16 @@ test('training matrix and view-only managers', async () => {
   await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'purple' });
   assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, null);
   assert.doesNotMatch((await admin('GET', `/training/people/${tess.id}`)).text, /Take off the matrix|name="training_note"/);
+  // Training report: pick an employee (or everyone) and print. Admin users only, like the matrix.
+  assert.match((await admin('GET', '/reports')).text, /Choose an employee/);
+  await admin('POST', `/training/people/${tess.id}/courses/${n1.id}`, { expiry: '2030-01-31', card: 'blue', back: '/training/matrix' });
+  let rep = (await admin('GET', `/reports/training?person=${tess.id}`)).text;
+  assert.match(rep, /Training report – Tess/);
+  assert.match(rep, /<td>N204 \/ C204<\/td>/);
+  assert.match(rep, /Blue · Competent Operator/);
+  assert.match((await admin('GET', '/reports/training?person=all')).text, /Training report – everyone/);
+  assert.equal((await mia('GET', `/reports/training?person=${tess.id}`)).status, 404);
+  assert.doesNotMatch((await mia('GET', '/reports')).text, /Choose an employee/);
 });
 
 test('employee documents: copies of cards', async () => {
