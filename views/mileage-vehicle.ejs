@@ -5,8 +5,11 @@
     const tag = place && canEdit
       ? `<button type="button" class="mi-tag ${place.kind} mi-edit" title="Change or remove this saved address" data-place="${escapeHtml(JSON.stringify({ id: place.id, kind: place.kind, user_id: place.user_id, label: place.label, address: place.address }))}">${TAGS[place.kind]}</button>`
       : where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Site</span>' : where === 'stop' ? '<span class="mi-tag stop" title="Allowed stop: counts as the rest of the journey">Stop</span>' : where === 'unknown' ? '<span class="mi-tag unknown" title="Saved as unknown: counts as personal">Unknown</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
-    const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-add="${escapeHtml(JSON.stringify({ address: text, user_id: v.driver_id }))}" title="Save this address">+</button>` : '';
-    return tag + escapeHtml(text || '—') + add;
+    const addData = escapeHtml(JSON.stringify({ address: text, user_id: v.driver_id }));
+    // The tag is a square block beside the address; an address not saved yet gets a + block in its place.
+    const block = tag || (text && canEdit && !where ? `<button class="mi-tag none mi-add" type="button" data-add="${addData}" title="Save this address">+</button>` : '<span class="mi-tag none"></span>');
+    const add = where === 'site' && text && canEdit ? ` <button class="mi-add" type="button" data-add="${addData}" title="Save this address">+</button>` : '';
+    return `<div class="mi-loc">${block}<span>${escapeHtml(text || '—')}${add}</span></div>`;
   };
 %>
 <div class="page-head">
