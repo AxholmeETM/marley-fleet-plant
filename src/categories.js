@@ -107,7 +107,7 @@ const PLANT_CARDS = {
     red: { colour: 'red', label: 'Red', name: 'Trained Operator (2 years)', renew: false },
     blue: { colour: 'blue', label: 'Blue', name: 'Competent Operator (5 years)', renew: true },
     gold: { colour: 'gold', label: 'Gold', name: 'Occupational Work Supervisor', renew: true },
-    traditional: { colour: 'traditional', label: 'Traditional', name: 'no CSCS logo, not for construction sites', renew: true },
+    traditional: { colour: 'traditional', label: 'Traditional', name: 'no CSCS logo', renew: true },
   },
   cpcs: {
     red: { colour: 'red', label: 'Red', name: 'Trained Operator (2 years)', renew: false },
