@@ -829,3 +829,4 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .mi-addr-table td.desc a:hover { color: var(--navy); text-decoration: underline; }
 .mi-addr-table td { vertical-align: middle; }
 .mi-addr-table .mi-quick { justify-content: flex-end; }
+.mi-trips tr[id] { scroll-margin-top: 140px; }

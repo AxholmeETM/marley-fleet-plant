@@ -196,6 +196,8 @@ router.post('/mileage/check', async (req, res) => {
   res.redirect(backTo(req.body.back));
 });
 
+// After saving from a trip, go back to that trip rather than the top of the page.
+const backAt = (req) => backTo(req.body.back) + (/^\d+$/.test(String(req.body.at || '')) ? `#trip-${req.body.at}` : '');
 const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers|\/weeks)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
 
 router.post('/mileage/addresses', async (req, res) => {
@@ -207,7 +209,7 @@ router.post('/mileage/addresses', async (req, res) => {
   if (kind === 'home' && !(await get('SELECT id FROM users WHERE id = ?', userId))) throw new UserError('Please choose whose home this is.');
   await run('INSERT INTO mileage_places (kind, user_id, label, address) VALUES (?, ?, ?, ?)', kind, userId, kind !== 'home' ? text(req.body.label) : null, address.slice(0, 300));
   req.flash('success', { home: 'Home address added. Personal miles have been worked out again.', work: 'Work address added. Trips to it now count as work.', unknown: 'Saved as an unknown address. Trips to or from it now count as personal miles. It is listed under Unknown addresses so you can ask the driver.' }[kind]);
-  res.redirect(backTo(req.body.back));
+  res.redirect(backAt(req));
 });
 
 // Change a saved address: what it is, whose home, its name, or the address itself.
@@ -221,13 +223,13 @@ router.post('/mileage/addresses/:id', async (req, res) => {
   if (kind === 'home' && !(await get('SELECT id FROM users WHERE id = ?', userId))) throw new UserError('Please choose whose home this is.');
   await run('UPDATE mileage_places SET kind = ?, user_id = ?, label = ?, address = ? WHERE id = ?', kind, userId, kind !== 'home' ? text(req.body.label) : null, address.slice(0, 300), place.id);
   req.flash('success', 'Address updated. Trips have been worked out again.');
-  res.redirect(backTo(req.body.back));
+  res.redirect(backAt(req));
 });
 
 router.post('/mileage/addresses/:id/remove', async (req, res) => {
   await run('DELETE FROM mileage_places WHERE id = ?', Number(req.params.id));
   req.flash('success', 'Address removed.');
-  res.redirect(backTo(req.body.back));
+  res.redirect(backAt(req));
 });
 
 // Change one trip to work or personal, or back to how it was worked out.

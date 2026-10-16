@@ -4,7 +4,7 @@
   <div class="card">
     <div class="dlg-head"><h2>Save address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
     <form method="post" action="/mileage/addresses" id="add-form">
-      <input type="hidden" name="back" value="<%= back %>">
+      <input type="hidden" name="back" value="<%= back %>"><input type="hidden" name="at" id="add-at">
       <div class="field"><label for="add-addr">Address with postcode</label><div class="mi-addr-row"><input id="add-addr" name="address" type="text" required placeholder="e.g. Bosworth Close, Hatfield, DN7 6AP"><a class="btn" id="add-map" target="_blank" rel="noopener">See location</a></div></div>
       <div class="field"><label>This is</label>
         <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
@@ -36,6 +36,7 @@
       e.preventDefault();
       const a = JSON.parse(el.dataset.add || '{}');
       form.reset();
+      document.getElementById('add-at').value = ((el.closest('tr[id^=trip-]') || {}).id || '').replace('trip-', '');
       addr.value = a.address || '';
       document.getElementById('add-user').value = a.user_id || '';
       form.querySelector(`input[name=kind][value=${a.kind || 'work'}]`).checked = true;
