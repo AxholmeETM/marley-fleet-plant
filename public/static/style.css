@@ -676,3 +676,4 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .card-pill.multi .segs { position: absolute; inset: 0; display: flex; }
 .card-pill.multi .segs span { flex: 1; }
 .card-pill.multi b { position: relative; font-weight: 700; text-shadow: 0 0 2px rgba(0, 0, 0, .45); }
+.cscs-grey { background: #8e9099; }

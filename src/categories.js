@@ -112,6 +112,7 @@ const PLANT_CARDS = {
   cpcs: {
     red: { colour: 'red', label: 'Red', name: 'Trained Operator (2 years)', renew: false },
     blue: { colour: 'blue', label: 'Blue', name: 'Competent Operator (5 years)', renew: true },
+    grey: { colour: 'grey', label: 'Grey', name: 'Grey card', renew: true },
   },
 };
 // NPORS and CPCS cards are issued per category, so the card colour is kept on each NPORS or CPCS training record.

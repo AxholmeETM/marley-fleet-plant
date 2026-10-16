@@ -17,7 +17,7 @@
 <div class="tm-legend">
   <span class="tm-legend-group"><span class="chip ok">In date</span><span class="chip soon">Within 30 days</span><span class="chip overdue">Expired</span><span class="chip needed">Needed</span><span class="chip note">Note</span></span>
   <span class="tm-legend-group"><span class="muted">CSCS card</span><% for (const c of ['green', 'red', 'blue', 'gold', 'black', 'white', 'partner']) { %><span class="cscs-chip"><span class="cscs cscs-<%= c %>"></span><%= c === 'partner' ? 'Partner' : c[0].toUpperCase() + c.slice(1) %></span><% } %></span>
-  <span class="tm-legend-group"><span class="muted">NPORS / CPCS card</span><span class="cscs-chip"><span class="cscs cscs-red"></span>Red trained</span><span class="cscs-chip"><span class="cscs cscs-blue"></span>Blue competent</span><span class="cscs-chip"><span class="cscs cscs-gold"></span>Gold supervisor</span><span class="cscs-chip"><span class="cscs cscs-traditional"></span>Traditional</span></span>
+  <span class="tm-legend-group"><span class="muted">NPORS / CPCS card</span><span class="cscs-chip"><span class="cscs cscs-red"></span>Red trained</span><span class="cscs-chip"><span class="cscs cscs-blue"></span>Blue competent</span><span class="cscs-chip"><span class="cscs cscs-gold"></span>Gold supervisor</span><span class="cscs-chip"><span class="cscs cscs-traditional"></span>Traditional</span><span class="cscs-chip"><span class="cscs cscs-grey"></span>Grey (CPCS)</span></span>
 </div>
 <div class="card flush tm-card">
   <% if (!people.length) { %><p class="empty"><%= attention ? 'Nothing needs attention here: nobody has anything expired or due within 30 days.' : q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet.' %></p><% } else { %>
