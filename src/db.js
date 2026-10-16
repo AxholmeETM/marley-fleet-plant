@@ -414,6 +414,14 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
 -- Which NPORS and CPCS operator card someone holds (red trained / blue competent ...); the categories are the NPORS and CPCS courses.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS npors_card TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cpcs_card TEXT;
+-- The NPORS / CPCS card colour for that category (red, blue, gold, traditional), set per training record.
+ALTER TABLE training_records ADD COLUMN IF NOT EXISTS card TEXT;
+-- Cards first set on the person (16/10/2026) move onto their dated training in that scheme, when it was a single card.
+UPDATE training_records r SET card = u.npors_card FROM users u, training_courses c
+  WHERE u.id = r.user_id AND c.id = r.course_id AND c.grp = 'NPORS' AND r.card IS NULL AND r.expiry IS NOT NULL AND u.npors_card IN ('red', 'blue', 'gold', 'traditional');
+UPDATE training_records r SET card = u.cpcs_card FROM users u, training_courses c
+  WHERE u.id = r.user_id AND c.id = r.course_id AND c.grp = 'CPCS' AND r.card IS NULL AND r.expiry IS NOT NULL AND u.cpcs_card IN ('red', 'blue');
+UPDATE users SET npors_card = NULL, cpcs_card = NULL WHERE npors_card IS NOT NULL OR cpcs_card IS NOT NULL;
 UPDATE users u SET cscs_card = CASE r.note WHEN 'Blue card' THEN 'blue' WHEN 'Green card' THEN 'green' ELSE 'red' END
   FROM training_records r JOIN training_courses c ON c.id = r.course_id AND c.key = 'cscs'
   WHERE r.user_id = u.id AND u.cscs_card IS NULL AND r.note IN ('Blue card', 'Green card', 'Red card');

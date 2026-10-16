@@ -10,7 +10,7 @@ process.env.ADMIN_EMAIL = 'admin@test.local';
 process.env.ADMIN_PASSWORD = 'adminpass1';
 
 const { createApp } = require('../src/app');
-const { get, run, close } = require('../src/db');
+const { all, get, run, close } = require('../src/db');
 const { VEHICLE_ITEMS, PLANT_ITEMS } = require('../src/checklists');
 const status = require('../src/status');
 
@@ -466,11 +466,22 @@ test('training matrix and view-only managers', async () => {
   assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, 'red_trainee');
   assert.match((await admin('GET', '/training/matrix')).text, /cscs cscs-red/);
   assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /can't be renewed/);
-  await admin('POST', `/training/people/${tess.id}`, { npors_card: ['red', 'blue'], cpcs_card: 'blue', [`expiry_${cscs.id + 15}`]: '2030-01-31' });
-  assert.deepEqual({ ...await get('SELECT npors_card, cpcs_card FROM users WHERE id = ?', tess.id) }, { npors_card: 'red,blue', cpcs_card: 'blue' });
-  assert.match((await admin('GET', '/training/matrix?group=NPORS')).text, /card-pill multi" title="NPORS: Red · Trained Operator \(2 years\), Blue[^"]*"><span class="segs"><span class="cscs-red"><\/span><span class="cscs-blue">/);
-  await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'purple', npors_card: 'gold-ish' });
-  assert.deepEqual({ ...await get('SELECT cscs_card, npors_card FROM users WHERE id = ?', tess.id) }, { cscs_card: null, npors_card: null });
+  // NPORS and CPCS card colours are kept on each training, so one person can be Blue on one machine and Red on another.
+  const [n1, n2] = await all("SELECT id FROM training_courses WHERE grp = 'NPORS' ORDER BY sort LIMIT 2");
+  const cp1 = await get("SELECT id FROM training_courses WHERE grp = 'CPCS' ORDER BY sort LIMIT 1");
+  await admin('POST', `/training/people/${tess.id}`, { [`expiry_${n1.id}`]: '2030-01-31', [`card_${n1.id}`]: 'blue', [`expiry_${n2.id}`]: '2028-01-31', [`card_${n2.id}`]: 'red', [`card_${cp1.id}`]: 'gold' });
+  assert.deepEqual((await all('SELECT course_id, card FROM training_records WHERE user_id = ? AND card IS NOT NULL ORDER BY card', tess.id)).map((r) => ({ ...r })), [{ course_id: n1.id, card: 'blue' }, { course_id: n2.id, card: 'red' }]);
+  let html = (await admin('GET', '/training/matrix?group=NPORS')).text;
+  assert.match(html, /card-pill multi" title="NPORS: Red · Trained Operator \(2 years\), Blue[^"]*"><span class="segs"><span class="cscs-red"><\/span><span class="cscs-blue">/);
+  assert.match(html, new RegExp(`data-c="${n1.id}"[^>]*data-g="NPORS" data-k="blue"`));
+  assert.match((await admin('GET', `/training/people/${tess.id}`)).text, new RegExp(`id="card_${n1.id}_blue" name="card_${n1.id}" value="blue" checked`));
+  // The pop-up can change one card; a General course can't have one.
+  await admin('POST', `/training/people/${tess.id}/courses/${n2.id}`, { expiry: '2028-01-31', card: 'blue', back: '/training/matrix' });
+  assert.equal((await get('SELECT card FROM training_records WHERE user_id = ? AND course_id = ?', tess.id, n2.id)).card, 'blue');
+  await admin('POST', `/training/people/${tess.id}/courses/${cscs.id}`, { expiry: '2030-01-31', card: 'blue', back: '/training/matrix' });
+  assert.equal((await get('SELECT card FROM training_records WHERE user_id = ? AND course_id = ?', tess.id, cscs.id)).card, null);
+  await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'purple' });
+  assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, null);
   await admin('POST', `/training/people/${tess.id}/remove`, {});
   assert.equal((await get('SELECT on_matrix FROM users WHERE id = ?', tess.id)).on_matrix, 0);
 });

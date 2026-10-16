@@ -1,4 +1,4 @@
-<%# Pop-up to update one person's training for one course. Opened by any element with class tm-upd (or tm-cell) carrying data-p, data-c, data-pn, data-cn, data-e, data-n and data-r. %>
+<%# Pop-up to update one person's training for one course. Opened by any element with class tm-upd (or tm-cell) carrying data-p, data-c, data-pn, data-cn, data-e, data-n, data-r, data-g (course group) and data-k (card colour). %>
 <dialog id="tm-dlg" class="dlg">
   <form class="card" method="post">
     <div class="dlg-head"><div><h2 id="tm-dlg-c"></h2><p class="muted" id="tm-dlg-p" style="margin:0 0 12px"></p></div><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
@@ -7,6 +7,9 @@
       <div class="field"><label for="tm-e">New expiry date</label><input type="date" id="tm-e" name="expiry"></div>
       <div class="field"><label for="tm-n">Note</label><input type="text" id="tm-n" name="note" maxlength="80" placeholder="e.g. Booked 19/10/26"></div>
     </div>
+    <% for (const [g, scheme] of [['NPORS', 'npors'], ['CPCS', 'cpcs']]) { %>
+    <div class="field tm-card" data-g="<%= g %>" hidden><label for="tm-k-<%= scheme %>"><%= g %> card</label><select id="tm-k-<%= scheme %>" name="card" disabled><option value="">Not recorded</option><% for (const [k, c] of Object.entries(PLANT_CARDS[scheme])) { %><option value="<%= k %>"><%= c.label %> · <%= c.name %></option><% } %></select></div>
+    <% } %>
     <div class="field"><label><input type="checkbox" id="tm-r" name="required" value="1"> Needed, not held yet</label></div>
     <div class="form-actions"><a class="btn" id="tm-dlg-all" href="#">All their training</a><button class="btn primary" type="submit">Save</button></div>
   </form>
@@ -22,6 +25,11 @@
       dlg.querySelector('#tm-dlg-p').textContent = d.pn;
       dlg.querySelector('#tm-dlg-all').href = '/training/people/' + d.p;
       f.expiry.value = d.e; f.note.value = d.n; f.required.checked = !!d.r;
+      // NPORS and CPCS training also has a card colour.
+      dlg.querySelectorAll('.tm-card').forEach((box) => {
+        const on = box.dataset.g === d.g; const sel = box.querySelector('select');
+        box.hidden = !on; sel.disabled = !on; if (on) sel.value = d.k || '';
+      });
       dlg.showModal();
       f.expiry.focus();
     };

@@ -114,17 +114,15 @@ const PLANT_CARDS = {
     blue: { colour: 'blue', label: 'Blue', name: 'Competent Operator (5 years)', renew: true },
   },
 };
-// Someone can hold several NPORS or CPCS cards (e.g. Blue for one machine, Red for another), stored as 'red,blue'.
-const plantCards = (scheme, v) => String(v || '').split(',').filter((k) => Object.hasOwn(PLANT_CARDS[scheme], k)).map((k) => ({ key: k, ...PLANT_CARDS[scheme][k] }));
-const plantCardValue = (scheme, v) => {
-  const keys = new Set([].concat(v || []).flatMap((x) => String(x).split(',')));
-  const out = Object.keys(PLANT_CARDS[scheme]).filter((k) => keys.has(k));
-  return out.length ? out.join(',') : null;
-};
+// NPORS and CPCS cards are issued per category, so the card colour is kept on each NPORS or CPCS training record.
+const cardScheme = (grp) => (grp === 'NPORS' ? 'npors' : grp === 'CPCS' ? 'cpcs' : null);
+const recordCard = (grp, k) => { const s = cardScheme(grp); return s && Object.hasOwn(PLANT_CARDS[s], k) ? { key: k, ...PLANT_CARDS[s][k] } : null; };
+// The different cards someone holds in one scheme, Red to Traditional.
+const heldCards = (scheme, keys) => Object.keys(PLANT_CARDS[scheme]).filter((k) => keys.includes(k)).map((k) => ({ key: k, ...PLANT_CARDS[scheme][k] }));
 const cscsLabel = (k) => (CSCS_CARDS[k] ? `${CSCS_CARDS[k].label} · ${CSCS_CARDS[k].name}` : '');
 
 module.exports = {
-  CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, plantCardValue,
+  CSCS_CARDS, cscsLabel, PLANT_CARDS, cardScheme, recordCard, heldCards,
   serviceWork, INSPECTION_TYPES, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE,
   VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, EMPLOYEE_TYPES, userLabel, FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES,
 };

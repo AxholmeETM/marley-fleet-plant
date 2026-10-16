@@ -3,7 +3,7 @@ const express = require('express');
 const { all, get, run, transaction } = require('../db');
 const { UserError, text, isAdmin } = require('../auth');
 const { isValidDate, dueStatus, ukDate } = require('../status');
-const { userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, plantCardValue } = require('../categories');
+const { userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, cardScheme, recordCard, heldCards } = require('../categories');
 
 const router = express.Router();
 // Only admin users: not managers, who otherwise see everything.
@@ -11,7 +11,7 @@ router.use('/training', (req, res, next) => (isAdmin(req.user) ? next() : res.st
 
 const GROUPS = ['General', 'NPORS', 'CPCS'];
 const listCourses = () => all('SELECT * FROM training_courses WHERE active = 1 ORDER BY sort, id');
-const listPeople = () => all("SELECT id, name, role, employee_type, job_title, training_note, training_funded, cscs_card, npors_card, cpcs_card FROM users WHERE on_matrix = 1 AND active = 1 ORDER BY name");
+const listPeople = () => all("SELECT id, name, role, employee_type, job_title, training_note, training_funded, cscs_card FROM users WHERE on_matrix = 1 AND active = 1 ORDER BY name");
 
 // A cell: held with an expiry date (ok, due within 30 days, expired), a note only (e.g. "Booked 19/10/26"), or needed but not held.
 function cellStatus(r) {
@@ -29,7 +29,17 @@ async function matrixData() {
   const [courses, people, records] = await Promise.all([listCourses(), listPeople(),
     all('SELECT r.* FROM training_records r JOIN users u ON u.id = r.user_id WHERE u.on_matrix = 1 AND u.active = 1')]);
   const byKey = new Map(records.map((r) => [`${r.user_id}:${r.course_id}`, { ...r, status: cellStatus(r) }]));
-  return { courses, people, records, cell: (u, c) => byKey.get(`${u.id}:${c.id}`) };
+  // The different NPORS and CPCS cards each person holds, from the card colour on their training.
+  const grpOf = new Map(courses.map((c) => [c.id, c.grp]));
+  const held = new Map();
+  for (const r of records) {
+    const s = cardScheme(grpOf.get(r.course_id));
+    if (!s || !recordCard(grpOf.get(r.course_id), r.card)) continue;
+    const h = held.get(r.user_id) || { npors: [], cpcs: [] };
+    h[s].push(r.card); held.set(r.user_id, h);
+  }
+  const cardsOf = (u, s) => heldCards(s, (held.get(u.id) || { npors: [], cpcs: [] })[s]);
+  return { courses, people, records, cell: (u, c) => byKey.get(`${u.id}:${c.id}`), cardsOf };
 }
 
 // Dashboard: what runs out in the next 30 days, what has already expired, and what is needed.
@@ -43,7 +53,7 @@ router.get('/training', async (req, res) => {
   const expired = items.filter((x) => x.s.level === 'overdue').sort((a, b) => -byDate(a, b));
   const needed = items.filter((x) => x.s.level === 'needed').sort((a, b) => a.p.name.localeCompare(b.p.name));
   const show = ['soon', 'expired', 'needed', 'notes'].includes(req.query.show) ? req.query.show : 'soon';
-  res.render('training', { title: 'Training Matrix', soon, expired, needed, people, notes: people.filter((p) => p.training_note || p.training_funded), show, back: req.originalUrl });
+  res.render('training', { title: 'Training Matrix', soon, expired, needed, people, notes: people.filter((p) => p.training_note || p.training_funded), show, PLANT_CARDS, back: req.originalUrl });
 });
 
 // The matrix itself: one row per person, one column per course.
@@ -69,24 +79,28 @@ router.get('/training/matrix', async (req, res) => {
     for (const c of data.courses) { const l = level(p, c); if (l in t) t[l] += 1; }
     return t;
   };
-  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, summary, CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, grp, q: req.query.q || '', attention, showEmpty, hidden, GROUPS, userLabel, back: req.originalUrl });
+  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, cardsOf: data.cardsOf, summary, CSCS_CARDS, cscsLabel, PLANT_CARDS, recordCard, grp, q: req.query.q || '', attention, showEmpty, hidden, GROUPS, userLabel, back: req.originalUrl });
 });
+
+// Save one person's record for one course; an empty one is removed.
+async function saveRecord(userId, courseId, { expiry, note, required, card }) {
+  if (!expiry && !note && !required && !card) return run('DELETE FROM training_records WHERE user_id = ? AND course_id = ?', userId, courseId);
+  return run(`INSERT INTO training_records (user_id, course_id, expiry, note, required, card) VALUES (?, ?, ?, ?, ?, ?)
+    ON CONFLICT (user_id, course_id) DO UPDATE SET expiry = EXCLUDED.expiry, note = EXCLUDED.note, required = EXCLUDED.required, card = EXCLUDED.card,
+      updated_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')`, userId, courseId, expiry, note, required, card);
+}
 
 // Update one course for one person, from the matrix pop-up.
 router.post('/training/people/:id/courses/:cid', async (req, res) => {
   const p = await get('SELECT id, name FROM users WHERE id = ?', Number(req.params.id));
-  const c = await get('SELECT id, name FROM training_courses WHERE id = ?', Number(req.params.cid));
+  const c = await get('SELECT id, name, grp FROM training_courses WHERE id = ?', Number(req.params.cid));
   if (!p || !c) throw new UserError('Not found.', 404);
   const expiry = text(req.body.expiry);
   if (expiry && !isValidDate(expiry)) throw new UserError('Please enter a valid date.');
   const note = text(req.body.note);
   const required = req.body.required ? 1 : 0;
-  if (!expiry && !note && !required) await run('DELETE FROM training_records WHERE user_id = ? AND course_id = ?', p.id, c.id);
-  else {
-    await run(`INSERT INTO training_records (user_id, course_id, expiry, note, required) VALUES (?, ?, ?, ?, ?)
-      ON CONFLICT (user_id, course_id) DO UPDATE SET expiry = EXCLUDED.expiry, note = EXCLUDED.note, required = EXCLUDED.required,
-        updated_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')`, p.id, c.id, expiry, note, required);
-  }
+  const card = recordCard(c.grp, req.body.card) ? req.body.card : null;
+  await saveRecord(p.id, c.id, { expiry, note, required, card });
   req.flash('success', `${p.name}: ${c.name} updated.`);
   // Back to the page the pop-up was opened from (the dashboard or the matrix), never anywhere else.
   const back = String(req.body.back || '');
@@ -99,7 +113,7 @@ router.get('/training/people/:id', async (req, res) => {
   if (!p) return res.status(404).render('error', { title: 'Not found', message: 'Employee not found.' });
   const courses = await listCourses();
   const recs = new Map((await all('SELECT * FROM training_records WHERE user_id = ?', p.id)).map((r) => [r.course_id, { ...r, status: cellStatus(r) }]));
-  res.render('training-person', { title: `${p.name} – training`, crumbs: [['Training Matrix', '/training/matrix'], [p.name]], crumbHere: 'Training', navActive: '/training', p, courses, recs, GROUPS, userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, onboard: req.query.onboard === '1' });
+  res.render('training-person', { title: `${p.name} – training`, crumbs: [['Training Matrix', '/training/matrix'], [p.name]], crumbHere: 'Training', navActive: '/training', p, courses, recs, GROUPS, userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, cardScheme, onboard: req.query.onboard === '1' });
 });
 
 router.post('/training/people/:id', async (req, res) => {
@@ -110,20 +124,13 @@ router.post('/training/people/:id', async (req, res) => {
   for (const c of courses) {
     const expiry = text(req.body[`expiry_${c.id}`]);
     if (expiry && !isValidDate(expiry)) throw new UserError(`${c.name}: please enter a valid date.`);
-    rows.push({ c, expiry, note: text(req.body[`note_${c.id}`]), required: req.body[`required_${c.id}`] ? 1 : 0 });
+    const card = req.body[`card_${c.id}`];
+    rows.push({ c, expiry, note: text(req.body[`note_${c.id}`]), required: req.body[`required_${c.id}`] ? 1 : 0, card: recordCard(c.grp, card) ? card : null });
   }
   await transaction(async () => {
-    await run('UPDATE users SET on_matrix = 1, training_note = ?, training_funded = ?, cscs_card = ?, npors_card = ?, cpcs_card = ? WHERE id = ?', text(req.body.training_note), ['Company', 'Personal'].includes(req.body.training_funded) ? req.body.training_funded : null,
-      Object.hasOwn(CSCS_CARDS, req.body.cscs_card) ? req.body.cscs_card : null,
-      plantCardValue('npors', req.body.npors_card), plantCardValue('cpcs', req.body.cpcs_card), p.id);
-    for (const r of rows) {
-      if (!r.expiry && !r.note && !r.required) await run('DELETE FROM training_records WHERE user_id = ? AND course_id = ?', p.id, r.c.id);
-      else {
-        await run(`INSERT INTO training_records (user_id, course_id, expiry, note, required) VALUES (?, ?, ?, ?, ?)
-          ON CONFLICT (user_id, course_id) DO UPDATE SET expiry = EXCLUDED.expiry, note = EXCLUDED.note, required = EXCLUDED.required,
-            updated_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')`, p.id, r.c.id, r.expiry, r.note, r.required);
-      }
-    }
+    await run('UPDATE users SET on_matrix = 1, training_note = ?, training_funded = ?, cscs_card = ? WHERE id = ?', text(req.body.training_note), ['Company', 'Personal'].includes(req.body.training_funded) ? req.body.training_funded : null,
+      Object.hasOwn(CSCS_CARDS, req.body.cscs_card) ? req.body.cscs_card : null, p.id);
+    for (const r of rows) await saveRecord(p.id, r.c.id, r);
   });
   if (req.body.onboard) {
     req.flash('success', `${p.name} is set up and on the Training Matrix.`);
