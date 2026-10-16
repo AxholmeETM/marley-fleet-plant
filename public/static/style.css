@@ -852,3 +852,13 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .mi-key dd { margin: 0; }
 .mi-key ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
 @media print { .mi-key { display: none; } }
+/* Address tabs in their type's colours. */
+.mi-addr-head .subnav a.mi-tab-work { color: #1d4f9c; }
+.mi-addr-head .subnav a.mi-tab-stop { color: #1d6b55; }
+.mi-addr-head .subnav a.mi-tab-home { color: var(--amber); }
+.mi-addr-head .subnav a.mi-tab-unknown { color: #6b2f8f; }
+.mi-addr-head .subnav a.mi-tab-work.active { background: #e6effc; }
+.mi-addr-head .subnav a.mi-tab-stop.active { background: #e3f4ef; }
+.mi-addr-head .subnav a.mi-tab-home.active { background: var(--amber-bg); }
+.mi-addr-head .subnav a.mi-tab-unknown.active { background: #f3e8fb; }
+.mi-addr-head .subnav a[class*=mi-tab-] .count { color: inherit; opacity: .7; }

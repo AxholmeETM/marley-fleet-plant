@@ -17,7 +17,7 @@
 <%- include('partials/pane-end') %>
 <div class="card mi-addr">
   <div class="mi-addr-head">
-    <nav class="subnav" aria-label="Address lists"><% for (const [key, label, n] of TABS) { %><a href="/mileage/addresses?<%= qs %>&show=<%= key %>" class="<%= show === key ? 'active' : '' %>"><%= label %> <span class="count"><%= n %></span></a><% } %></nav>
+    <nav class="subnav" aria-label="Address lists"><% for (const [key, label, n] of TABS) { %><a href="/mileage/addresses?<%= qs %>&show=<%= key %>" class="mi-tab-<%= key %><%= show === key ? ' active' : '' %>"><%= label %> <span class="count"><%= n %></span></a><% } %></nav>
     <input type="search" class="pick-filter" id="addr-filter" placeholder="Find an address or name" aria-label="Find an address or name">
   </div>
 
