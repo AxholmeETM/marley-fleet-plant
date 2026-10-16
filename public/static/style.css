@@ -587,3 +587,12 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tp-table input[type=date] { min-width: 150px; }
 .tp-table td:nth-child(1) { min-width: 180px; }
 @media (max-width: 700px) { .tm-table .tm-name { min-width: 120px; max-width: 140px; } .tm-table .tm-name small { display: none; } .tm-table th.tm-grp { text-align: left; } }
+/* Each training group (General, NPORS, CPCS) has its own colour, with a strong line where a group starts. */
+.tm-table th.tm-grp { font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; text-align: left; padding: 6px 10px; }
+.tm-table th.tm-grp.g0 { background: #01024c; color: #fff; }
+.tm-table th.tm-grp.g1 { background: #0b6e4f; color: #fff; }
+.tm-table th.tm-grp.g2 { background: #b45309; color: #fff; }
+.tm-table th.tm-course.g0 { background: #eef0fb; }
+.tm-table th.tm-course.g1 { background: #e6f4ee; }
+.tm-table th.tm-course.g2 { background: #fdf1e3; }
+.tm-table .gstart { border-left: 3px solid #01024c; }
