@@ -3,7 +3,7 @@ const express = require('express');
 const { all, get, run, transaction } = require('../db');
 const { UserError, text, isAdmin } = require('../auth');
 const { isValidDate, dueStatus, ukDate } = require('../status');
-const { userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS } = require('../categories');
+const { userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, plantCardValue } = require('../categories');
 
 const router = express.Router();
 // Only admin users: not managers, who otherwise see everything.
@@ -69,7 +69,7 @@ router.get('/training/matrix', async (req, res) => {
     for (const c of data.courses) { const l = level(p, c); if (l in t) t[l] += 1; }
     return t;
   };
-  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, summary, CSCS_CARDS, cscsLabel, PLANT_CARDS, grp, q: req.query.q || '', attention, showEmpty, hidden, GROUPS, userLabel, back: req.originalUrl });
+  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, summary, CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, grp, q: req.query.q || '', attention, showEmpty, hidden, GROUPS, userLabel, back: req.originalUrl });
 });
 
 // Update one course for one person, from the matrix pop-up.
@@ -99,7 +99,7 @@ router.get('/training/people/:id', async (req, res) => {
   if (!p) return res.status(404).render('error', { title: 'Not found', message: 'Employee not found.' });
   const courses = await listCourses();
   const recs = new Map((await all('SELECT * FROM training_records WHERE user_id = ?', p.id)).map((r) => [r.course_id, { ...r, status: cellStatus(r) }]));
-  res.render('training-person', { title: `${p.name} – training`, crumbs: [['Training Matrix', '/training/matrix'], [p.name]], crumbHere: 'Training', navActive: '/training', p, courses, recs, GROUPS, userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, onboard: req.query.onboard === '1' });
+  res.render('training-person', { title: `${p.name} – training`, crumbs: [['Training Matrix', '/training/matrix'], [p.name]], crumbHere: 'Training', navActive: '/training', p, courses, recs, GROUPS, userLabel, CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, onboard: req.query.onboard === '1' });
 });
 
 router.post('/training/people/:id', async (req, res) => {
@@ -115,8 +115,7 @@ router.post('/training/people/:id', async (req, res) => {
   await transaction(async () => {
     await run('UPDATE users SET on_matrix = 1, training_note = ?, training_funded = ?, cscs_card = ?, npors_card = ?, cpcs_card = ? WHERE id = ?', text(req.body.training_note), ['Company', 'Personal'].includes(req.body.training_funded) ? req.body.training_funded : null,
       Object.hasOwn(CSCS_CARDS, req.body.cscs_card) ? req.body.cscs_card : null,
-      Object.hasOwn(PLANT_CARDS.npors, req.body.npors_card) ? req.body.npors_card : null,
-      Object.hasOwn(PLANT_CARDS.cpcs, req.body.cpcs_card) ? req.body.cpcs_card : null, p.id);
+      plantCardValue('npors', req.body.npors_card), plantCardValue('cpcs', req.body.cpcs_card), p.id);
     for (const r of rows) {
       if (!r.expiry && !r.note && !r.required) await run('DELETE FROM training_records WHERE user_id = ? AND course_id = ?', p.id, r.c.id);
       else {

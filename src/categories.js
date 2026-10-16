@@ -114,10 +114,17 @@ const PLANT_CARDS = {
     blue: { colour: 'blue', label: 'Blue', name: 'Competent Operator (5 years)', renew: true },
   },
 };
+// Someone can hold several NPORS or CPCS cards (e.g. Blue for one machine, Red for another), stored as 'red,blue'.
+const plantCards = (scheme, v) => String(v || '').split(',').filter((k) => Object.hasOwn(PLANT_CARDS[scheme], k)).map((k) => ({ key: k, ...PLANT_CARDS[scheme][k] }));
+const plantCardValue = (scheme, v) => {
+  const keys = new Set([].concat(v || []).flatMap((x) => String(x).split(',')));
+  const out = Object.keys(PLANT_CARDS[scheme]).filter((k) => keys.has(k));
+  return out.length ? out.join(',') : null;
+};
 const cscsLabel = (k) => (CSCS_CARDS[k] ? `${CSCS_CARDS[k].label} · ${CSCS_CARDS[k].name}` : '');
 
 module.exports = {
-  CSCS_CARDS, cscsLabel, PLANT_CARDS,
+  CSCS_CARDS, cscsLabel, PLANT_CARDS, plantCards, plantCardValue,
   serviceWork, INSPECTION_TYPES, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE,
   VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, EMPLOYEE_TYPES, userLabel, FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES,
 };

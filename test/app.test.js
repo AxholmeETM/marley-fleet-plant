@@ -466,9 +466,9 @@ test('training matrix and view-only managers', async () => {
   assert.equal((await get('SELECT cscs_card FROM users WHERE id = ?', tess.id)).cscs_card, 'red_trainee');
   assert.match((await admin('GET', '/training/matrix')).text, /cscs cscs-red/);
   assert.match((await admin('GET', `/training/people/${tess.id}`)).text, /can't be renewed/);
-  await admin('POST', `/training/people/${tess.id}`, { npors_card: 'red', cpcs_card: 'blue', [`expiry_${cscs.id + 15}`]: '2030-01-31' });
-  assert.deepEqual({ ...await get('SELECT npors_card, cpcs_card FROM users WHERE id = ?', tess.id) }, { npors_card: 'red', cpcs_card: 'blue' });
-  assert.match((await admin('GET', '/training/matrix?group=NPORS')).text, /card-pill cscs-red" title="NPORS: Red/);
+  await admin('POST', `/training/people/${tess.id}`, { npors_card: ['red', 'blue'], cpcs_card: 'blue', [`expiry_${cscs.id + 15}`]: '2030-01-31' });
+  assert.deepEqual({ ...await get('SELECT npors_card, cpcs_card FROM users WHERE id = ?', tess.id) }, { npors_card: 'red,blue', cpcs_card: 'blue' });
+  assert.match((await admin('GET', '/training/matrix?group=NPORS')).text, /card-pill multi" title="NPORS: Red · Trained Operator \(2 years\), Blue[^"]*"><span class="segs"><span class="cscs-red"><\/span><span class="cscs-blue">/);
   await admin('POST', `/training/people/${tess.id}`, { cscs_card: 'purple', npors_card: 'gold-ish' });
   assert.deepEqual({ ...await get('SELECT cscs_card, npors_card FROM users WHERE id = ?', tess.id) }, { cscs_card: null, npors_card: null });
   await admin('POST', `/training/people/${tess.id}/remove`, {});
