@@ -830,3 +830,8 @@ button.mi-tag:hover { outline: 1.5px solid currentColor; }
 .mi-addr-table td { vertical-align: middle; }
 .mi-addr-table .mi-quick { justify-content: flex-end; }
 .mi-trips tr[id] { scroll-margin-top: 140px; }
+/* Save-as buttons in the same colours as the Work, Home and Unknown tags. */
+.btn.mi-kind.work { background: #e6effc; color: #1d4f9c; }
+.btn.mi-kind.home { background: var(--amber-bg); color: var(--amber); }
+.btn.mi-kind.unknown { background: #f3e8fb; color: #6b2f8f; }
+.btn.mi-kind:hover { box-shadow: inset 0 0 0 1.5px currentColor; }
