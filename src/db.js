@@ -411,6 +411,9 @@ UPDATE training_courses c SET info = v.info FROM (VALUES
 ) AS v(key, info) WHERE c.key = v.key AND c.info IS NULL;
 -- Which CSCS card someone holds (green labourer, blue skilled worker, ...); its expiry is the CSCS Card course.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
+-- Which NPORS and CPCS operator card someone holds (red trained / blue competent ...); the categories are the NPORS and CPCS courses.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS npors_card TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS cpcs_card TEXT;
 UPDATE users u SET cscs_card = CASE r.note WHEN 'Blue card' THEN 'blue' WHEN 'Green card' THEN 'green' ELSE 'red' END
   FROM training_records r JOIN training_courses c ON c.id = r.course_id AND c.key = 'cscs'
   WHERE r.user_id = u.id AND u.cscs_card IS NULL AND r.note IN ('Blue card', 'Green card', 'Red card');

@@ -17,6 +17,7 @@
 <div class="tm-legend">
   <span class="tm-legend-group"><span class="chip ok">In date</span><span class="chip soon">Within 30 days</span><span class="chip overdue">Expired</span><span class="chip needed">Needed</span><span class="chip note">Note</span></span>
   <span class="tm-legend-group"><span class="muted">CSCS card</span><% for (const c of ['green', 'red', 'blue', 'gold', 'black', 'white', 'partner']) { %><span class="cscs-chip"><span class="cscs cscs-<%= c %>"></span><%= c === 'partner' ? 'Partner' : c[0].toUpperCase() + c.slice(1) %></span><% } %></span>
+  <span class="tm-legend-group"><span class="muted">NPORS / CPCS card</span><span class="cscs-chip"><span class="cscs cscs-red"></span>Red trained</span><span class="cscs-chip"><span class="cscs cscs-blue"></span>Blue competent</span><span class="cscs-chip"><span class="cscs cscs-gold"></span>Gold supervisor</span><span class="cscs-chip"><span class="cscs cscs-traditional"></span>Traditional</span></span>
 </div>
 <div class="card flush tm-card">
   <% if (!people.length) { %><p class="empty"><%= attention ? 'Nothing needs attention here: nobody has anything expired or due within 30 days.' : q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet.' %></p><% } else { %>
@@ -29,10 +30,10 @@
       <tr>
         <th class="tm-name" scope="row">
           <a href="/training/people/<%= p.id %>"><%= p.name %></a>
-          <span class="tm-sub"><% if (card) { %><span class="cscs cscs-<%= card.colour %>" title="CSCS: <%= cscsLabel(p.cscs_card) %>"></span><% } %><%= p.job_title || userLabel(p) %></span>
+          <% const np = PLANT_CARDS.npors[p.npors_card]; %><% const cp = PLANT_CARDS.cpcs[p.cpcs_card]; %><span class="tm-sub"><% if (card) { %><span class="cscs cscs-<%= card.colour %>" title="CSCS: <%= cscsLabel(p.cscs_card) %>"></span><% } %><% if (np) { %><span class="op-card cscs-<%= np.colour %>" title="NPORS: <%= np.label %> · <%= np.name %>">N</span><% } %><% if (cp) { %><span class="op-card cscs-<%= cp.colour %>" title="CPCS: <%= cp.label %> · <%= cp.name %>">C</span><% } %><%= p.job_title || userLabel(p) %></span>
         </th>
         <td class="tm-sum"><% if (t.overdue) { %><span class="badge overdue"><%= t.overdue %> expired</span><% } %><% if (t.soon) { %><span class="badge soon"><%= t.soon %> due</span><% } %><% if (t.needed) { %><span class="badge needed"><%= t.needed %> needed</span><% } %><% if (!t.overdue && !t.soon && !t.needed) { %><span class="badge ok">All in date</span><% } %></td>
-        <% courses.forEach((c, i) => { const r = cell(p, c); const s = r && r.status; const cs = c.key === 'cscs' && card; %><td tabindex="0" data-p="<%= p.id %>" data-c="<%= c.id %>" data-pn="<%= p.name %>" data-cn="<%= c.name %>" data-e="<%= r && r.expiry || '' %>" data-n="<%= r && r.note || '' %>" data-r="<%= r && r.required ? 1 : '' %>" class="tm-cell<%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.name %><%= s ? ': ' + s.text : '' %><%= r && r.note && r.expiry ? ' · ' + r.note : '' %><%= cs ? ' · ' + cscsLabel(p.cscs_card) + ' card' : '' %>"><% if (s) { %><span class="chip <%= s.level %>"><% if (cs) { %><span class="cscs cscs-<%= card.colour %>"></span><% } %><%= s.short %></span><% } %></td><% }) %>
+        <% courses.forEach((c, i) => { const r = cell(p, c); const s = r && r.status; const cs = c.key === 'cscs' ? card : c.grp === 'NPORS' ? np : c.grp === 'CPCS' ? cp : null; %><td tabindex="0" data-p="<%= p.id %>" data-c="<%= c.id %>" data-pn="<%= p.name %>" data-cn="<%= c.name %>" data-e="<%= r && r.expiry || '' %>" data-n="<%= r && r.note || '' %>" data-r="<%= r && r.required ? 1 : '' %>" class="tm-cell<%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.name %><%= s ? ': ' + s.text : '' %><%= r && r.note && r.expiry ? ' · ' + r.note : '' %><%= cs ? ' · ' + (c.key === 'cscs' ? 'CSCS' : c.grp) + ' card: ' + cs.label + ' · ' + cs.name : '' %>"><% if (s) { %><span class="chip <%= s.level %>"><% if (cs) { %><span class="cscs cscs-<%= cs.colour %>"></span><% } %><%= s.short %></span><% } %></td><% }) %>
       </tr>
     <% } %></tbody>
   </table></div><% } %>

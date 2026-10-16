@@ -21,13 +21,19 @@
 <% } %>
 <form class="card" method="post" action="/training/people/<%= p.id %>">
   <% if (onboard) { %><input type="hidden" name="onboard" value="1"><% } %>
-  <div class="grid grid-3">
+  <div class="grid grid-3 tp-fields">
     <div class="field"><span class="label">Training paid for</span>
       <div class="seg funded" role="radiogroup" aria-label="Training paid for"><% for (const v of ['Company', 'Personal']) { %><input type="radio" id="funded_<%= v %>" name="training_funded" value="<%= v %>" <%= p.training_funded === v ? 'checked' : '' %>><label for="funded_<%= v %>"><%= v %></label><% } %></div></div>
     <div class="field"><label for="cscs_card">CSCS card</label>
       <div class="cscs-pick"><span class="cscs cscs-<%= CSCS_CARDS[p.cscs_card] ? CSCS_CARDS[p.cscs_card].colour : 'none' %>" id="cscs-swatch"></span>
       <select id="cscs_card" name="cscs_card"><option value="">Not recorded</option><% for (const [k, c] of Object.entries(CSCS_CARDS)) { %><option value="<%= k %>" data-colour="<%= c.colour %>" <%= p.cscs_card === k ? 'selected' : '' %>><%= cscsLabel(k) %></option><% } %></select></div>
       <% if (CSCS_CARDS[p.cscs_card] && !CSCS_CARDS[p.cscs_card].renew) { %><p class="hint">This card can't be renewed. They'll need to qualify for another card before it runs out.</p><% } %></div>
+    <% for (const [scheme, title] of [['npors', 'NPORS card'], ['cpcs', 'CPCS card']]) { const cur = PLANT_CARDS[scheme][p[scheme + '_card']]; %>
+    <div class="field"><label for="<%= scheme %>_card"><%= title %></label>
+      <div class="cscs-pick"><span class="cscs cscs-<%= cur ? cur.colour : 'none' %>" id="<%= scheme %>-swatch"></span>
+      <select id="<%= scheme %>_card" name="<%= scheme %>_card" data-swatch="<%= scheme %>-swatch"><option value="">Not recorded</option><% for (const [k, c] of Object.entries(PLANT_CARDS[scheme])) { %><option value="<%= k %>" data-colour="<%= c.colour %>" <%= p[scheme + '_card'] === k ? 'selected' : '' %>><%= c.label %> · <%= c.name %></option><% } %></select></div>
+      <% if (cur && !cur.renew) { %><p class="hint">A Red card can't be renewed. They need the NVQ within the 2 years to move to a Blue card.</p><% } %></div>
+    <% } %>
     <div class="field"><label for="training_note">Note</label><input type="text" id="training_note" name="training_note" value="<%= p.training_note || '' %>" maxlength="200"></div>
   </div>
   <% for (const g of GROUPS) { const list = courses.filter((c) => c.grp === g); if (!list.length) continue;
@@ -66,10 +72,12 @@
   }));
 </script>
 <script>
-  document.getElementById('cscs_card').addEventListener('change', (e) => {
-    const o = e.target.selectedOptions[0];
-    document.getElementById('cscs-swatch').className = 'cscs cscs-' + (o.dataset.colour || 'none');
-  });
+  for (const id of ['cscs_card', 'npors_card', 'cpcs_card']) {
+    document.getElementById(id).addEventListener('change', (e) => {
+      const o = e.target.selectedOptions[0];
+      document.getElementById(id.replace('_card', '-swatch')).className = 'cscs cscs-' + (o.dataset.colour || 'none');
+    });
+  }
 </script>
 <%- include('partials/course-info') %>
 <%- include('partials/footer') %>

@@ -100,10 +100,24 @@ const CSCS_CARDS = {
   white_pqp: { colour: 'white', label: 'White', name: 'Professionally Qualified Person', renew: false },
   partner: { colour: 'partner', label: 'Partner card', name: 'with the CSCS logo (e.g. CPCS, NPORS)', renew: true },
 };
+// Plant operator cards (npors.com and CPCS, checked 16/10/2026). Red Trained Operator lasts 2 years and can't be renewed:
+// the holder needs the NVQ to move to Blue. Blue Competent Operator lasts 5 years.
+const PLANT_CARDS = {
+  npors: {
+    red: { colour: 'red', label: 'Red', name: 'Trained Operator (2 years)', renew: false },
+    blue: { colour: 'blue', label: 'Blue', name: 'Competent Operator (5 years)', renew: true },
+    gold: { colour: 'gold', label: 'Gold', name: 'Occupational Work Supervisor', renew: true },
+    traditional: { colour: 'traditional', label: 'Traditional', name: 'no CSCS logo, not for construction sites', renew: true },
+  },
+  cpcs: {
+    red: { colour: 'red', label: 'Red', name: 'Trained Operator (2 years)', renew: false },
+    blue: { colour: 'blue', label: 'Blue', name: 'Competent Operator (5 years)', renew: true },
+  },
+};
 const cscsLabel = (k) => (CSCS_CARDS[k] ? `${CSCS_CARDS[k].label} · ${CSCS_CARDS[k].name}` : '');
 
 module.exports = {
-  CSCS_CARDS, cscsLabel,
+  CSCS_CARDS, cscsLabel, PLANT_CARDS,
   serviceWork, INSPECTION_TYPES, SECTIONS, CATEGORIES, CATEGORY, OWNERS, PLANT_STATUSES, PLANT_INACTIVE,
   VEHICLE_CATEGORIES, VEHICLE_STATUSES, VEHICLE_INACTIVE, TRACKED, EMPLOYEE_TYPES, userLabel, FUEL_CARD_PROVIDERS, FUEL_CARD_STATUSES,
 };
