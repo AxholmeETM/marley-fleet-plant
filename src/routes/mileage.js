@@ -16,8 +16,10 @@ const upload = multer({
 
 // The dates to show: from the address bar, else the latest upload, else the last 7 days.
 async function period(q) {
+  // The dashboard's uploaded-files picker sends the week as "from|to".
+  if (typeof q.week === 'string' && q.week.includes('|')) { const [from, to] = q.week.split('|'); q = { from, to }; }
   if (isValidDate(q.from) && isValidDate(q.to) && q.from <= q.to) return { from: q.from, to: q.to };
-  const last = await get('SELECT date_from, date_to FROM mileage_uploads ORDER BY id DESC LIMIT 1');
+  const last = await get('SELECT date_from, date_to FROM mileage_uploads ORDER BY date_from DESC, id DESC LIMIT 1');
   if (last) return { from: last.date_from, to: last.date_to };
   return { from: addDays(isoDate(), -6), to: isoDate() };
 }

@@ -19,7 +19,7 @@
 </div>
 <form class="filters mi-weekpick" method="get">
   <div class="field"><label for="upl">Uploaded files</label>
-    <select id="upl" onchange="const [f, t] = this.value.split('|'); location.href = '/mileage?from=' + f + '&to=' + t;">
+    <select id="upl" name="week">
       <% if (!weeks.some((w) => w.date_from === p.from && w.date_to === p.to)) { %><option value="" selected><%= weeks.length ? 'Choose…' : 'No files uploaded yet' %></option><% } %>
       <% for (const w of weeks) { %><option value="<%= w.date_from %>|<%= w.date_to %>" <%= w.date_from === p.from && w.date_to === p.to ? 'selected' : '' %>><%= ukDate(w.date_from) %> to <%= ukDate(w.date_to) %></option><% } %>
     </select></div>

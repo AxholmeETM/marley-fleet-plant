@@ -578,6 +578,8 @@ test('mileage from a SoTrack trip list', async () => {
   // The dashboard: top 5 personal miles and idle time, and work against personal miles per driver.
   const dash = (await admin('GET', '/mileage?from=2026-10-12&to=2026-10-13')).text;
   assert.match(dash, /Top 5 personal miles/);
+  // The uploaded-files picker sends the week as one value.
+  assert.match((await admin('GET', '/mileage?week=2026-10-12%7C2026-10-13')).text, /<option value="2026-10-12\|2026-10-13" selected>/);
   assert.match(dash, /Top 5 idle time/);
   assert.match(dash, /Work and personal miles by driver/);
   assert.match(dash, /Personal 7\.0 mi/);
