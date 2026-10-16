@@ -1,0 +1,116 @@
+<%- include('partials/header') %>
+<%
+  const maxP = Math.max(1, ...topPersonal.map((v) => v.personal));
+  const maxI = Math.max(1, ...topIdle.map((v) => v.idle));
+  const maxT = Math.max(1, ...byDriver.map((v) => v.total));
+  const pct = (n, of) => (n / of * 100).toFixed(2) + '%';
+  const href = (v) => '/mileage/' + v.reg + '?' + qs;
+  const share = totals.work + totals.personal ? Math.round(totals.personal / (totals.work + totals.personal) * 100) : 0;
+%>
+<div class="page-head">
+  <div><h1>Mileage <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1></div>
+  <div class="actions">
+    <a class="btn" href="/mileage?<%= prevQs %>" title="The <%= Math.round((Date.parse(p.to) - Date.parse(p.from)) / 86400000) + 1 %> days before">‹ Previous</a>
+    <a class="btn" href="/mileage?<%= nextQs %>">Next ›</a>
+    <a class="btn" href="/mileage/addresses">Home and work addresses</a>
+    <% if (canEdit) { %>
+    <form class="mi-upload" method="post" action="/mileage/upload" enctype="multipart/form-data">
+      <label class="btn primary">Upload SoTrack file<input type="file" name="file" accept=".xlsx" required hidden onchange="this.form.submit()"></label>
+    </form>
+    <% } %>
+  </div>
+</div>
+<form class="filters" method="get">
+  <div class="field"><label for="from">From</label><input id="from" type="date" name="from" value="<%= p.from %>"></div>
+  <div class="field"><label for="to">To</label><input id="to" type="date" name="to" value="<%= p.to %>"></div>
+  <% if (uploads.length) { %><div class="field"><label for="upl">Uploaded files</label>
+    <select id="upl" onchange="if (this.value) { const [f, t] = this.value.split('|'); this.form.from.value = f; this.form.to.value = t; this.form.submit(); }">
+      <option value="">Choose…</option>
+      <% for (const u of uploads) { %><option value="<%= u.date_from %>|<%= u.date_to %>"><%= ukDate(u.date_from) %> to <%= ukDate(u.date_to) %> (<%= u.trips %> trips)</option><% } %>
+    </select></div><% } %>
+  <button class="btn" type="submit">Show</button>
+</form>
+<%- include('partials/pane-end') %>
+<% if (!vehicles.length) { %>
+<div class="card"><p class="empty">No trips for these dates. Upload the week's Trip List from SoTrack, or pick an uploaded file above.</p></div>
+<% } else { %>
+<div class="mi-tiles">
+  <div class="card mi-tile"><span>Work miles</span><strong><%= M.fmtMiles(totals.work) %></strong></div>
+  <div class="card mi-tile personal"><span>Personal miles</span><strong><%= M.fmtMiles(totals.personal) %></strong><em><%= share %>% of all miles</em></div>
+  <div class="card mi-tile"><span>Idle time</span><strong><%= M.fmtSecs(totals.idle) %></strong></div>
+  <div class="card mi-tile"><span>Drivers with personal miles</span><strong><%= byDriver.filter((v) => v.personal > 0).length %></strong><em>of <%= vehicles.length %> vehicles</em></div>
+</div>
+<div class="mi-dash">
+  <div class="card">
+    <h2>Top 10 personal miles</h2>
+    <% if (!topPersonal.length) { %><p class="empty">No personal miles for these dates.</p><% } else { %>
+    <ol class="mi-rank">
+      <% topPersonal.forEach((v, i) => { %>
+      <li data-tip="<%= v.who %> · <%= v.regText %>|Personal <%= M.fmtMiles(v.personal) %> mi|Work <%= M.fmtMiles(v.work) %> mi|<%= Math.round(v.personal / v.total * 100) %>% of their miles">
+        <a href="<%= href(v) %>">
+          <span class="mi-rank-n"><%= i + 1 %></span>
+          <span class="mi-rank-name"><%= v.who %> <small><%= v.regText %></small></span>
+          <span class="mi-rank-bar"><i class="personal" style="width:<%= pct(v.personal, maxP) %>"></i></span>
+          <span class="mi-rank-val"><%= M.fmtMiles(v.personal) %> mi</span>
+        </a>
+      </li>
+      <% }) %>
+    </ol><% } %>
+  </div>
+  <div class="card">
+    <h2>Top 10 idle time</h2>
+    <% if (!topIdle.length) { %><p class="empty">No idle time for these dates.</p><% } else { %>
+    <ol class="mi-rank">
+      <% topIdle.forEach((v, i) => { %>
+      <li data-tip="<%= v.who %> · <%= v.regText %>|Idle <%= M.fmtSecs(v.idle) %>|<%= v.trips.length %> trips">
+        <a href="<%= href(v) %>">
+          <span class="mi-rank-n"><%= i + 1 %></span>
+          <span class="mi-rank-name"><%= v.who %> <small><%= v.regText %></small></span>
+          <span class="mi-rank-bar"><i class="idle" style="width:<%= pct(v.idle, maxI) %>"></i></span>
+          <span class="mi-rank-val"><%= M.fmtSecs(v.idle) %></span>
+        </a>
+      </li>
+      <% }) %>
+    </ol><% } %>
+  </div>
+</div>
+<div class="card mi-chart">
+  <div class="mi-chart-head">
+    <h2>Work and personal miles by driver</h2>
+    <div class="mi-legend"><span><i class="work"></i>Work</span><span><i class="personal"></i>Personal</span></div>
+  </div>
+  <div class="mi-stack">
+    <% for (const v of byDriver) { %>
+    <a class="mi-stack-row" href="<%= href(v) %>" data-tip="<%= v.who %> · <%= v.regText %>|Work <%= M.fmtMiles(v.work) %> mi|Personal <%= M.fmtMiles(v.personal) %> mi|Total <%= M.fmtMiles(v.total) %> mi">
+      <span class="mi-stack-name"><%= v.who %></span>
+      <span class="mi-stack-track">
+        <span class="mi-stack-bar" style="width:<%= pct(v.total, maxT) %>">
+          <% if (v.work) { %><i class="work" style="flex:<%= v.work %>"></i><% } %><% if (v.personal) { %><i class="personal" style="flex:<%= v.personal %>"></i><% } %>
+        </span>
+        <span class="mi-stack-val"><%= M.fmtMiles(v.work) %><% if (v.personal) { %> · <b><%= M.fmtMiles(v.personal) %></b><% } %></span>
+      </span>
+    </a>
+    <% } %>
+  </div>
+  <p class="small muted">Miles for each driver over these dates: work, then personal. The <a href="/mileage/drivers?<%= qs %>">Drivers</a> tab has the same figures as a table.</p>
+</div>
+<div class="mi-tip" id="mi-tip" hidden></div>
+<script>
+  (() => {
+    const tip = document.getElementById('mi-tip');
+    document.querySelectorAll('[data-tip]').forEach((el) => {
+      el.addEventListener('mousemove', (e) => {
+        const [head, ...lines] = el.dataset.tip.split('|');
+        tip.innerHTML = '';
+        const h = document.createElement('strong'); h.textContent = head; tip.appendChild(h);
+        for (const l of lines) { const d = document.createElement('div'); d.textContent = l; tip.appendChild(d); }
+        tip.hidden = false;
+        const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+        tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px';
+      });
+      el.addEventListener('mouseleave', () => { tip.hidden = true; });
+    });
+  })();
+</script>
+<% } %>
+<%- include('partials/footer') %>

@@ -554,7 +554,7 @@ test('mileage from a SoTrack trip list', async () => {
   // The same file again adds nothing.
   await send();
   assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_trips')).n, 7);
-  let page = (await admin('GET', r.location)).text;
+  let page = (await admin('GET', '/mileage/drivers?from=2026-10-12&to=2026-10-13')).text;
   assert.match(page, /Dave Driver/);
   assert.match(page, /Home address needed/);
   assert.match(page, /Not on Fleet/);
@@ -574,6 +574,12 @@ test('mileage from a SoTrack trip list', async () => {
   page = (await admin('GET', '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13')).text;
   assert.match(page, /Site\?/);
   assert.match(page, /Personal/);
+  // The dashboard: top 10 personal miles and idle time, and work against personal miles per driver.
+  const dash = (await admin('GET', '/mileage?from=2026-10-12&to=2026-10-13')).text;
+  assert.match(dash, /Top 10 personal miles/);
+  assert.match(dash, /Top 10 idle time/);
+  assert.match(dash, /Work and personal miles by driver/);
+  assert.match(dash, /Personal 7\.0 mi/);
   // Change a trip by hand, then undo it.
   const shop = await get("SELECT id FROM mileage_trips WHERE end_loc LIKE 'Shop Road%'");
   await admin('POST', `/mileage/trips/${shop.id}`, { use: 'work', back: '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13' });

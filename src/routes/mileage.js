@@ -55,12 +55,33 @@ async function mileageFor(p, reg) {
   return { vehicles, places };
 }
 
-router.get('/mileage', async (req, res) => {
-  const p = await period(req.query);
+async function summary(q) {
+  const p = await period(q);
   const { vehicles } = await mileageFor(p);
+  const trips = vehicles.flatMap((v) => v.trips);
+  const totals = { work: M.sum(trips, 'work'), personal: M.sum(trips, 'personal'), trips: trips.length, idle: vehicles.reduce((n, v) => n + v.idle, 0) };
   const uploads = await all('SELECT * FROM mileage_uploads ORDER BY id DESC LIMIT 12');
-  const totals = { work: M.sum(vehicles.flatMap((v) => v.trips), 'work'), personal: M.sum(vehicles.flatMap((v) => v.trips), 'personal'), trips: vehicles.reduce((n, v) => n + v.trips.length, 0) };
-  res.render('mileage', { title: 'Mileage', p, qs: qs(p), vehicles, uploads, totals, M, placeCount: (await get('SELECT COUNT(*)::int AS n FROM mileage_places')).n });
+  return { p, qs: qs(p), vehicles, totals, uploads, M };
+}
+const who = (v) => v.driver_name || (v.notOnFleet ? v.device : `No driver (${v.regText})`);
+
+// Dashboard: the week's top 10 for personal miles and idle time, and work against personal miles for each driver.
+router.get('/mileage', async (req, res) => {
+  const s = await summary(req.query);
+  const days = Math.round((Date.parse(s.p.to) - Date.parse(s.p.from)) / 86400000) + 1;
+  const shift = (n) => `from=${addDays(s.p.from, n)}&to=${addDays(s.p.to, n)}`;
+  const named = s.vehicles.map((v) => ({ ...v, who: who(v) }));
+  res.render('mileage-dashboard', {
+    title: 'Mileage', ...s, prevQs: shift(-days), nextQs: shift(days),
+    topPersonal: named.filter((v) => v.personal > 0).sort((a, b) => b.personal - a.personal).slice(0, 10),
+    topIdle: named.filter((v) => v.idle > 0).sort((a, b) => b.idle - a.idle).slice(0, 10),
+    byDriver: named.filter((v) => v.total > 0).sort((a, b) => b.total - a.total),
+  });
+});
+
+router.get('/mileage/drivers', async (req, res) => {
+  const s = await summary(req.query);
+  res.render('mileage', { title: 'Mileage', ...s, placeCount: (await get('SELECT COUNT(*)::int AS n FROM mileage_places')).n });
 });
 
 // Upload a Trip List. Trips already loaded (same vehicle and start time) are skipped, so overlapping files are fine.
@@ -98,7 +119,7 @@ router.get('/mileage/addresses', async (req, res) => {
   res.render('mileage-addresses', { title: 'Home and work addresses', crumbs: [['Mileage', '/mileage'], ['Addresses']], navActive: '/mileage', places: await listPlaces(), people });
 });
 
-const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
+const backTo = (b) => (/^\/mileage(\/[A-Z0-9]+|\/addresses|\/drivers)?(\?[\w=&-]*)?$/.test(String(b || '')) ? String(b) : '/mileage/addresses');
 
 router.post('/mileage/addresses', async (req, res) => {
   const kind = req.body.kind === 'home' ? 'home' : 'work';
@@ -141,7 +162,7 @@ router.get('/mileage/:reg', async (req, res) => {
     days[days.length - 1].trips.push(t);
   }
   res.render('mileage-vehicle', {
-    title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Mileage', `/mileage?${qs(p)}`], [v.regText]], navActive: '/mileage',
+    title: `${v.driver_name || v.device} – ${v.regText}`, crumbs: [['Mileage', `/mileage/drivers?${qs(p)}`], [v.regText]], navActive: '/mileage',
     p, qs: qs(p), v, days, M, back: `/mileage/${reg}?${qs(p)}`,
   });
 });

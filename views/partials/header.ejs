@@ -65,6 +65,7 @@
   const SUBNAV = {
     '/': [['/', 'Dashboard', (p) => p === '/'], ['/calendar', 'Calendar', (p) => p === '/calendar']],
     '/plant': [['/plant', 'Plant', (p) => p === '/plant'], ['/checks?type=plant', 'Site Checks', (p) => p.startsWith('/checks')], ['/defects', 'Defects', (p) => p.startsWith('/defects')]],
+    '/mileage': [['/mileage', 'Dashboard', (p) => p === '/mileage'], ['/mileage/drivers', 'Drivers', (p) => p === '/mileage/drivers']],
     '/fuel': [['/fuel', 'Summary', (p) => p === '/fuel'], ['/fuel/log', 'Fuel log and receipts', (p) => p === '/fuel/log']],
     '/training': [['/training', 'Dashboard', (p) => p === '/training'], ['/training/matrix', 'Training Matrix', (p) => p === '/training/matrix']],
   };

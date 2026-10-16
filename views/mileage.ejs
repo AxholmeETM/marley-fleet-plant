@@ -1,6 +1,6 @@
 <%- include('partials/header') %>
 <div class="page-head">
-  <div><h1>Mileage <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1></div>
+  <div><h1>Mileage by driver <span class="count"><%= ukDate(p.from) %> to <%= ukDate(p.to) %></span></h1></div>
   <div class="actions">
     <a class="btn" href="/mileage/addresses">Home and work addresses</a>
     <% if (vehicles.length) { %><a class="btn" href="/reports/mileage?<%= qs %>&print=1" target="_blank" rel="noopener">Print</a><% } %>

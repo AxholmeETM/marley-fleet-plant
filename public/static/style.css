@@ -762,3 +762,39 @@ tfoot th { border-top: 1.5px solid var(--line-strong); text-align: left; font-we
 tfoot th.num { text-align: right; }
 tfoot th { font-size: .86rem; color: var(--ink); padding-top: 12px; padding-bottom: 12px; }
 .mi-tag.site { background: var(--grey-bg); color: var(--ink-2); border: 1px dashed var(--line-strong); }
+/* Mileage dashboard */
+.mi-tile em { display: block; font-style: normal; font-size: .74rem; color: var(--muted); margin-top: 2px; }
+.mi-dash { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+@media (max-width: 1000px) { .mi-dash { grid-template-columns: 1fr; } }
+.mi-dash h2, .mi-chart h2 { font-size: 1.05rem; margin: 0 0 10px; }
+.mi-rank { list-style: none; margin: 0; padding: 0; }
+.mi-rank a { display: grid; grid-template-columns: 22px minmax(120px, 1.2fr) 2fr 70px; gap: 10px; align-items: center; padding: 6px 4px; border-radius: 6px; color: var(--ink); }
+.mi-rank a:hover { background: var(--grey-bg); }
+.mi-rank-n { color: var(--muted); font-size: .8rem; text-align: right; }
+.mi-rank-name { font-size: .86rem; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi-rank-name small { color: var(--muted); font-weight: 400; margin-left: 4px; }
+.mi-rank-bar { height: 10px; }
+.mi-rank-bar i, .mi-stack-bar i, .mi-legend i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.mi-rank-val { font-size: .84rem; text-align: right; font-variant-numeric: tabular-nums; }
+i.work { background: #3d4fc4; }
+i.personal { background: #e08a1e; }
+i.idle { background: #7a86a8; }
+.mi-chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.mi-legend { display: flex; gap: 14px; font-size: .8rem; color: var(--ink-2); }
+.mi-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.mi-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.mi-stack { display: grid; gap: 2px; margin: 6px 0 10px; }
+.mi-stack-row { display: grid; grid-template-columns: 170px 1fr; gap: 12px; align-items: center; padding: 4px; border-radius: 6px; color: var(--ink); }
+.mi-stack-row:hover { background: var(--grey-bg); }
+.mi-stack-name { font-size: .84rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mi-stack-track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mi-stack-bar { display: flex; gap: 2px; height: 14px; min-width: 4px; }
+.mi-stack-bar i { border-radius: 0; }
+.mi-stack-bar i:last-child { border-radius: 0 4px 4px 0; }
+.mi-stack-val { font-size: .78rem; color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mi-stack-val b { font-weight: 600; color: var(--ink); }
+.mi-tip { position: fixed; z-index: 50; pointer-events: none; background: #fff; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; font-size: .78rem; box-shadow: 0 6px 20px rgba(0,0,0,.12); color: var(--ink); }
+.mi-tip strong { display: block; margin-bottom: 2px; }
+@media (max-width: 600px) { .mi-stack-row { grid-template-columns: 110px 1fr; } .mi-rank a { grid-template-columns: 18px 1fr 1fr 60px; } }
+.mi-stack-row:hover, .mi-rank a:hover { text-decoration: none; }
+@media (max-width: 600px) { .mi-rank-name small { display: none; } }
