@@ -617,3 +617,18 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tm-table tbody tr:hover td:not(.tm), .tm-table tbody tr:hover th.tm-name { background: #f1f3fb; }
 .tm-table tbody tr:hover th.tm-name a { font-weight: 600; }
 .tm-more { margin: 10px 4px 0; font-size: .86rem; }
+/* Slanted course names: narrow columns with the names at 45 degrees, so the header takes far less height. */
+.tm-wrap { padding-right: 110px; }
+.tm-table th.tm-course { height: 128px; min-width: 0; width: 58px; max-width: 58px; padding: 0; vertical-align: bottom; white-space: nowrap; overflow: visible; }
+.tm-table th.tm-course > div { width: 58px; transform: translate(29px, -6px) rotate(-45deg); transform-origin: bottom left; }
+.tm-table th.tm-course > div > span { writing-mode: horizontal-tb; transform: none; display: inline-block; max-height: none; font-size: .74rem; font-weight: 500; padding: 0 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tm-table td { min-width: 58px; max-width: 58px; padding: 4px 2px; font-size: .74rem; }
+.tm-table th.tm-course.g0, .tm-table th.tm-course.g1, .tm-table th.tm-course.g2 { background: var(--card); }
+.tm-table th.tm-course.g0 > div > span { color: #01024c; } .tm-table th.tm-course.g1 > div > span { color: #0b6e4f; } .tm-table th.tm-course.g2 > div > span { color: #b45309; }
+.tm-table thead tr:first-child th { z-index: 210; }
+.tm-table thead .tm-name { z-index: 220; }
+.tm-table td { overflow: hidden; text-overflow: ellipsis; }
+.tm-table th.tm-course { border-right-color: transparent; }
+/* The employee type choice has four options; let it wrap on a phone. */
+#emp-type .seg { flex-wrap: wrap; max-width: 100%; }
+#emp-type { min-width: 0; }

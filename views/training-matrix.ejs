@@ -19,7 +19,7 @@
   <div class="tm-wrap"><table class="tm-table">
     <thead>
       <tr><th class="tm-name" rowspan="2">Employee</th><% for (const g of GROUPS) { const n = courses.filter((c) => c.grp === g).length; if (n) { %><th class="tm-grp g<%= GROUPS.indexOf(g) %> gstart" colspan="<%= n %>"><%= g %></th><% } } %></tr>
-      <tr><% courses.forEach((c, i) => { %><th class="tm-course g<%= GROUPS.indexOf(c.grp) %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>"><span><%= c.name %></span></th><% }) %></tr>
+      <tr><% courses.forEach((c, i) => { %><th class="tm-course g<%= GROUPS.indexOf(c.grp) %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.name %>" style="z-index:<%= 200 - i %>"><div><span><%= c.name %></span></div></th><% }) %></tr>
     </thead>
     <tbody><% for (const p of people) { %>
       <tr>
