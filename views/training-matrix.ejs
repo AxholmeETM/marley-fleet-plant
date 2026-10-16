@@ -2,16 +2,20 @@
 <div class="page-head">
   <div><h1>Training Matrix</h1><p class="muted" style="margin:0">Expiry dates for each person. <span class="tm-key"><span class="tm ok">In date</span> <span class="tm soon">Within 30 days</span> <span class="tm overdue">Expired</span> <span class="tm needed">Needed</span> <span class="tm note">Note</span></span></p></div>
 </div>
+<% const link = (o) => { const u = new URLSearchParams({ group: grp, ...(q ? { q } : {}), ...(attention ? { show: 'attention' } : {}), ...(showEmpty ? { empty: '1' } : {}), ...o }); for (const [k, v] of [...u]) if (v === '') u.delete(k); return '/training/matrix?' + u; }; %>
+<nav class="tabs tm-tabs"><% for (const g of [...GROUPS, 'All']) { %><a href="<%= link({ group: g }) %>" class="<%= grp === g ? 'active' : '' %> t<%= GROUPS.indexOf(g) %>"><%= g %></a><% } %></nav>
 <form class="filters" method="get">
+  <input type="hidden" name="group" value="<%= grp %>">
   <div class="field"><label for="q">Search</label><input type="search" id="q" name="q" value="<%= q %>" placeholder="Name"></div>
-  <div class="field"><label for="group">Training</label>
-    <select id="group" name="group"><option value="">All</option><% for (const g of GROUPS) { %><option <%= grp === g ? 'selected' : '' %>><%= g %></option><% } %></select></div>
-  <button class="btn" type="submit">Show</button>
-  <a class="btn" href="<%= path %>">Reset</a>
+  <div class="field"><span class="label">Show</span>
+    <div class="seg funded"><input type="radio" id="sh-all" name="show" value="" <%= attention ? '' : 'checked' %> onchange="this.form.submit()"><label for="sh-all">Everyone</label><input type="radio" id="sh-att" name="show" value="attention" <%= attention ? 'checked' : '' %> onchange="this.form.submit()"><label for="sh-att">Needs attention</label></div></div>
+  <% if (showEmpty) { %><input type="hidden" name="empty" value="1"><% } %>
+  <button class="btn" type="submit">Search</button>
+  <a class="btn" href="/training/matrix?group=<%= grp %>">Reset</a>
 </form>
 <%- include('partials/pane-end') %>
 <div class="card flush">
-  <% if (!people.length) { %><p class="empty"><%= q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet. Use the Training button on an employee\'s page to add them.' %></p><% } else { %>
+  <% if (!people.length) { %><p class="empty"><%= attention ? 'Nothing needs attention here: nobody has anything expired or due within 30 days.' : q ? 'Nobody matches that search.' : 'Nobody is on the Training Matrix yet. Use the Training button on an employee\'s page to add them.' %></p><% } else { %>
   <div class="tm-wrap"><table class="tm-table">
     <thead>
       <tr><th class="tm-name" rowspan="2">Employee</th><% for (const g of GROUPS) { const n = courses.filter((c) => c.grp === g).length; if (n) { %><th class="tm-grp g<%= GROUPS.indexOf(g) %> gstart" colspan="<%= n %>"><%= g %></th><% } } %></tr>
@@ -20,9 +24,11 @@
     <tbody><% for (const p of people) { %>
       <tr>
         <th class="tm-name" scope="row"><a href="/training/people/<%= p.id %>"><%= p.name %></a></th>
-        <% courses.forEach((c, i) => { const r = cell(p, c); const s = r && r.status; %><td class="<%= s ? 'tm ' + s.level : '' %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>"<% if (s) { %> title="<%= c.name %>: <%= s.text %><%= r.note && r.expiry ? ' · ' + r.note : '' %>"<% } %>><%= s ? s.short : '' %></td><% }) %>
+        <% courses.forEach((c, i) => { const r = cell(p, c); const s = r && r.status; %><td tabindex="0" data-p="<%= p.id %>" data-c="<%= c.id %>" data-pn="<%= p.name %>" data-cn="<%= c.name %>" data-e="<%= r && r.expiry || '' %>" data-n="<%= r && r.note || '' %>" data-r="<%= r && r.required ? 1 : '' %>" class="tm-cell <%= s ? 'tm ' + s.level : '' %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>"<% if (s) { %> title="<%= c.name %>: <%= s.text %><%= r.note && r.expiry ? ' · ' + r.note : '' %>"<% } %>><%= s ? s.short : '' %></td><% }) %>
       </tr>
     <% } %></tbody>
   </table></div><% } %>
 </div>
+<% if (hidden || showEmpty) { %><p class="muted tm-more"><% if (showEmpty) { %><a href="<%= link({ empty: '' }) %>">Hide courses nobody here holds</a><% } else { %><%= hidden %> course<%= hidden === 1 ? '' : 's' %> nobody here holds <%= hidden === 1 ? 'is' : 'are' %> hidden. <a href="<%= link({ empty: '1' }) %>">Show all courses</a><% } %></p><% } %>
+<%- include('partials/training-dialog') %>
 <%- include('partials/footer') %>

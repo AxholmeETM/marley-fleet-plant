@@ -43,18 +43,48 @@ router.get('/training', async (req, res) => {
   const expired = items.filter((x) => x.s.level === 'overdue').sort((a, b) => -byDate(a, b));
   const needed = items.filter((x) => x.s.level === 'needed').sort((a, b) => a.p.name.localeCompare(b.p.name));
   const show = ['soon', 'expired', 'needed', 'notes'].includes(req.query.show) ? req.query.show : 'soon';
-  res.render('training', { title: 'Training Matrix', soon, expired, needed, people, notes: people.filter((p) => p.training_note || p.training_funded), show });
+  res.render('training', { title: 'Training Matrix', soon, expired, needed, people, notes: people.filter((p) => p.training_note || p.training_funded), show, back: req.originalUrl });
 });
 
 // The matrix itself: one row per person, one column per course.
 router.get('/training/matrix', async (req, res) => {
   const data = await matrixData();
-  const grp = GROUPS.includes(req.query.group) ? req.query.group : '';
+  // One group at a time (General first), or all of them.
+  const grp = req.query.group === 'All' ? 'All' : GROUPS.includes(req.query.group) ? req.query.group : GROUPS[0];
   const q = String(req.query.q || '').trim().toLowerCase();
+  const attention = req.query.show === 'attention';
+  const showEmpty = req.query.empty === '1';
+  let courses = data.courses.filter((c) => grp === 'All' || c.grp === grp);
   let { people } = data;
   if (q) people = people.filter((p) => [p.name, p.job_title].some((f) => f && f.toLowerCase().includes(q)));
-  const courses = data.courses.filter((c) => !grp || c.grp === grp);
-  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, grp, q: req.query.q || '', GROUPS, userLabel });
+  const level = (p, c) => { const r = data.cell(p, c); return r && r.status && r.status.level; };
+  if (attention) people = people.filter((p) => courses.some((c) => ['soon', 'overdue'].includes(level(p, c))));
+  // Courses nobody shown holds are hidden unless asked for.
+  const used = courses.filter((c) => people.some((p) => data.cell(p, c)));
+  const hidden = courses.length - used.length;
+  if (!showEmpty) courses = used;
+  res.render('training-matrix', { title: 'Training Matrix', courses, people, cell: data.cell, grp, q: req.query.q || '', attention, showEmpty, hidden, GROUPS, userLabel, back: req.originalUrl });
+});
+
+// Update one course for one person, from the matrix pop-up.
+router.post('/training/people/:id/courses/:cid', async (req, res) => {
+  const p = await get('SELECT id, name FROM users WHERE id = ?', Number(req.params.id));
+  const c = await get('SELECT id, name FROM training_courses WHERE id = ?', Number(req.params.cid));
+  if (!p || !c) throw new UserError('Not found.', 404);
+  const expiry = text(req.body.expiry);
+  if (expiry && !isValidDate(expiry)) throw new UserError('Please enter a valid date.');
+  const note = text(req.body.note);
+  const required = req.body.required ? 1 : 0;
+  if (!expiry && !note && !required) await run('DELETE FROM training_records WHERE user_id = ? AND course_id = ?', p.id, c.id);
+  else {
+    await run(`INSERT INTO training_records (user_id, course_id, expiry, note, required) VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT (user_id, course_id) DO UPDATE SET expiry = EXCLUDED.expiry, note = EXCLUDED.note, required = EXCLUDED.required,
+        updated_at = to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS')`, p.id, c.id, expiry, note, required);
+  }
+  req.flash('success', `${p.name}: ${c.name} updated.`);
+  // Back to the page the pop-up was opened from (the dashboard or the matrix), never anywhere else.
+  const back = String(req.body.back || '');
+  res.redirect(/^\/training(\/matrix)?(\?[\w=&%.-]*)?$/.test(back) ? back : '/training');
 });
 
 // One person's training, to update their dates and notes.

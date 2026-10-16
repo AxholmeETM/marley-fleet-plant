@@ -21,16 +21,18 @@
 <% } else { const list = show === 'expired' ? expired : show === 'needed' ? needed : soon; %>
   <% if (!list.length) { %><p class="empty"><%= show === 'soon' ? 'Nothing runs out in the next 30 days.' : show === 'expired' ? 'Nothing has expired.' : 'Nothing is marked as needed.' %></p><% } else { %>
   <div class="table-wrap"><table>
-    <thead><tr><th>Employee</th><th>Training</th><th>Group</th><th><%= show === 'needed' ? 'Note' : 'Expiry' %></th></tr></thead>
+    <thead><tr><th>Employee</th><th>Training</th><th>Group</th><th><%= show === 'needed' ? 'Note' : 'Expiry' %></th><th></th></tr></thead>
     <tbody><% for (const x of list) { %>
       <tr>
         <td><a href="/training/people/<%= x.p.id %>"><%= x.p.name %></a><% if (x.p.job_title) { %> <span class="muted"><%= x.p.job_title %></span><% } %></td>
         <td><%= x.c.name %></td>
         <td><%= x.c.grp %></td>
         <td><% if (show === 'needed') { %><%= x.r.note || '—' %><% } else { %><%- pill({ level: x.s.level, text: x.s.text }) %><% if (x.r.note) { %> <span class="muted"><%= x.r.note %></span><% } %><% } %></td>
+        <td class="nowrap" style="text-align:right"><button type="button" class="btn small tm-upd" data-p="<%= x.p.id %>" data-c="<%= x.c.id %>" data-pn="<%= x.p.name %>" data-cn="<%= x.c.name %>" data-e="<%= x.r.expiry || '' %>" data-n="<%= x.r.note || '' %>" data-r="<%= x.r.required ? 1 : '' %>">Update</button></td>
       </tr>
     <% } %></tbody>
   </table></div><% } %>
 <% } %>
 </div>
+<%- include('partials/training-dialog') %>
 <%- include('partials/footer') %>

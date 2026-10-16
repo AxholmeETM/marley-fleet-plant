@@ -427,7 +427,19 @@ test('training matrix and view-only managers', async () => {
   assert.match(matrix, /tm overdue/);
   assert.match(matrix, /tm needed/);
   assert.equal((await admin('POST', '/training/courses', { name: 'Hand Arm Vibration', grp: 'General' })).status, 302);
-  assert.match((await admin('GET', '/training/matrix?group=General')).text, /Hand Arm Vibration/);
+  assert.doesNotMatch((await admin('GET', '/training/matrix?group=General')).text, /<span>Hand Arm Vibration/);
+  assert.match((await admin('GET', '/training/matrix?group=General&empty=1')).text, /<span>Hand Arm Vibration/);
+  // One cell can be changed from the matrix pop-up, which returns to the same view.
+  assert.equal((await admin('POST', `/training/people/${tess.id}/courses/${cscs.id}`, { expiry: '2030-01-31', back: '/training/matrix?group=General' })).location, '/training/matrix?group=General');
+  assert.equal((await get('SELECT expiry FROM training_records WHERE user_id = ? AND course_id = ?', tess.id, cscs.id)).expiry, '2030-01-31');
+  assert.equal((await admin('POST', `/training/people/${tess.id}/courses/${cscs.id}`, { expiry: '', back: 'https://evil.example' })).location, '/training');
+  assert.equal(await get('SELECT 1 FROM training_records WHERE user_id = ? AND course_id = ?', tess.id, cscs.id), undefined);
+  assert.match((await admin('GET', '/training/matrix?show=attention')).text, /Tess Trained/);
+  // The dashboard has an Update button per row; the pop-up returns to the same tab.
+  assert.match((await admin('GET', '/training?show=expired')).text, /class="btn small tm-upd"/);
+  assert.equal((await admin('POST', `/training/people/${tess.id}/courses/${first.id}`, { expiry: '2031-05-01', back: '/training?show=expired' })).location, '/training?show=expired');
+  // Employee details opened from the training page leads back to it.
+  assert.match((await admin('GET', `/users/${tess.id}?from=training`)).text, new RegExp(`class="crumbs".*href="/training/matrix">Training Matrix</a>.*href="/training/people/${tess.id}">Tess Trained</a>`));
 
   // Managers see everything read-only, apart from the Training Matrix and full card numbers.
   const mia = client();

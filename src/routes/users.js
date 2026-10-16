@@ -143,7 +143,10 @@ router.get('/users/:id', async (req, res) => {
   const cards = await all(`SELECT c.*, v.reg, u.name AS user_name FROM fuel_cards c LEFT JOIN vehicles v ON v.id = c.vehicle_id LEFT JOIN users u ON u.id = c.user_id
     ORDER BY c.provider, CASE WHEN c.card_ref ~ '^[0-9]+$' THEN c.card_ref::numeric END, c.card_ref`);
   res.render('user-view', {
-    title: item.name, crumbs: [['Employees', '/users'], [item.name]], item, EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
+    title: item.name, item,
+    // Opened from someone's training page: the breadcrumb leads back there.
+    ...(req.query.from === 'training' && req.user.role === 'admin' ? { navActive: '/training' } : {}),
+    crumbs: req.query.from === 'training' && req.user.role === 'admin' ? [['Training Matrix', '/training/matrix'], [item.name, `/training/people/${item.id}`], ['Employee details']] : [['Employees', '/users'], [item.name]], EMPLOYEE_TYPES, FUEL_CARD_STATUSES,
     myVehicles: vehicles.filter((v) => v.driver_id === item.id), otherVehicles: vehicles.filter((v) => v.driver_id !== item.id && v.active),
     myCards: cards.filter((c) => c.user_id === item.id), otherCards: cards.filter((c) => c.user_id !== item.id && c.status === 'active'),
   });

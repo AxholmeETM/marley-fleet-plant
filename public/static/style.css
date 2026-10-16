@@ -610,3 +610,10 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .tp-group .table-wrap { padding: 0 16px 8px; }
 .tp-group .table-wrap thead th { position: static; box-shadow: none; }
 .seg.funded input:checked + label { background: var(--navy); color: #fff; }
+/* Matrix: group tabs in the group colours, clickable cells and a highlighted row. */
+.tm-tabs a.t0.active { background: #01024c; } .tm-tabs a.t1.active { background: #0b6e4f; } .tm-tabs a.t2.active { background: #b45309; }
+.tm-table td.tm-cell { cursor: pointer; }
+.tm-table td.tm-cell:hover, .tm-table td.tm-cell:focus-visible { outline: 2px solid #01024c; outline-offset: -2px; }
+.tm-table tbody tr:hover td:not(.tm), .tm-table tbody tr:hover th.tm-name { background: #f1f3fb; }
+.tm-table tbody tr:hover th.tm-name a { font-weight: 600; }
+.tm-more { margin: 10px 4px 0; font-size: .86rem; }

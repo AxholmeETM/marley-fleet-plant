@@ -1,0 +1,35 @@
+<%# Pop-up to update one person's training for one course. Opened by any element with class tm-upd (or tm-cell) carrying data-p, data-c, data-pn, data-cn, data-e, data-n and data-r. %>
+<dialog id="tm-dlg" class="dlg">
+  <form class="card" method="post">
+    <div class="dlg-head"><div><h2 id="tm-dlg-c"></h2><p class="muted" id="tm-dlg-p" style="margin:0 0 12px"></p></div><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <input type="hidden" name="back" value="<%= back %>">
+    <div class="form-grid">
+      <div class="field"><label for="tm-e">New expiry date</label><input type="date" id="tm-e" name="expiry"></div>
+      <div class="field"><label for="tm-n">Note</label><input type="text" id="tm-n" name="note" maxlength="80" placeholder="e.g. Booked 19/10/26"></div>
+    </div>
+    <div class="field"><label><input type="checkbox" id="tm-r" name="required" value="1"> Needed, not held yet</label></div>
+    <div class="form-actions"><a class="btn" id="tm-dlg-all" href="#">All their training</a><button class="btn primary" type="submit">Save</button></div>
+  </form>
+</dialog>
+<script>
+  (() => {
+    const dlg = document.getElementById('tm-dlg');
+    const f = dlg.querySelector('form');
+    const open = (el) => {
+      const d = el.dataset;
+      f.action = '/training/people/' + d.p + '/courses/' + d.c;
+      dlg.querySelector('#tm-dlg-c').textContent = d.cn;
+      dlg.querySelector('#tm-dlg-p').textContent = d.pn;
+      dlg.querySelector('#tm-dlg-all').href = '/training/people/' + d.p;
+      f.expiry.value = d.e; f.note.value = d.n; f.required.checked = !!d.r;
+      dlg.showModal();
+      f.expiry.focus();
+    };
+    document.querySelectorAll('.tm-upd, .tm-cell').forEach((el) => {
+      el.addEventListener('click', () => open(el));
+      if (el.tagName === 'TD') el.addEventListener('keydown', (e) => { if (e.key === 'Enter') open(el); });
+    });
+    dlg.querySelector('[data-close]').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  })();
+</script>

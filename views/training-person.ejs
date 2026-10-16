@@ -1,7 +1,7 @@
 <%- include('partials/header') %>
 <div class="page-head">
   <div><h1><%= p.name %></h1><p class="muted" style="margin:0"><%= userLabel(p) %><%= p.job_title ? ' · ' + p.job_title : '' %></p></div>
-  <div class="actions"><a class="btn" href="/users/<%= p.id %>">Employee details</a></div>
+  <div class="actions"><a class="btn" href="/users/<%= p.id %>?from=training">Employee details</a></div>
 </div>
 <%- include('partials/pane-end') %>
 <form class="card" method="post" action="/training/people/<%= p.id %>">
