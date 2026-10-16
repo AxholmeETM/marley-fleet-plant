@@ -731,3 +731,34 @@ table:not(.tp-table) .code-tag { display: table; margin-top: 4px; }
 .pick-list label[hidden] { display: none; }
 .pick-list .pick-all { font-weight: 600; border-bottom: 1px solid var(--line); }
 .pick-count { margin: 0; }
+/* Mileage */
+.mi-upload { display: inline; margin: 0; }
+.mi-upload label { cursor: pointer; }
+.mi-steps { margin: 0; padding-left: 20px; line-height: 1.7; }
+.mi-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+.mi-tile { padding: 14px 16px; }
+.mi-tile span { display: block; font-size: .78rem; color: var(--muted); }
+.mi-tile strong { font-size: 1.5rem; font-weight: 600; }
+.mi-tile.personal strong, .mi-personal { color: var(--amber); }
+@media (max-width: 700px) { .mi-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.mi-tag { display: inline-block; font-size: .68rem; font-weight: 600; padding: 1px 6px; border-radius: 4px; margin-right: 6px; vertical-align: 1px; }
+.mi-tag.home { background: var(--amber-bg); color: var(--amber); }
+.mi-tag.work { background: #e6effc; color: #1d4f9c; }
+.mi-add { margin-left: 6px; width: 20px; height: 20px; line-height: 16px; padding: 0; border-radius: 50%; border: 1px solid var(--line-strong); background: #fff; color: var(--blue); cursor: pointer; font-weight: 600; }
+.mi-add:hover { background: var(--blue); color: #fff; }
+.mi-trips tr.mi-row-personal td { background: #fffaf1; }
+.mi-use { display: inline-flex; gap: 8px; align-items: center; margin: 0; }
+.mi-use button.pill { border: 0; cursor: pointer; font: inherit; font-size: .78rem; }
+.mi-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 900px) { .mi-cols { grid-template-columns: 1fr; } }
+.mi-cols h2 { font-size: 1.05rem; margin: 0 0 4px; }
+.mi-places { width: 100%; margin: 8px 0 14px; }
+.mi-places td { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: .86rem; vertical-align: top; }
+.mi-add-form { display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+.mi-add-form .btn { justify-self: start; }
+label.radio { display: flex; gap: 8px; align-items: center; font-weight: 400; margin: 4px 0; }
+.report-dates { display: flex; gap: 10px; } .report-dates .field { flex: 1; }
+tfoot th { border-top: 1.5px solid var(--line-strong); text-align: left; font-weight: 600; }
+tfoot th.num { text-align: right; }
+tfoot th { font-size: .86rem; color: var(--ink); padding-top: 12px; padding-bottom: 12px; }
+.mi-tag.site { background: var(--grey-bg); color: var(--ink-2); border: 1px dashed var(--line-strong); }

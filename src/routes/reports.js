@@ -7,6 +7,8 @@ const { decorate: decorateCard } = require('./fuel-cards');
 const { CATEGORIES, CATEGORY, PLANT_STATUSES, INSPECTION_TYPES, VEHICLE_CATEGORIES, VEHICLE_STATUSES, FUEL_CARD_STATUSES, EMPLOYEE_TYPES, userLabel, CSCS_CARDS, cscsLabel, recordCard } = require('../categories');
 const { cellStatus } = require('./training');
 const { listDocs, DOC_KINDS } = require('../documents');
+const { mileageFor, period: mileagePeriod } = require('./mileage');
+const M = require('../mileage');
 
 const router = express.Router();
 router.use('/reports', requireAdmin);
@@ -147,6 +149,35 @@ const REPORTS = {
       return { title: 'Projects report', count: `${projects.filter((p) => p.active).length} open`,
         columns: ['Project No.', 'Project / site', 'Status', 'Items', 'Plant & equipment on this project'], widths: [11, 22, 8, 6, 53],
         groups: [{ rows: projects.map((p) => [p.code, p.name || '—', pill(p.active ? 'ok' : 'none', p.active ? 'Open' : 'Closed'), String(p.items), p.assets || '—']) }] };
+    },
+  },
+  mileage: {
+    label: 'Mileage', picker: 'period',
+    blurb: 'Work and personal miles from the SoTrack trips: a summary for each driver, then their trips day by day, like the weekly trip records sheet.',
+    async build({ query }) {
+      const p = await mileagePeriod(query);
+      const reg = query.reg ? M.normReg(query.reg) : null;
+      const { vehicles } = await mileageFor(p, reg);
+      const when = `${ukDate(p.from)} to ${ukDate(p.to)}`;
+      const tagOf = (w) => ({ home: 'Home · ', work: 'Work · ', site: 'Site? · ' }[w] || '');
+      const who = (v) => v.driver_name || (v.notOnFleet ? v.device : 'No driver');
+      const summary = {
+        title: 'Mileage report', sub: when, count: `${M.fmtMiles(M.sum(vehicles.flatMap((v) => v.trips), 'personal'))} personal miles`,
+        columns: ['Driver / vehicle', 'Reg', 'Trips', 'Work miles', 'Personal miles', 'Total', 'Idle time'], widths: [28, 12, 8, 13, 13, 13, 13],
+        groups: [{ rows: vehicles.map((v) => [who(v), { reg: v.regText }, String(v.trips.length), M.fmtMiles(v.work), v.personal ? M.fmtMiles(v.personal) : '—', M.fmtMiles(v.total), M.fmtSecs(v.idle)]) }],
+      };
+      const trips = vehicles.map((v) => ({
+        title: `Trips – ${who(v)}`, sub: `${v.regText} · ${when}`, count: `${M.fmtMiles(v.work)} work · ${M.fmtMiles(v.personal)} personal`,
+        columns: ['Start', 'From', 'End', 'To', 'Miles', 'Counts as'], widths: [8, 36, 7, 36, 6, 7],
+        groups: [...new Set(v.trips.map((t) => t.started_at.slice(0, 10)))].map((d) => ({
+          label: new Date(d + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }),
+          rows: v.trips.filter((t) => t.started_at.startsWith(d)).map((t) => [t.started_at.slice(11, 16), tagOf(t.from) + (t.start_loc || '—'),
+            t.ended_at ? t.ended_at.slice(11, 16) : '—', tagOf(t.to) + (t.end_loc || '—'), M.fmtMiles(t.distance),
+            pill(t.use === 'personal' ? 'soon' : 'ok', t.use === 'personal' ? 'Personal' : 'Work')]),
+        })),
+      }));
+      if (reg) return trips[0] || { ...summary, groups: [] };
+      return { title: summary.title, sections: [summary, ...trips] };
     },
   },
   training: {

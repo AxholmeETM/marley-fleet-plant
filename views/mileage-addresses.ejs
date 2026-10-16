@@ -1,0 +1,38 @@
+<%- include('partials/header') %>
+<div class="page-head">
+  <div><h1>Home and work addresses <span class="count"><%= places.length %></span></h1>
+  <p class="muted" style="margin:0">A trip matches an address with the same postcode, or the same street in the same postcode area, as SoTrack gives it.</p></div>
+</div>
+<%- include('partials/pane-end') %>
+<% const works = places.filter((x) => x.kind === 'work'); const homes = places.filter((x) => x.kind === 'home'); %>
+<div class="mi-cols">
+  <div class="card">
+    <h2>Work addresses <span class="count"><%= works.length %></span></h2>
+    <p class="muted small">Sites, the yard and suppliers. A journey that reaches one of these is work.</p>
+    <% if (works.length) { %><table class="mi-places"><tbody><% for (const w of works) { %>
+      <tr><td><% if (w.label) { %><strong><%= w.label %></strong><br><% } %><%= w.address %></td>
+        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= w.id %>/remove"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+    <% } %></tbody></table><% } else { %><p class="empty">None yet.</p><% } %>
+    <% if (canEdit) { %><form method="post" action="/mileage/addresses" class="mi-add-form">
+      <input type="hidden" name="kind" value="work"><input type="hidden" name="back" value="/mileage/addresses">
+      <div class="field"><label for="w-label">Name <span class="hint">(optional)</span></label><input id="w-label" name="label" type="text" placeholder="e.g. Yard, Hatfield"></div>
+      <div class="field"><label for="w-addr">Address with postcode</label><input id="w-addr" name="address" type="text" required placeholder="e.g. Near to A614, South Yorkshire, DN7 6NS"></div>
+      <button class="btn primary" type="submit">Add work address</button>
+    </form><% } %>
+  </div>
+  <div class="card">
+    <h2>Home addresses <span class="count"><%= homes.length %></span></h2>
+    <p class="muted small">Where each driver lives. A journey that starts or ends at home without reaching a work address is personal.</p>
+    <% if (homes.length) { %><table class="mi-places"><tbody><% for (const h of homes) { %>
+      <tr><td><strong><%= h.user_name || '—' %></strong><br><%= h.address %></td>
+        <td class="num"><% if (canEdit) { %><form method="post" action="/mileage/addresses/<%= h.id %>/remove"><button class="linkbtn" type="submit">Remove</button></form><% } %></td></tr>
+    <% } %></tbody></table><% } else { %><p class="empty">None yet.</p><% } %>
+    <% if (canEdit) { %><form method="post" action="/mileage/addresses" class="mi-add-form">
+      <input type="hidden" name="kind" value="home"><input type="hidden" name="back" value="/mileage/addresses">
+      <div class="field"><label for="h-user">Employee</label><select id="h-user" name="user_id" required><option value="">Choose…</option><% for (const u of people) { %><option value="<%= u.id %>"><%= u.name %></option><% } %></select></div>
+      <div class="field"><label for="h-addr">Home address with postcode</label><input id="h-addr" name="address" type="text" required placeholder="e.g. Bosworth Close, Hatfield, DN7 6AP"></div>
+      <button class="btn primary" type="submit">Add home address</button>
+    </form><% } %>
+  </div>
+</div>
+<%- include('partials/footer') %>

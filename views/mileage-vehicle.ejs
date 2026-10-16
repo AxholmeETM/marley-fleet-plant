@@ -1,0 +1,75 @@
+<%- include('partials/header') %>
+<%
+  const loc = (where, text, t) => {
+    const tag = where === 'home' ? '<span class="mi-tag home">Home</span>' : where === 'work' ? '<span class="mi-tag work">Work</span>' : where === 'site' ? '<span class="mi-tag site" title="Stopped here 3 hours or more on a weekday, so taken as a site. Click + to save it.">Site?</span>' : '';
+    const add = (!where || where === 'site') && text && canEdit ? `<button class="mi-add" type="button" data-addr="${escapeHtml(text)}" title="Save this address">+</button>` : '';
+    return tag + escapeHtml(text || '—') + add;
+  };
+%>
+<div class="page-head">
+  <div><h1><%= v.driver_name || v.device %> <span class="reg"><%= v.regText %></span></h1>
+    <p class="muted" style="margin:0"><%= ukDate(p.from) %> to <%= ukDate(p.to) %> · <strong><%= M.fmtMiles(v.work) %></strong> work miles · <strong class="mi-personal"><%= M.fmtMiles(v.personal) %></strong> personal miles<% if (v.notOnFleet) { %> · not on the Fleet register<% } %></p></div>
+  <div class="actions"><a class="btn" href="/mileage/addresses">Home and work addresses</a><a class="btn" href="/reports/mileage?<%= qs %>&reg=<%= v.reg %>&print=1" target="_blank" rel="noopener">Print</a></div>
+</div>
+<% if (v.needsHome) { %><div class="flash warning">No home address for <%= v.driver_name %> yet, so every trip counts as work. Click <strong>+</strong> next to their home on a trip below, or add it under Home and work addresses.</div><% } %>
+<% if (!v.driver_id && !v.notOnFleet) { %><div class="flash warning">This vehicle has no driver on the Fleet register, so every trip counts as work.</div><% } %>
+<%- include('partials/pane-end') %>
+<div class="card flush">
+  <div class="table-wrap"><table class="mi-trips">
+    <thead><tr><th>Start</th><th class="desc">From</th><th>End</th><th class="desc">To</th><th class="num">Miles</th><th class="num">Trip time</th><th class="num">Idle</th><th>Counts as</th></tr></thead>
+    <% for (const d of days) { const dm = d.trips; %>
+    <tbody>
+      <tr class="group"><th colspan="8"><%= new Date(d.date + 'T12:00:00Z').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }) %>
+        <span><%= M.fmtMiles(M.sum(dm, 'work')) %> work<% if (M.sum(dm, 'personal')) { %> · <%= M.fmtMiles(M.sum(dm, 'personal')) %> personal<% } %></span></th></tr>
+      <% for (const t of dm) { %>
+      <tr id="trip-<%= t.id %>" class="<%= t.use === 'personal' ? 'mi-row-personal' : '' %>">
+        <td class="nowrap"><%= t.started_at.slice(11, 16) %></td>
+        <td><%- loc(t.from, t.start_loc, t) %></td>
+        <td class="nowrap"><%= t.ended_at ? t.ended_at.slice(11, 16) : '—' %></td>
+        <td><%- loc(t.to, t.end_loc, t) %></td>
+        <td class="num"><%= M.fmtMiles(t.distance) %></td>
+        <td class="num"><%= M.fmtSecs(t.trip_secs) %></td>
+        <td class="num"><%= t.idle_secs ? M.fmtSecs(t.idle_secs) : '—' %></td>
+        <td class="nowrap">
+          <% if (canEdit) { %><form method="post" action="/mileage/trips/<%= t.id %>" class="mi-use">
+            <input type="hidden" name="back" value="<%= back %>">
+            <button class="pill <%= t.use === 'personal' ? 'soon' : 'ok' %>" type="submit" name="use" value="<%= t.use === 'personal' ? 'work' : 'personal' %>" title="Change to <%= t.use === 'personal' ? 'work' : 'personal' %>"><%= t.use === 'personal' ? 'Personal' : 'Work' %></button>
+            <% if (t.override) { %><button class="linkbtn small" type="submit" name="use" value="" title="Go back to how it was worked out (<%= t.auto %>)">Undo</button><% } %>
+          </form><% } else { %><span class="pill <%= t.use === 'personal' ? 'soon' : 'ok' %>"><%= t.use === 'personal' ? 'Personal' : 'Work' %></span><% } %>
+        </td>
+      </tr>
+      <% } %>
+    </tbody>
+    <% } %>
+  </table></div>
+</div>
+<p class="small muted"><span class="mi-tag home">Home</span> and <span class="mi-tag work">Work</span> mark saved addresses. <span class="mi-tag site">Site?</span> is a weekday stop of 3 hours or more that isn't saved yet, so it is counted as work. Click <strong>+</strong> next to any other address to save it as a work address<%= v.driver_id ? ' or as ' + v.driver_name + "'s home" : '' %>. Click Work or Personal on a trip to change it; Undo puts it back.</p>
+<% if (canEdit) { %>
+<dialog id="addr-dlg" class="dlg">
+  <div class="card">
+    <div class="dlg-head"><h2>Save address</h2><button class="dlg-x" type="button" data-close aria-label="Close">×</button></div>
+    <form method="post" action="/mileage/addresses">
+      <input type="hidden" name="back" value="<%= back %>">
+      <div class="field"><label for="addr-text">Address</label><input id="addr-text" name="address" type="text" required></div>
+      <div class="field"><label>This is</label>
+        <label class="radio"><input type="radio" name="kind" value="work" checked> A work address (site, yard, supplier)</label>
+        <% if (v.driver_id) { %><label class="radio"><input type="radio" name="kind" value="home"> <%= v.driver_name %>'s home</label><input type="hidden" name="user_id" value="<%= v.driver_id %>"><% } %>
+      </div>
+      <div class="field" id="addr-label-f"><label for="addr-label">Name <span class="hint">(optional, e.g. Rossington site)</span></label><input id="addr-label" name="label" type="text"></div>
+      <p class="hint">Trips match on the postcode, or the same street in the same postcode area.</p>
+      <div class="form-actions"><button class="btn" type="button" data-close>Cancel</button><button class="btn primary" type="submit">Save address</button></div>
+    </form>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const dlg = document.getElementById('addr-dlg');
+    document.querySelectorAll('.mi-add').forEach((b) => b.addEventListener('click', () => {
+      dlg.querySelector('#addr-text').value = b.dataset.addr; dlg.showModal();
+    }));
+    dlg.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', () => dlg.close()));
+    dlg.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', () => { document.getElementById('addr-label-f').hidden = r.value === 'home' && r.checked; }));
+  })();
+</script>
+<% } %>
+<%- include('partials/footer') %>

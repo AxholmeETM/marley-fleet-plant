@@ -8,7 +8,13 @@
   <div class="card report-card">
     <h2><%= r.label %></h2>
     <p class="muted"><%= r.blurb %></p>
-    <% if (r.picker) { %>
+    <% if (r.picker === 'period') { %>
+    <form class="report-pick" method="get" action="/reports/<%= key %>" target="_blank">
+      <div class="report-dates"><div class="field"><label for="<%= key %>-from">From</label><input id="<%= key %>-from" type="date" name="from"></div><div class="field"><label for="<%= key %>-to">To</label><input id="<%= key %>-to" type="date" name="to"></div></div>
+      <p class="hint">Leave blank for the latest SoTrack file uploaded.</p>
+      <div class="actions"><button class="btn primary" type="submit" name="print" value="1">Save as PDF</button><button class="btn" type="submit">View</button></div>
+    </form>
+    <% } else if (r.picker) { %>
     <form class="report-pick" method="get" action="/reports/<%= key %>" target="_blank">
       <input type="search" class="pick-filter" placeholder="Find a name" aria-label="Find a name">
       <div class="pick-list" role="group" aria-label="Employees to include">
@@ -25,7 +31,7 @@
   <% } %>
 </div>
 <script>
-  document.querySelectorAll('.report-pick').forEach((f) => {
+  document.querySelectorAll('.report-pick:has(.pick-list)').forEach((f) => {
     const boxes = [...f.querySelectorAll('input[name=person]')];
     const all = boxes.find((b) => b.value === 'all');
     const count = f.querySelector('.pick-count');

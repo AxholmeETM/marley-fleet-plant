@@ -541,3 +541,52 @@ test('employee documents: copies of cards', async () => {
   assert.equal(r.status, 302);
   assert.equal(await get('SELECT id FROM documents WHERE id = ?', doc.id), undefined);
 });
+
+test('mileage from a SoTrack trip list', async () => {
+  const admin = client();
+  await admin('POST', '/login', { email: 'admin@test.local', password: 'adminpass1' });
+  const dave = await get("SELECT id FROM users WHERE email = 'dave@test.local'");
+  const file = fs.readFileSync(path.join(__dirname, 'fixtures', 'trip-list.xlsx'));
+  const send = () => { const fd = new FormData(); fd.append('file', new Blob([file]), 'Trip List.xlsx'); return admin('POST', '/mileage/upload', fd); };
+  let r = await send();
+  assert.equal(r.location, '/mileage?from=2026-10-12&to=2026-10-13');
+  assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_trips')).n, 7);
+  // The same file again adds nothing.
+  await send();
+  assert.equal((await get('SELECT COUNT(*)::int AS n FROM mileage_trips')).n, 7);
+  let page = (await admin('GET', r.location)).text;
+  assert.match(page, /Dave Driver/);
+  assert.match(page, /Home address needed/);
+  assert.match(page, /Not on Fleet/);
+  // Wrong file types are refused.
+  const bad = new FormData(); bad.append('file', new Blob(['x']), 'trips.csv');
+  assert.equal((await admin('POST', '/mileage/upload', bad)).status, 400);
+
+  // Home and work addresses split the miles: the evening trip to the shop is personal; Tuesday's long stop is a site.
+  assert.equal((await admin('POST', '/mileage/addresses', { kind: 'home', user_id: dave.id, address: 'Test Street, Testville' })).status, 400);
+  await admin('POST', '/mileage/addresses', { kind: 'home', user_id: dave.id, address: '12 Test Street, Testville, DN1 1AA' });
+  await admin('POST', '/mileage/addresses', { kind: 'work', label: 'Yard', address: 'Yard Lane, Hatfield, DN2 2BB' });
+  const { mileageFor } = require('../src/routes/mileage');
+  let { vehicles } = await mileageFor({ from: '2026-10-12', to: '2026-10-13' });
+  let v = vehicles.find((x) => x.reg === 'YX21KPL');
+  assert.deepEqual([v.work, v.personal], [36, 7]);
+  assert.equal(v.trips[4].to, 'site');
+  page = (await admin('GET', '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13')).text;
+  assert.match(page, /Site\?/);
+  assert.match(page, /Personal/);
+  // Change a trip by hand, then undo it.
+  const shop = await get("SELECT id FROM mileage_trips WHERE end_loc LIKE 'Shop Road%'");
+  await admin('POST', `/mileage/trips/${shop.id}`, { use: 'work', back: '/mileage/YX21KPL?from=2026-10-12&to=2026-10-13' });
+  ({ vehicles } = await mileageFor({ from: '2026-10-12', to: '2026-10-13' }));
+  assert.equal(vehicles.find((x) => x.reg === 'YX21KPL').personal, 3.5);
+  await admin('POST', `/mileage/trips/${shop.id}`, { use: '' });
+  assert.equal((await get('SELECT override FROM mileage_trips WHERE id = ?', shop.id)).override, null);
+  // The report: a summary, then each vehicle's trips.
+  const rep = (await admin('GET', '/reports/mileage?from=2026-10-12&to=2026-10-13')).text;
+  assert.match(rep, /Mileage report/);
+  assert.match(rep, /Trips – Dave Driver/);
+  // Drivers can't see it.
+  const d = client();
+  await d('POST', '/login', { email: 'dave@test.local', password: 'driverpass1' });
+  assert.equal((await d('GET', '/mileage')).status, 403);
+});

@@ -110,6 +110,7 @@ async function createApp() {
   app.use(require('./routes/defects'));
   app.use(require('./routes/plant'));
   app.use(require('./routes/vehicles'));
+  app.use(require('./routes/mileage').router);
   app.use(require('./routes/users'));
   app.use(require('./routes/projects'));
   app.use(require('./routes/reports'));
