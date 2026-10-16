@@ -409,6 +409,35 @@ UPDATE training_courses c SET info = v.info FROM (VALUES
   ('cpcs_dump_artic', 'CPCS Dump Truck, articulated chassis (15 tonnes).'),
   ('cpcs_dump_rigid', 'CPCS Dump Truck, rigid chassis (15 tonnes).')
 ) AS v(key, info) WHERE c.key = v.key AND c.info IS NULL;
+-- Scheme codes for NPORS and CPCS training (npors.com, cpcs.nocn.org.uk and Ben's sheet, checked 16/10/2026), shown with the name.
+ALTER TABLE training_courses ADD COLUMN IF NOT EXISTS code TEXT;
+UPDATE training_courses c SET code = v.code, info = v.info FROM (VALUES
+  ('npors_a09a', 'A09A', 'The A09 code on the card. A09 is the forward tipping dumper category; the A at the end is the endorsement shown on the card.'),
+  ('npors_ftd', 'N204 / C204', 'Forward Tipping Dumper. Codes on cards: N204AA / C204AA. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_ftd_e', 'N204 / C204', 'Forward Tipping Dumper with the E endorsement (N204AAE / C204AAE). N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_roller', 'N214', 'Ride-on Roller (NPORS N214, ride-on or road roller). N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_360', 'N202 / C202', '360 Excavator. Codes on cards: N202TK, C202TK, N202TJ, C202TKZ. The letters after the number say which machine they were tested on: T is tracked, J is above 10 tonnes, K is below 10 tonnes, and Z is an extra endorsement such as lifting. These letter meanings come from training providers; NPORS doesn''t publish an official list. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_180', 'N201', '180 Excavator (backhoe loader). N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_lorry', 'N107', 'Lorry Loader. Operating a lorry-mounted crane. Code on cards: N107A. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_telehandler', 'N010 / C010', 'Telescopic Handler. Codes on cards: N010J3 / C010J3. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_rear_dumper', 'N205 / C205', 'Rear Tipping Dumper. Codes on cards: ZD2d / C205BC. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_excav_crane', 'N100', 'Excavator used as a Crane. Lifting loads with an excavator. Codes on cards: N100, N100T, C100, N160. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_slinger', 'N402', 'Slinger Signaller. Attaching loads and guiding the operator during lifts. Codes on cards: N402 / N402S. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_harness', 'N723', 'Harness and Fall Arrest. Wearing, checking and using a safety harness for work at height.'),
+  ('npors_shovel', 'N209', 'Loading Shovel. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_marshaller', 'N403', 'Vehicle Marshaller. Guiding vehicles and plant safely around the site. (N133 is the plant machinery marshaller.) N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('npors_dozer', 'N215', 'Crawler Tractor / Dozer. N codes go on the traditional NPORS card. C codes go on the NPORS card with the CSCS logo (Red Trained or Blue Competent), which also needs the CITB health, safety and environment test.'),
+  ('cpcs_ftd', 'A09', 'CPCS A09 Forward Tipping Dumper. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_crane_sup', 'A62', 'CPCS A62 Crane / Lifting Operations Supervisor. Supervising lifting operations on site. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_roller', 'A31', 'CPCS A31 Ride-on Roller. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_skid', 'A23', 'CPCS A23 Skid Steer Loader. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_slinger', 'A40', 'CPCS A40 Slinger Signaller. Attaching loads and guiding the operator during lifts. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_telehandler', 'A17', 'CPCS A17 Telescopic Handler. (A77 is the 360 slew version.) CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_excav_small', 'A58', 'CPCS A58 360 Excavator below 10 tonnes. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_excav_large', 'A59', 'CPCS A59 360 Excavator above 10 tonnes. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_dump_artic', 'A56', 'CPCS A56 Dump Truck, articulated chassis. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.'),
+  ('cpcs_dump_rigid', 'A57', 'CPCS A57 Dump Truck, rigid chassis. CPCS cards are Red (Trained Operator) then Blue (Competent Operator) once they have the NVQ.')
+) AS v(key, code, info) WHERE c.key = v.key AND c.code IS NULL;
 -- Which CSCS card someone holds (green labourer, blue skilled worker, ...); its expiry is the CSCS Card course.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
 -- Which NPORS and CPCS operator card someone holds (red trained / blue competent ...); the categories are the NPORS and CPCS courses.

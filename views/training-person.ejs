@@ -40,7 +40,7 @@
     <thead><tr><th>Training</th><% if (scheme) { %><th>Card</th><% } %><th>Expiry date</th><th>Note</th><th>Needs this</th><th>Status</th></tr></thead>
     <tbody><% for (const c of list) { const r = recs.get(c.id) || {}; %>
       <tr data-level="<%= r.status ? r.status.level : '' %>">
-        <td><%= c.name %><% if (c.info) { %> <button type="button" class="info-btn" aria-label="What is <%= c.name %>?" data-t="<%= g %> · <%= c.name %>" data-b="<%= c.info %>">i</button><% } %></td>
+        <td><%= c.name %><% if (c.code) { %> <span class="code-tag"><%= c.code %></span><% } %><% if (c.info) { %> <button type="button" class="info-btn" aria-label="What is <%= c.name %>?" data-t="<%= g %> · <%= c.name %><%= c.code ? ' · ' + c.code : '' %>" data-b="<%= c.info %>">i</button><% } %></td>
         <% if (scheme) { %><td><div class="card-ticks small" role="radiogroup" aria-label="<%= c.name %> card"><input type="radio" id="card_<%= c.id %>_" name="card_<%= c.id %>" value="" <%= !PLANT_CARDS[scheme][r.card] ? 'checked' : '' %>><label for="card_<%= c.id %>_" title="Not recorded">None</label><% for (const [k, cc] of Object.entries(PLANT_CARDS[scheme])) { %><input type="radio" id="card_<%= c.id %>_<%= k %>" name="card_<%= c.id %>" value="<%= k %>" <%= r.card === k ? 'checked' : '' %>><label for="card_<%= c.id %>_<%= k %>" title="<%= cc.label %> · <%= cc.name %>"><span class="cscs cscs-<%= cc.colour %>"></span><%= cc.label %></label><% } %></div></td><% } %>
         <td><input type="date" name="expiry_<%= c.id %>" value="<%= r.expiry || '' %>" aria-label="<%= c.name %> expiry"></td>
         <td><input type="text" name="note_<%= c.id %>" value="<%= r.note || '' %>" maxlength="80" aria-label="<%= c.name %> note" placeholder="e.g. Booked 19/10/26"></td>
