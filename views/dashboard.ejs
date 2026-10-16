@@ -3,7 +3,7 @@
   <div><h1>Dashboard</h1><p class="muted" style="margin:0"><%= ukDate(today) %><% if (manager) { %> · <%= projects.length ? 'Project' + (projects.length === 1 ? ' ' : 's ') + projects.join(', ') : 'No projects assigned yet' %><% } %> · <%= stats.plantOnly %> plant · <%= stats.plantTotal - stats.plantOnly %> equipment · <%= stats.vehicleTotal %> vehicle<%= stats.vehicleTotal === 1 ? '' : 's' %></p></div>
 </div>
 <%- include('partials/pane-end') %>
-<div class="kpis kpis-4">
+<div class="kpis kpis-4<%= manager ? ' kpis-5' : '' %>">
   <a class="kpi <%= stats.unsafe ? 'bad' : 'good' %>" href="<%= manager ? '#todo' : '/defects' %>"<% if (manager) { %> data-goto="defects"<% } %>><div class="label">Unsafe defects</div><div class="value"><%= stats.unsafe %></div>
     <div class="sub"><%= stats.unsafe ? 'do not use until fixed' : 'none reported' %></div></a>
   <a class="kpi <%= stats.overdue ? 'bad' : 'good' %>" href="#todo" data-goto="overdue"><div class="label">Overdue</div><div class="value"><%= stats.overdue %></div>
@@ -12,7 +12,9 @@
     <div class="sub">due in the next 30 days</div></a>
   <% if (manager) { %>
   <a class="kpi plain" href="/plant"><div class="label">My plant</div><div class="value"><%= stats.plantOnly %></div>
-    <div class="sub">plus <%= stats.plantTotal - stats.plantOnly %> equipment item<%= stats.plantTotal - stats.plantOnly === 1 ? '' : 's' %> on my projects</div></a>
+    <div class="sub">on my projects</div></a>
+  <a class="kpi plain" href="/equipment"><div class="label">My equipment</div><div class="value"><%= stats.plantTotal - stats.plantOnly %></div>
+    <div class="sub">on my projects</div></a>
   <% } else { %>
   <a class="kpi <%= stats.receipts ? 'warn' : 'good' %>" href="/fuel/log?show=unverified&period=year"><div class="label">Receipts to check</div><div class="value"><%= stats.receipts %></div>
     <div class="sub"><%= stats.receiptsCost ? money(stats.receiptsCost) + ' waiting for the office' : 'waiting for the office' %></div></a>
