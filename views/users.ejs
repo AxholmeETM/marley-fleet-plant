@@ -23,7 +23,7 @@
         <td><%= u.employee_no || '—' %></td>
         <td><span class="pill <%= u.role === 'admin' ? 'soon' : 'none' %>"><%= userLabel(u) %></span></td>
         <td><%= u.job_title || '—' %></td>
-        <td><%= u.email || 'No login' %><% if (u.phone) { %><div class="small muted"><%= u.phone %></div><% } %></td>
+        <td><%= u.email || '—' %><% if (!u.password_hash) { %> <span class="small muted">· No login</span><% } %><% if (u.phone) { %><div class="small muted"><%= u.phone %></div><% } %></td>
         <td><%= u.vehicles || '—' %></td>
         <td class="num"><%= u.cards ? u.cards : '—' %></td>
         <td><%- u.active ? '<span class="pill ok">Active</span>' : '<span class="pill none">Disabled</span>' %></td>

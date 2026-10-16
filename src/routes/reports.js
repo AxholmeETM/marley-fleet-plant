@@ -81,7 +81,7 @@ const REPORTS = {
           (SELECT string_agg(provider || COALESCE(' #' || card_ref, ''), ', ' ORDER BY provider, card_ref) FROM fuel_cards c WHERE c.user_id = u.id AND c.status = 'active') AS cards
         FROM users u ORDER BY u.active DESC, u.name`);
       const row = (u) => [u.employee_no || '—', u.name, userLabel(u),
-        u.job_title || '—', u.phone || '—', u.email || 'No login', u.vehicles || '—', u.cards || '—', pill(u.active ? 'ok' : 'none', u.active ? 'Active' : 'Disabled')];
+        u.job_title || '—', u.phone || '—', u.password_hash ? u.email : (u.email ? u.email + ' (no login)' : 'No login'), u.vehicles || '—', u.cards || '—', pill(u.active ? 'ok' : 'none', u.active ? 'Active' : 'Disabled')];
       const groups = [
         { label: 'Fleet drivers', rows: users.filter((u) => u.employee_type === 'driver').map(row) },
         { label: 'Site managers', rows: users.filter((u) => u.employee_type === 'site_manager').map(row) },

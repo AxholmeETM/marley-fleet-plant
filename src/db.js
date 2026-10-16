@@ -191,6 +191,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email ON users (lower(email));
 ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
 ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS employee_no TEXT;
+-- Employee record details (admins only).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS work_email TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS licence_no TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ni_number TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS dob TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_phone TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS emergency_email TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS users_employee_no ON users (lower(employee_no));
 -- The driver a fill counts against: the vehicle's driver at the time (not whoever typed it in).
 ALTER TABLE fuel_entries ADD COLUMN IF NOT EXISTS driver_id INTEGER REFERENCES users(id) ON DELETE SET NULL;

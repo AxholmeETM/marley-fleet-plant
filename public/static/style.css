@@ -562,3 +562,5 @@ tr.clickable { cursor: pointer; }
 .kpis-4 .kpi.plain { background: var(--accent-soft); color: var(--navy); } .kpis-4 .kpi.plain .label, .kpis-4 .kpi.plain .sub { color: var(--navy); }
 .kpis-4.kpis-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .kpis-4.kpis-5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.form-section { font-size: 1rem; margin: 24px 0 12px; padding-top: 18px; border-top: 1px solid var(--line); }
+dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink); margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--line); }

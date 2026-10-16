@@ -4,6 +4,7 @@ const { all, get, run, transaction, isUniqueViolation } = require('../db');
 const { listVehicles, syncCardVehicles } = require('../queries');
 const { requireAdmin, UserError, text } = require('../auth');
 const { EMPLOYEE_TYPES, FUEL_CARD_STATUSES } = require('../categories');
+const { isValidDate, isoDate } = require('../status');
 
 const router = express.Router();
 router.use('/users', requireAdmin);
@@ -32,12 +33,35 @@ router.get('/users/new', async (req, res) => {
 
 // Employees without an email have no login; admin users always need one.
 // "No account needed" logs the person on the system with no login at all (e.g. site workers).
+// Contact and personal details kept on the employee record (admins only).
+const DETAIL_COLS = ['work_email', 'address', 'licence_no', 'ni_number', 'dob', 'emergency_name', 'emergency_phone', 'emergency_email'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function readDetails(body) {
+  const d = {};
+  for (const [key, label] of [['email', 'Email'], ['work_email', 'Work email'], ['emergency_email', 'Emergency contact email']]) {
+    const v = text(body[key]);
+    if (v && !EMAIL_RE.test(v)) throw new UserError(`${label} doesn't look like an email address.`);
+    if (key !== 'email') d[key] = v;
+  }
+  d.address = text(body.address);
+  d.licence_no = text(body.licence_no) && text(body.licence_no).replace(/\s+/g, '').toUpperCase();
+  d.ni_number = text(body.ni_number) && text(body.ni_number).replace(/\s+/g, '').toUpperCase();
+  if (d.ni_number && !/^[A-Z]{2}\d{6}[A-D]$/.test(d.ni_number)) throw new UserError('National Insurance number should look like QQ 12 34 56 C.');
+  d.dob = text(body.dob);
+  if (d.dob && (!isValidDate(d.dob) || d.dob >= isoDate())) throw new UserError('Please enter a valid date of birth.');
+  d.emergency_name = text(body.emergency_name);
+  d.emergency_phone = text(body.emergency_phone);
+  return d;
+}
+
 function readUser(body, existing) {
   const name = text(body.name);
+  const details = readDetails(body);
   if (body.role === 'none') {
     if (!name) throw new UserError('Please enter their name.');
     if (!EMPLOYEE_TYPES[body.employee_type]) throw new UserError('Please choose an employee type.');
-    return { name, employee_no: text(body.employee_no), email: null, phone: text(body.phone), role: 'driver', employee_type: body.employee_type, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password: '' };
+    // No account: their email is kept for contact, but there is no password, so they cannot sign in.
+    return { name, employee_no: text(body.employee_no), email: text(body.email), phone: text(body.phone), role: 'driver', employee_type: body.employee_type, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password: '', noLogin: true, details };
   }
   const email = text(body.email);
   const role = body.role === 'admin' ? 'admin' : 'driver';
@@ -49,7 +73,7 @@ function readUser(body, existing) {
   // Admins can also be a fleet driver or site manager (or neither); employees must be one of them.
   const employeeType = EMPLOYEE_TYPES[body.employee_type] ? body.employee_type : null;
   if (role !== 'admin' && !EMPLOYEE_TYPES[employeeType]) throw new UserError('Please choose an employee type.');
-  return { name, employee_no: text(body.employee_no), email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password };
+  return { name, employee_no: text(body.employee_no), email, phone: text(body.phone), role, employee_type: employeeType, job_title: text(body.job_title), active: body.active === '0' ? 0 : 1, password, details };
 }
 
 const saveError = (err) => {
@@ -61,10 +85,12 @@ router.post('/users', async (req, res) => {
   const u = readUser(req.body, null);
   let id;
   try {
-    id = (await run('INSERT INTO users (name, employee_no, email, phone, role, employee_type, job_title, active, password_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email ? bcrypt.hashSync(u.password, 10) : null)).lastInsertRowid;
+    id = (await run(`INSERT INTO users (name, employee_no, email, phone, role, employee_type, job_title, active, password_hash, ${DETAIL_COLS.join(', ')})
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ${DETAIL_COLS.map(() => '?').join(', ')})`,
+      u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, u.email && !u.noLogin ? bcrypt.hashSync(u.password, 10) : null,
+      ...DETAIL_COLS.map((c) => u.details[c]))).lastInsertRowid;
   } catch (err) { saveError(err); }
-  req.flash('success', u.email ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
+  req.flash('success', u.email && !u.noLogin ? `${u.name} added. Give them their email and password to sign in.` : `${u.name} added.`);
   res.redirect(`/users/${id}`);
 });
 
@@ -176,10 +202,11 @@ router.post('/users/:id', async (req, res) => {
   const u = readUser(req.body, existing);
   if (id === req.user.id && (u.role !== 'admin' || !u.active)) throw new UserError('You cannot remove your own admin access.');
   // A new password, or no email (no login), changes the stored password; otherwise it stays.
-  const hash = !u.email ? null : u.password ? bcrypt.hashSync(u.password, 10) : existing.password_hash;
+  const hash = !u.email || u.noLogin ? null : u.password ? bcrypt.hashSync(u.password, 10) : existing.password_hash;
   try {
-    await run('UPDATE users SET name = ?, employee_no = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ?, password_hash = ? WHERE id = ?',
-      u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, hash, id);
+    await run(`UPDATE users SET name = ?, employee_no = ?, email = ?, phone = ?, role = ?, employee_type = ?, job_title = ?, active = ?, password_hash = ?,
+        ${DETAIL_COLS.map((c) => `${c} = ?`).join(', ')} WHERE id = ?`,
+      u.name, u.employee_no, u.email, u.phone, u.role, u.employee_type, u.job_title, u.active, hash, ...DETAIL_COLS.map((c) => u.details[c]), id);
   } catch (err) { saveError(err); }
   req.flash('success', `${u.name} updated.`);
   res.redirect(`/users/${id}`);

@@ -115,7 +115,19 @@ test('admin and driver flows', async () => {
   // No account needed: a site worker is logged with no email or password, even if one was typed.
   await admin('POST', '/users', { name: 'Sid Worker', role: 'none', employee_type: 'worker', email: 'sid@x.test', password: 'password123', active: '1' });
   const sid = await get("SELECT * FROM users WHERE name = 'Sid Worker'");
-  assert.ok(sid && sid.email === null && sid.password_hash === null && sid.employee_type === 'worker' && sid.role === 'driver');
+  assert.ok(sid && sid.email === 'sid@x.test' && sid.password_hash === null && sid.employee_type === 'worker' && sid.role === 'driver');
+  assert.equal((await admin('POST', '/login', { email: 'sid@x.test', password: 'password123' })).status, 401);
+  await admin('POST', '/login', { email: 'admin@test.local', password: 'adminpass1' });
+  // The employee record keeps contact, personal and emergency details.
+  await admin('POST', `/users/${sid.id}`, { name: 'Sid Worker', role: 'none', employee_type: 'worker', email: 'sid@x.test', active: '1', work_email: 'sid@marley.test',
+    address: '1 High St\nDoncaster', licence_no: 'morga 657054 sm9ij', ni_number: 'qq 12 34 56 c', dob: '1990-05-01', emergency_name: 'Ann Worker', emergency_phone: '07700 900123', emergency_email: 'ann@x.test' });
+  const sid2 = await get('SELECT * FROM users WHERE id = ?', sid.id);
+  assert.equal(sid2.ni_number, 'QQ123456C');
+  assert.equal(sid2.licence_no, 'MORGA657054SM9IJ');
+  const sidPage = (await admin('GET', `/users/${sid.id}`)).text;
+  assert.match(sidPage, /QQ 12 34 56 C/);
+  assert.match(sidPage, /Ann Worker/);
+  assert.equal((await admin('POST', `/users/${sid.id}`, { name: 'Sid Worker', role: 'none', employee_type: 'worker', ni_number: 'nope' })).status, 400);
   assert.match((await admin('GET', '/users?show=workers')).text, /Sid Worker/);
   assert.match((await admin('GET', `/users/${sid.id}/edit`)).text, /id="role-none" name="role" value="none" checked/);
   await run("DELETE FROM users WHERE name = 'Sid Worker'");

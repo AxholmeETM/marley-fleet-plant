@@ -8,14 +8,25 @@
 <div class="grid grid-2">
   <div class="card">
     <h2>Details</h2>
+    <% const v = (x) => x || '—'; %>
     <dl class="facts">
       <dt>Status</dt><dd><%- item.active ? '<span class="pill ok">Active</span>' : '<span class="pill none">Disabled</span>' %></dd>
-      <dt>Employee ID</dt><dd><%= item.employee_no || '—' %></dd>
+      <dt>Employee ID</dt><dd><%= v(item.employee_no) %></dd>
       <dt>Type</dt><dd><%= userLabel(item) %></dd>
-      <dt>Job role</dt><dd><%= item.job_title || '—' %></dd>
-      <dt>Phone</dt><dd><%= item.phone || '—' %></dd>
-      <dt>Email</dt><dd><%= item.email || '—' %></dd>
-      <dt>Sign in</dt><dd><%= item.email && item.password_hash ? 'Yes, with their email' : 'No login' %></dd>
+      <dt>Job role</dt><dd><%= v(item.job_title) %></dd>
+      <dt>Phone number</dt><dd><% if (item.phone) { %><a href="tel:<%= item.phone.replace(/\s+/g, '') %>"><%= item.phone %></a><% } else { %>—<% } %></dd>
+      <dt>Email</dt><dd><% if (item.email) { %><a href="mailto:<%= item.email %>"><%= item.email %></a><% } else { %>—<% } %></dd>
+      <dt>Sign-in options</dt><dd><%= !item.password_hash ? 'No login' : item.role === 'admin' ? 'Admin user, signs in with their email' : 'Employee login, signs in with their email' %></dd>
+      <dt>Address</dt><dd style="white-space:pre-line"><%= v(item.address) %></dd>
+      <dt>Driving licence no.</dt><dd><%= v(item.licence_no) %></dd>
+      <dt>National Insurance no.</dt><dd><%= item.ni_number ? item.ni_number.replace(/^(..)(..)(..)(..)(.)$/, '$1 $2 $3 $4 $5') : '—' %></dd>
+      <dt>Date of birth</dt><dd><%= item.dob ? ukDate(item.dob) : '—' %></dd>
+      <dt class="facts-head">Emergency contact</dt>
+      <dt>Name</dt><dd><%= v(item.emergency_name) %></dd>
+      <dt>Phone number</dt><dd><% if (item.emergency_phone) { %><a href="tel:<%= item.emergency_phone.replace(/\s+/g, '') %>"><%= item.emergency_phone %></a><% } else { %>—<% } %></dd>
+      <dt>Email</dt><dd><% if (item.emergency_email) { %><a href="mailto:<%= item.emergency_email %>"><%= item.emergency_email %></a><% } else { %>—<% } %></dd>
+      <dt class="facts-head">Work</dt>
+      <dt>Work email</dt><dd><% if (item.work_email) { %><a href="mailto:<%= item.work_email %>"><%= item.work_email %></a><% } else { %>—<% } %></dd>
     </dl>
   </div>
   <div>
