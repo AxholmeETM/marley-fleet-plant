@@ -40,7 +40,7 @@
             <% if (t.override) { %><button class="linkbtn small" type="submit" name="use" value="" title="Go back to how it was worked out (<%= t.auto %>)">Undo</button><% } %>
           </form><% } else { %><span class="pill <%= t.use === 'personal' ? 'soon' : 'ok' %>"><%= t.use === 'personal' ? 'Personal' : 'Work' %></span><% } %>
         </td>
-        <td class="nowrap"><% if (t.start_loc && t.end_loc) { %><a class="btn small" href="https://www.google.com/maps/dir/?api=1&origin=<%= encodeURIComponent(t.start_loc) %>&destination=<%= encodeURIComponent(t.end_loc) %>&travelmode=driving" target="_blank" rel="noopener" title="Open the route from start to end in Google Maps">See trip</a><% } %></td>
+        <td class="nowrap"><% if (t.start_loc && t.end_loc) { %><a class="btn small" href="https://www.google.com/maps/dir/?api=1&origin=<%= encodeURIComponent(M.postcodeOf(t.start_loc)) %>&destination=<%= encodeURIComponent(M.postcodeOf(t.end_loc)) %>&travelmode=driving" target="_blank" rel="noopener" title="Open the route from start to end in Google Maps">See trip</a><% } %></td>
       </tr>
       <% } %>
     </tbody>

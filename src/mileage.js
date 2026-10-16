@@ -76,6 +76,11 @@ function sameAddress(a, b) {
   if (!a.postcode || !b.postcode) return false;
   return a.postcode === b.postcode || (a.district === b.district && !!a.street && a.street === b.street);
 }
+// Just the postcode ("DN7 6AP"), for a map link; the whole address when it has none.
+function postcodeOf(s) {
+  const pcs = [...String(s || '').toUpperCase().matchAll(POSTCODE)];
+  return pcs.length ? `${pcs[pcs.length - 1][1]} ${pcs[pcs.length - 1][2]}` : String(s || '');
+}
 const matcher = (places) => {
   const keys = places.map((p) => ({ ...p, key: addressKey(p.address) }));
   return (loc) => { if (!loc) return null; const k = addressKey(loc); return keys.find((p) => sameAddress(k, p.key)) || null; };
@@ -140,4 +145,4 @@ function fmtSecs(s) {
 }
 const fmtReg = (reg) => (reg && reg.length > 4 ? `${reg.slice(0, -3)} ${reg.slice(-3)}` : reg);
 
-module.exports = { parseTripList, regOf, normReg, addressKey, sameAddress, classify, weekOf, weekEnd, sum, fmtMiles, fmtSecs, fmtReg };
+module.exports = { parseTripList, regOf, normReg, addressKey, sameAddress, postcodeOf, classify, weekOf, weekEnd, sum, fmtMiles, fmtSecs, fmtReg };
