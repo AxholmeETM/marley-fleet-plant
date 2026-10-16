@@ -1,0 +1,25 @@
+<%# The "i" buttons next to course names: a click shows what the course is. %>
+<div class="info-pop" id="info-pop" role="dialog" aria-modal="false" hidden><strong id="info-pop-t"></strong><p id="info-pop-b"></p></div>
+<script>
+  (() => {
+    const pop = document.getElementById('info-pop');
+    let at = null;
+    const close = () => { pop.hidden = true; at = null; };
+    document.addEventListener('click', (e) => {
+      const b = e.target.closest('.info-btn');
+      if (!b) { if (!e.target.closest('#info-pop')) close(); return; }
+      e.preventDefault(); e.stopPropagation();
+      if (at === b) return close();
+      at = b;
+      document.getElementById('info-pop-t').textContent = b.dataset.t;
+      document.getElementById('info-pop-b').textContent = b.dataset.b;
+      pop.hidden = false;
+      const r = b.getBoundingClientRect();
+      const w = pop.offsetWidth;
+      pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + 'px';
+      pop.style.top = (r.bottom + 8) + 'px';
+    }, true);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    addEventListener('scroll', close, true);
+  })();
+</script>

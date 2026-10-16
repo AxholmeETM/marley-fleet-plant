@@ -366,6 +366,49 @@ UPDATE training_courses c SET short = v.short FROM (VALUES
   ('cpcs_dump_artic', 'Dump Artic'),
   ('cpcs_dump_rigid', 'Dump Rigid')
 ) AS v(key, short) WHERE c.key = v.key AND c.short IS NULL;
+-- What each course is, for the info button on the matrix.
+ALTER TABLE training_courses ADD COLUMN IF NOT EXISTS info TEXT;
+UPDATE training_courses c SET info = v.info FROM (VALUES
+  ('cscs', 'Construction Skills Certification Scheme card. Shows the holder has the training and qualifications for their job on site; the colour shows the level (see the CSCS card on their training page).'),
+  ('temp_works', 'Temporary Works Supervisor. Trained to supervise temporary works on site, such as props, trench support, shoring and falsework.'),
+  ('groundworker_reg', 'Groundworker NVQ. The vocational qualification for groundworkers; a Level 2 NVQ is what a Blue CSCS Skilled Worker card needs.'),
+  ('swqr', 'Street Works Qualification Register. Operatives and supervisors qualified under the New Roads and Street Works Act to dig and reinstate in the public highway.'),
+  ('smsts', 'Site Management Safety Training Scheme (CITB). Five-day health and safety course for site managers. Valid for 5 years.'),
+  ('sssts', 'Site Supervisor Safety Training Scheme (CITB). Two-day health and safety course for supervisors. Valid for 5 years.'),
+  ('face_fit', 'Face-fit test. Checks that a tight-fitting mask (such as an FFP3 dust mask) seals properly on the wearer''s face.'),
+  ('first_aid', 'First Aid at Work. Trained to give first aid on site. Usually valid for 3 years.'),
+  ('fire_marshal', 'Fire Marshal (Fire Warden). Trained to spot fire risks, use extinguishers and lead an evacuation.'),
+  ('scaffold', 'Scaffold Awareness. Knowing what a safe scaffold looks like and checking it before use.'),
+  ('abrasive', 'Abrasive Wheels. Safe use, mounting and changing of discs on cut-off saws and grinders.'),
+  ('asbestos', 'Asbestos Awareness. Recognising where asbestos may be and what to do if it is found. Usually refreshed every year.'),
+  ('confined', 'Confined Space. Working safely in confined spaces such as manholes, chambers and tanks.'),
+  ('cat_eusr', 'CAT and Genny (EUSR). Using a cable avoidance tool and signal generator to find buried services before digging. EUSR is the utilities skills register.'),
+  ('npors_a09a', 'NPORS plant category A09A, as shown on the operator''s card. A09 is the forward tipping dumper category.'),
+  ('npors_ftd', 'NPORS Forward Tipping Dumper (N204AA / C204AA).'),
+  ('npors_ftd_e', 'NPORS Forward Tipping Dumper with the N204AAE / C204AAE endorsement on the card.'),
+  ('npors_roller', 'NPORS Ride-on Roller.'),
+  ('npors_360', 'NPORS 360 Excavator (N202TK / C202TK / N202TJ / C202TKZ).'),
+  ('npors_180', 'NPORS 180 Excavator (backhoe loader).'),
+  ('npors_lorry', 'NPORS Lorry Loader (N107A). Operating a lorry-mounted crane.'),
+  ('npors_telehandler', 'NPORS Telescopic Handler (N010J3 / C010J3).'),
+  ('npors_rear_dumper', 'NPORS Rear Tipping Dumper (ZD2d / C205BC).'),
+  ('npors_excav_crane', 'NPORS Excavator used as a Crane (N160 / C100 / N100T / N100). Lifting loads with an excavator.'),
+  ('npors_slinger', 'NPORS Slinger Signaller (N402 / N402S). Attaching loads and guiding the operator during lifts.'),
+  ('npors_harness', 'Harness training. Wearing, checking and using a safety harness for work at height.'),
+  ('npors_shovel', 'NPORS Loading Shovel.'),
+  ('npors_marshaller', 'NPORS Vehicle Marshaller. Guiding vehicles and plant safely around the site.'),
+  ('npors_dozer', 'NPORS Crawler Tractor / Dozer.'),
+  ('cpcs_ftd', 'CPCS Forward Tipping Dumper. CPCS cards are red (trained operator) then blue (competent operator).'),
+  ('cpcs_crane_sup', 'CPCS Crane Supervisor. Supervising lifting operations on site.'),
+  ('cpcs_roller', 'CPCS Ride-on Roller.'),
+  ('cpcs_skid', 'CPCS Skid Steer Loader.'),
+  ('cpcs_slinger', 'CPCS Slinger Signaller. Attaching loads and guiding the operator during lifts.'),
+  ('cpcs_telehandler', 'CPCS Telescopic Handler.'),
+  ('cpcs_excav_small', 'CPCS 360 Excavator below 10 tonnes.'),
+  ('cpcs_excav_large', 'CPCS 360 Excavator above 10 tonnes.'),
+  ('cpcs_dump_artic', 'CPCS Dump Truck, articulated chassis (15 tonnes).'),
+  ('cpcs_dump_rigid', 'CPCS Dump Truck, rigid chassis (15 tonnes).')
+) AS v(key, info) WHERE c.key = v.key AND c.info IS NULL;
 -- Which CSCS card someone holds (green labourer, blue skilled worker, ...); its expiry is the CSCS Card course.
 ALTER TABLE users ADD COLUMN IF NOT EXISTS cscs_card TEXT;
 UPDATE users u SET cscs_card = CASE r.note WHEN 'Blue card' THEN 'blue' WHEN 'Green card' THEN 'green' ELSE 'red' END

@@ -648,3 +648,9 @@ dl.facts dt.facts-head { grid-column: 1 / -1; font-weight: 600; color: var(--ink
 .cscs-pick .cscs { width: 30px; height: 20px; border-radius: 4px; }
 .cscs-none { background: repeating-linear-gradient(45deg, #eef0f5 0 4px, #dfe2ec 4px 8px); }
 .chip:has(.cscs) { max-width: 76px; padding-inline: 4px; }
+/* "i" button beside a course name, and the small pop-up it opens. */
+.info-btn { display: inline-grid; place-items: center; width: 15px; height: 15px; margin-left: 2px; padding: 0; border: 0; border-radius: 50%; background: var(--grey-bg); color: var(--ink-2); font: italic 700 10px/1 Georgia, 'Times New Roman', serif; cursor: pointer; vertical-align: 1px; }
+.info-btn:hover, .info-btn:focus-visible { background: var(--navy); color: #fff; outline: none; }
+.info-pop { position: fixed; z-index: 300; width: min(300px, calc(100vw - 16px)); padding: 12px 14px; background: var(--card); border-radius: 10px; box-shadow: 0 8px 28px rgba(1, 2, 76, .22); font-size: .84rem; line-height: 1.45; text-align: left; }
+.info-pop strong { display: block; color: var(--navy); margin-bottom: 4px; }
+.info-pop p { margin: 0; color: var(--ink-2); }

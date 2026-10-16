@@ -23,7 +23,7 @@
   <div class="tm-wrap"><table class="tm-table">
     <thead>
       <tr class="tm-groups"><th class="tm-name" rowspan="2"><%= people.length %> <%= people.length === 1 ? 'person' : 'people' %></th><th class="tm-sum" rowspan="2">Status</th><% for (const g of GROUPS) { const n = courses.filter((c) => c.grp === g).length; if (n) { %><th class="tm-grp g<%= GROUPS.indexOf(g) %>" colspan="<%= n %>"><%= g %></th><% } } %></tr>
-      <tr class="tm-heads"><% courses.forEach((c, i) => { %><th class="tm-course g<%= GROUPS.indexOf(c.grp) %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.grp %>: <%= c.name %>"><%= c.short || c.name %></th><% }) %></tr>
+      <tr class="tm-heads"><% courses.forEach((c, i) => { %><th class="tm-course g<%= GROUPS.indexOf(c.grp) %><%= !i || courses[i - 1].grp !== c.grp ? ' gstart' : '' %>" title="<%= c.grp %>: <%= c.name %>"><%= c.short || c.name %><% if (c.info) { %> <button type="button" class="info-btn" aria-label="What is <%= c.name %>?" data-t="<%= c.grp %> · <%= c.name %>" data-b="<%= c.info %>">i</button><% } %></th><% }) %></tr>
     </thead>
     <tbody><% for (const p of people) { const t = summary(p); const card = CSCS_CARDS[p.cscs_card]; %>
       <tr>
@@ -39,4 +39,5 @@
 </div>
 <% if (hidden || showEmpty) { %><p class="muted tm-more"><% if (showEmpty) { %><a href="<%= link({ empty: '' }) %>">Hide courses nobody here holds</a><% } else { %><%= hidden %> course<%= hidden === 1 ? '' : 's' %> nobody here holds <%= hidden === 1 ? 'is' : 'are' %> hidden. <a href="<%= link({ empty: '1' }) %>">Show all courses</a><% } %></p><% } %>
 <%- include('partials/training-dialog') %>
+<%- include('partials/course-info') %>
 <%- include('partials/footer') %>

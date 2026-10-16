@@ -39,7 +39,7 @@
     <thead><tr><th>Training</th><th>Expiry date</th><th>Note</th><th>Needs this</th><th>Status</th></tr></thead>
     <tbody><% for (const c of list) { const r = recs.get(c.id) || {}; %>
       <tr data-level="<%= r.status ? r.status.level : '' %>">
-        <td><%= c.name %></td>
+        <td><%= c.name %><% if (c.info) { %> <button type="button" class="info-btn" aria-label="What is <%= c.name %>?" data-t="<%= g %> · <%= c.name %>" data-b="<%= c.info %>">i</button><% } %></td>
         <td><input type="date" name="expiry_<%= c.id %>" value="<%= r.expiry || '' %>" aria-label="<%= c.name %> expiry"></td>
         <td><input type="text" name="note_<%= c.id %>" value="<%= r.note || '' %>" maxlength="80" aria-label="<%= c.name %> note" placeholder="e.g. Booked 19/10/26"></td>
         <td><input type="checkbox" name="required_<%= c.id %>" value="1" <%= r.required ? 'checked' : '' %> aria-label="<%= c.name %> needed"></td>
@@ -71,4 +71,5 @@
     document.getElementById('cscs-swatch').className = 'cscs cscs-' + (o.dataset.colour || 'none');
   });
 </script>
+<%- include('partials/course-info') %>
 <%- include('partials/footer') %>
