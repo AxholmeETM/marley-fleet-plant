@@ -19,7 +19,7 @@ function supabase() {
     return { url: process.env.SUPABASE_URL.replace(/\/+$/, ''), key: process.env.SUPABASE_SERVICE_ROLE_KEY };
   }
   // Cloudflare Workers have no disk to keep files on.
-  if (ON_WORKERS) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set. Add them as secrets in Cloudflare (see DEPLOY.md).');
+  if (ON_WORKERS) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are not set. Add them as secrets in Cloudflare (see docs/DEPLOYMENT.md).');
   return null;
 }
 

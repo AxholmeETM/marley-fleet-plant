@@ -1,5 +1,5 @@
 // Cloudflare Workers settings. Secrets (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
-// ADMIN_EMAIL, ADMIN_PASSWORD) are added in the Cloudflare dashboard, never here. See DEPLOY.md.
+// ADMIN_EMAIL, ADMIN_PASSWORD) are added in the Cloudflare dashboard, never here. See docs/DEPLOYMENT.md.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "marley-fleet-plant",

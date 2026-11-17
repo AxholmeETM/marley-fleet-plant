@@ -1,4 +1,41 @@
-# Putting the system online
+# Deployment
+
+How the system gets online, how changes reach it, and how to roll back. Settings are listed in [ENVIRONMENT.md](ENVIRONMENT.md). The staging, CI and backup plan is in [ROADMAP.md](ROADMAP.md).
+
+## Environments
+
+| | Live (today's demo) | Staging (planned) |
+| --- | --- | --- |
+| Address | https://marley-fleet-plant.ben-cc3.workers.dev (later admin.marleyconstruction.co.uk) | e.g. marley-staging.ben-cc3.workers.dev |
+| Branch | `main` | `staging` |
+| Database | Supabase project (real data), Hyperdrive `marley-db` | Second Supabase project with made-up data, Hyperdrive `marley-db-staging` |
+
+## Release steps
+
+1. Change on a branch, open a pull request.
+2. `npm test` passes (by hand today; GitHub Actions planned).
+3. Ben reviews and merges to `main`. Cloudflare builds and deploys in a minute or two.
+4. Smoke test: sign in, open Dashboard, a plant item, a vehicle, Fuel Logs and Mileage.
+5. Add the change to [CHANGELOG.md](CHANGELOG.md).
+
+## Rollback
+
+Cloudflare → Worker → **Deployments** → **Rollback** on the previous version. It takes seconds and doesn't touch the data. Schema changes are additive, so the older code still runs on the newer database.
+
+## Production checklist
+
+- [ ] Workers Paid plan
+- [ ] Secrets set (ENVIRONMENT.md), including `SESSION_SECRET`
+- [ ] Supabase Pro for daily backups; nightly copy to R2
+- [ ] Rate limit on `/login`
+- [ ] Demo rows removed
+- [ ] 2FA on GitHub, Cloudflare, Supabase
+- [ ] Uptime monitor
+- [ ] Custom domain
+
+---
+
+## First-time setup
 
 The site runs on **Cloudflare Workers**. The data and receipt photos are kept in **Supabase**, and the code lives on **GitHub**. Cloudflare builds the site from GitHub automatically, so every push to `main` goes live.
 
@@ -12,7 +49,7 @@ Cost: Cloudflare **Workers Paid** at $5 a month. The free plan only allows 10 ms
 
 Keep passwords and keys in Cloudflare's settings only. Never put them in GitHub or paste them in chat.
 
-## 1. Supabase: copy three values
+### 1. Supabase: copy three values
 
 Open the project in [supabase.com/dashboard](https://supabase.com/dashboard).
 
@@ -22,7 +59,7 @@ Open the project in [supabase.com/dashboard](https://supabase.com/dashboard).
 
 You don't need to create any tables or storage buckets. The site creates them the first time it starts. It also switches on row level security, so Supabase's public API can't read the data.
 
-## 2. Cloudflare: create the site from GitHub
+### 2. Cloudflare: create the site from GitHub
 
 1. In the [Cloudflare dashboard](https://dash.cloudflare.com), go to **Workers & Pages > Create > Import a repository**.
 2. Choose GitHub and the **AxholmeETM/marley-fleet-plant** repository. Allow the Cloudflare GitHub app access to it if you're asked.
@@ -31,13 +68,13 @@ You don't need to create any tables or storage buckets. The site creates them th
 
 The first deploy finishes, but until steps 3 and 4 the site only shows "could not reach its database".
 
-## 3. Cloudflare: Hyperdrive
+### 3. Cloudflare: Hyperdrive
 
 1. Go to **Storage & databases > Hyperdrive > Connect database > Connect to public database**.
 2. Name it `marley-db`, paste the connection string from step 1.1, and **untick Enable caching** (otherwise people can see stale data right after saving). Click through to create it.
 3. The ID is in the page address after `/hyperdrive/`. It goes in `wrangler.jsonc` under `hyperdrive` (already set to the `marley-db` ID for Marley's account).
 
-## 4. Cloudflare: add the secrets
+### 4. Cloudflare: add the secrets
 
 Open the **marley-fleet-plant** Worker, then **Settings > Variables and Secrets** (the section that already lists `COOKIE_SECURE`, not the one under **Build**) **> Add**. Add each of these with the type **Secret**:
 
@@ -50,21 +87,21 @@ Open the **marley-fleet-plant** Worker, then **Settings > Variables and Secrets*
 
 Click **Deploy** to save them. (The database connection comes from Hyperdrive, so no `DATABASE_URL` secret is needed.) Then open the `…workers.dev` address on the Worker's overview page and sign in with `ADMIN_EMAIL` and `ADMIN_PASSWORD`. The admin email and password are only used to create that first account. Change the password later under your name, top right.
 
-## 5. Your own address (optional)
+### 5. Your own address (optional)
 
 The domain has to be in the same Cloudflare account.
 
 1. Open the Worker, then **Settings > Domains & Routes > Add > Custom domain**.
 2. Enter the address, e.g. `fleet.marleyconstruction.co.uk`, and click **Add domain**. Cloudflare creates the DNS record and the HTTPS certificate itself.
 
-## Updating the site
+### Updating the site
 
 Push to `main` on GitHub and Cloudflare rebuilds and deploys in a minute or two. To see build logs, open the Worker and go to **Deployments**.
 
-## Backups
+### Backups
 
 Supabase's paid plans back up the database daily (see **Database > Backups**). The free plan has no daily backups, so move to a paid plan once the system is in real use.
 
-## Running it somewhere else
+### Running it somewhere else
 
 The same code also runs as a normal Node.js server (`npm start`). Set `DATABASE_URL`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` as environment variables, and put it behind HTTPS with `COOKIE_SECURE=true`. If you leave out `DATABASE_URL`, it uses a built-in database kept in `DATA_DIR`.
