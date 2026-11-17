@@ -662,7 +662,7 @@ function connect() {
       close: () => pool.end(),
     };
   }
-  if (ON_WORKERS) throw new Error('DATABASE_URL is not set. Add it as a secret in Cloudflare (see DEPLOY.md).');
+  if (ON_WORKERS) throw new Error('DATABASE_URL is not set. Add it as a secret in Cloudflare (see docs/DEPLOYMENT.md).');
   const { PGlite } = require('@electric-sql/pglite');
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const pg = new PGlite(path.join(DATA_DIR, 'pgdata'));
